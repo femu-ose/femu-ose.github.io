@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="t"><title id="t">FEMU open-source ecosystem</title>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#12364a"/>
+  <path d="M18 46V18h29v8H26v6h16v8H26v6Z" fill="#f5fbff"/>
+  <!-- The two cells become nodes of a small graph: the ecosystem around FEMU. -->
+  <path d="M48.5 35.5L55.5 41.5L48.5 47.5" fill="none" stroke="#69c7dc" stroke-width="1.6"/>
+  <circle cx="48.5" cy="35.5" r="3" fill="#69c7dc"/>
+  <circle cx="55.5" cy="41.5" r="3" fill="#69c7dc"/>
+  <circle cx="48.5" cy="47.5" r="3" fill="#69c7dc"/>
+</svg>

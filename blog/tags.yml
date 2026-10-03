@@ -1,0 +1,12 @@
+pose:
+  label: NSF POSE
+  permalink: /pose
+  description: FEMU's NSF Pathways to Enable Open-Source Ecosystems award and its milestones
+docs:
+  label: Documentation
+  permalink: /docs
+  description: New and changed documentation
+community:
+  label: Community
+  permalink: /community
+  description: Ways to take part in FEMU

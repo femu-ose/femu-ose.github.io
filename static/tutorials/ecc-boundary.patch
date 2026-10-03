@@ -1,0 +1,12 @@
+--- a/hw/femu/tests/unit/test-nand-media.c
++++ b/hw/femu/tests/unit/test-nand-media.c
+@@ -139,6 +139,9 @@
+ 
+     bb_config(&cfg);
+     cfg.timing.ecc_step_ns = 200000;
++    check("wear: 749 P/E stays below one tier", read_lat(&cfg, 749, 0), 10000);
++    check("wear: 750 P/E reaches one tier", read_lat(&cfg, 750, 0), 210000);
++    check("wear: 751 P/E stays within one tier", read_lat(&cfg, 751, 0), 210000);
+     check("wear: 1500 P/E = 2 tiers", read_lat(&cfg, 1500, 0), 10000 + 2 * 200000);
+     check("wear is capped at ecc_max_tiers", read_lat(&cfg, 100000, 0), 10000 + 4 * 200000);
+ 

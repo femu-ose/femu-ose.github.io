@@ -1,0 +1,121 @@
+---
+title: Geometry and capacity
+description: "Calculate FEMU raw and exposed capacity, generate black-box geometry arguments, and check GC reserve and host-memory implications."
+---
+
+import GeometryCalculator from '@site/src/components/GeometryCalculator';
+
+# Geometry and capacity
+
+The black-box array's raw capacity is the product of seven geometry values.
+The guest-visible capacity also depends on the GC reserve and over-provisioning.
+This calculator generates a page-mapped black-box recipe with 10% explicit
+over-provisioning relative to exposed capacity. See
+[configuration recipes](/docs/configuration-recipes) for other policies.
+
+<GeometryCalculator />
+
+## Why it is a product
+
+The black-box model derives raw capacity from its configured array dimensions:
+
+```
+capacity = secsz x secs_per_pg x pgs_per_blk x blks_per_pl
+           x pls_per_lun x luns_per_ch x nchs
+```
+
+Each factor also means something for performance:
+
+- **`nchs` and `luns_per_ch`** determine the number of modeled LUN timelines.
+  Requests to different LUNs can overlap; requests to the same LUN contend.
+  The workload, placement, and enabled channel timing determine whether this
+  parallelism is used. Channel count alone does not predict throughput.
+- **`pls_per_lun`** adds planes and capacity, and lets line GC batch erases.
+  The ordinary black-box read/program timing still gates on the LUN.
+- **`pgs_per_blk`** increases the number of pages in each block and GC line.
+  **`blks_per_pl`** increases the number of lines, not the size of each line.
+  The valid pages remaining in the chosen victim determine relocation work.
+- **`secsz x secs_per_pg`** is the page, the unit the flash actually reads and
+  writes.
+
+For a hardware comparison, calibrate placement, concurrency, and
+[timing](/docs/timing-model) alongside capacity.
+
+## Equal capacity, different collection units
+
+A black-box line groups one block index across all channels, LUNs, and planes:
+
+```text
+pages_per_line = nchs × luns_per_ch × pls_per_lun × pgs_per_blk
+line_count = blks_per_pl
+raw_bytes = pages_per_line × line_count × bytes_per_page
+```
+
+Keep 512-byte sectors, eight sectors per page, 256 pages per block, and one
+plane per LUN. These two configurations both provide 16 GiB of raw capacity:
+
+| Quantity | Configuration A | Configuration B |
+| --- | --- | --- |
+| Channels (`nchs`) | 8 | 4 |
+| LUNs per channel (`luns_per_ch`) | 8 | 8 |
+| Blocks per plane (`blks_per_pl`) | 256 | 512 |
+| Modeled LUNs | 64 | 32 |
+| Pages per GC line | 16,384 | 8,192 |
+| Bytes per GC line | 64 MiB | 32 MiB |
+| Number of lines | 256 | 512 |
+
+B trades half the LUN timelines for twice as many lines. Its smaller collection
+unit does not guarantee lower write amplification: placement, overwrite
+locality, occupancy, and victim selection determine how many live pages move.
+Compare [GC counters](/docs/observability) under the same workload and report
+both geometry tuples. Equal raw capacity is insufficient to isolate a GC
+policy when geometry also changes.
+
+## Over-provisioning
+
+`op_pcent=P` exposes `raw_bytes * 100 / (100 + P)`, sector-aligned.
+With `op_pcent=10`, that is about 90.91% of raw bytes. With zero explicit
+over-provisioning, `devsz_mb` chooses exposed MiB independently of raw geometry,
+but the FTL still requires sufficient free lines. See
+[capacity and reserve](/docs/policies#capacity-and-placement).
+
+### Final partial-page boundary
+
+The calculator requires every exposed byte to fit after the GC reserve,
+including a partially exposed final page. FEMU's `bb_check_capacity()` does the
+same: it rounds the namespace up to whole pages before comparing it with the
+pages left after the reserve.
+
+For example, use 512-byte sectors, eight sectors per page, one page per block,
+nine blocks per plane, and one plane, LUN, and channel. Raw capacity is
+36,864 bytes. With `op_pcent=10`, the namespace exposes 33,280 bytes after
+512-byte alignment, which is eight pages and 512 bytes. The default reserve
+leaves eight pages, or 32,768 bytes. Both the calculator and device
+realization reject this capacity because the partial ninth page does not fit.
+Increase blocks per plane before using the generated recipe.
+
+### What the reserve check covers
+
+The calculator models the generated recipe: page mapping, one namespace, no
+hot/cold separation, no Streams, and the default 95% forced-GC watermark. It
+reserves the forced-GC lines plus one data write-pointer line. Device
+realization reserves more lines for other configurations: one for
+`hot_cold_sep`, one for a `hybrid` or `fast` mapping, and `streams.max + 1`
+with Streams. With any of these, forced GC also keeps at least one line free
+where the watermark would round to zero, which happens below 20 lines. The
+calculator does not model these cases; see
+[the reserve](/manual/design/ftl#the-reserve) in the manual.
+
+## Zoned devices
+
+ZNS derives pages per block and zone size using its `zns_*` geometry and
+namespace capacity, rather than the black-box product above. See
+[ZNS geometry](/docs/modes/zns#geometry-differs-from-black-box-geometry).
+
+## Implementation sources
+
+The comparison follows FEMU revision `39a55eeb6` and is arithmetic derived
+from source, not a guest benchmark:
+
+- [Geometry derivation](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/bbssd/ftl-geom.c): line size, count, and GC thresholds.
+- [Capacity validation](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/bbssd/bb.c): free-line reserve and exposed-page limits.

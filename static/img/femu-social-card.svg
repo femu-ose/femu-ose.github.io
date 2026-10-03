@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">FEMU: NVMe SSD emulation for storage research</title>
+  <desc id="desc">Run real software. Explore device policies. Build reproducible experiments.</desc>
+  <rect width="1200" height="630" fill="#102e40"/>
+  <path d="M860 0v630M980 0v630M1100 0v630M760 110h440M760 230h440M760 350h440M760 470h440" stroke="#1c4358" stroke-width="2"/>
+  <rect x="74" y="72" width="70" height="70" rx="16" fill="#f5fbff"/>
+  <path d="M93 124V90h35v9h-25v7h19v9h-19v9Z" fill="#12364a"/>
+  <text x="164" y="125" fill="#f5fbff" font-family="Arial, sans-serif" font-weight="700" font-size="51" letter-spacing="2">FEMU</text>
+  <text x="74" y="260" fill="#f5fbff" font-family="Arial, sans-serif" font-weight="700" font-size="62">NVMe SSD emulation</text>
+  <text x="74" y="336" fill="#f5fbff" font-family="Arial, sans-serif" font-weight="700" font-size="62">for storage research</text>
+  <rect x="74" y="376" width="94" height="5" rx="2" fill="#69c7dc"/>
+  <text x="74" y="434" fill="#c1d7e3" font-family="Arial, sans-serif" font-size="27">Run real software. Explore device policies.</text>
+  <text x="74" y="475" fill="#c1d7e3" font-family="Arial, sans-serif" font-size="27">Build reproducible experiments.</text>
+  <text x="74" y="567" fill="#8fb6cc" font-family="Arial, sans-serif" font-size="23">Open source · QEMU-based · Configurable</text>
+</svg>

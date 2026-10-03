@@ -1,0 +1,5 @@
+{
+  "commit": "39a55eeb637b23c26b3a2ce9254399c9e0b1b3be",
+  "checked_with": "tools/check-recipes.py",
+  "note": "The FEMU commit the downloadable configurations, patches and tools were last checked against. Update only after check-recipes.py passes at the new commit."
+}

@@ -1,0 +1,279 @@
+/**
+ * A restrained palette. The project is a research tool, so the site should
+ * read as documentation rather than as a product launch.
+ */
+
+:root {
+  --ifm-color-primary: #1a6c8f;
+  --ifm-color-primary-dark: #176180;
+  --ifm-color-primary-darker: #165c79;
+  --ifm-color-primary-darkest: #124c63;
+  --ifm-color-primary-light: #1d779e;
+  --ifm-color-primary-lighter: #1e7ca5;
+  --ifm-color-primary-lightest: #228cbb;
+  --ifm-code-font-size: 90%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.08);
+
+  /* Compact, quiet documentation: soft ink, square corners, no shadows. */
+  --ifm-font-color-base: #374151;
+  --ifm-heading-color: #1f2937;
+  --ifm-font-size-base: 96%;
+  --ifm-line-height-base: 1.65;
+  --ifm-heading-font-weight: 700;
+  --ifm-h1-font-size: 2rem;
+  --ifm-h2-font-size: 1.5rem;
+  --ifm-h3-font-size: 1.2rem;
+  --ifm-global-radius: 2px;
+  --ifm-code-border-radius: 2px;
+  --ifm-pre-border-radius: 2px;
+  --ifm-global-shadow-lw: none;
+  --ifm-global-shadow-md: none;
+  --ifm-navbar-shadow: none;
+  --ifm-navbar-height: 3.25rem;
+  --ifm-navbar-background-color: #f8f9fa;
+  --ifm-navbar-item-padding-horizontal: 0.6rem;
+  --ifm-alert-border-radius: 0;
+  --ifm-alert-border-left-width: 0;
+  --ifm-alert-shadow: none;
+  --ifm-table-border-width: 0;
+  --ifm-table-stripe-background: transparent;
+  --ifm-table-head-background: transparent;
+  --ifm-footer-background-color: #f8f9fa;
+  --ifm-footer-padding-vertical: 1.5rem;
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #5cb8d9;
+  --ifm-color-primary-dark: #43adD2;
+  --ifm-color-primary-darker: #36a7cf;
+  --ifm-color-primary-darkest: #2b89aa;
+  --ifm-color-primary-light: #75c3e0;
+  --ifm-color-primary-lighter: #82c9e3;
+  --ifm-color-primary-lightest: #a9daeb;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --ifm-font-color-base: #d1d5db;
+  --ifm-heading-color: #f3f4f6;
+  --ifm-navbar-background-color: #1b1d21;
+  --ifm-footer-background-color: #1b1d21;
+}
+
+/* Tables carry a lot of this site's content; give them room to breathe. */
+.markdown table { display: block; max-width: 100%; overflow-x: auto; }
+.markdown table td { vertical-align: top; }
+
+/* Keep recipe settings from squeezing the workload guidance into narrow rows. */
+.policy-recipe-table th:first-child { min-width: 9rem; }
+.policy-recipe-table th:nth-child(2),
+.policy-recipe-table th:nth-child(3) { min-width: 18rem; }
+.policy-recipe-table td code { white-space: normal; overflow-wrap: anywhere; }
+
+/* Keep actions and footer links within narrow layouts when text is enlarged. */
+.button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.footer__link-item { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.footer__copyright a {
+  color: var(--ifm-footer-link-color);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.navbar__search kbd {
+  color: var(--ifm-navbar-link-color);
+}
+.navbar__search input::placeholder {
+  color: var(--ifm-navbar-link-color);
+  opacity: 1;
+}
+.markdown a:not(.hash-link):not(.button) {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+/* Mermaid's dark edge-label background needs brighter text than its default. */
+[data-theme='dark'] .docusaurus-mermaid-container .edgeLabel p {
+  color: #ffffff !important;
+}
+@media (max-width: 360px) {
+  .navbar__title {
+    position: absolute; width: 1px; height: 1px; padding: 0;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+}
+@media (max-width: 600px) {
+  .pagination-nav { grid-template-columns: minmax(0, 1fr); }
+  .pagination-nav__link--next { grid-column: 1; }
+}
+
+/* Keep wide reference material readable without widening the page. */
+.table-frame { margin-bottom: var(--ifm-spacing-vertical); }
+.table-scroll { max-width: 100%; overflow-x: auto; }
+.markdown .table-scroll table {
+  display: table;
+  width: 100%;
+  min-width: 42rem;
+  margin-bottom: 0;
+}
+.scroll-hint {
+  margin: 0 0 0.5rem;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.85rem;
+}
+.diagram-frame { margin: 1.5rem 0; }
+.diagram-scroll { max-width: 100%; overflow-x: auto; padding: 1rem; }
+.diagram-scroll.is-expanded .docusaurus-mermaid-container { min-width: 60rem; }
+.table-scroll:focus-visible, .diagram-scroll:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+.table-scroll th:nth-child(4), .table-scroll td:nth-child(4) { min-width: 18rem; }
+
+/* Compact numeric examples do not need the reference tables' wide columns. */
+.markdown .compact-table .table-scroll table { min-width: 0; }
+.compact-table .table-scroll th:nth-child(4),
+.compact-table .table-scroll td:nth-child(4) { min-width: 0; }
+@media (max-width: 600px) {
+  .compact-table .table-scroll th,
+  .compact-table .table-scroll td { padding: .55rem .45rem; }
+}
+
+/* Autocomplete measures query text here; keep long names off the viewport
+   without constraining the width used for its measurement. */
+.navbar__search pre[aria-hidden="true"] { left: -10000px; top: 0; }
+
+/* Keep the mobile clear action visible as Tab moves from input to button. */
+.navbar__search:focus-within button[class*="searchClearButton"] { display: block; }
+
+/* Keep suggestions reachable on short screens and when the viewport shrinks. */
+.navbar__search [class*="dropdownMenu"] {
+  max-height: calc(100vh - var(--ifm-navbar-height) - 1rem);
+  max-height: calc(100dvh - var(--ifm-navbar-height) - 1rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Opening must make controls focusable immediately. Animate their position
+   and opacity, but do not defer visibility until an animation frame. */
+.navbar-sidebar--show .navbar-sidebar { transition-property: opacity, transform; }
+
+/* Design-guide entry cards share the documentation theme and keyboard focus. */
+.design-guide-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.design-guide-grid a { display: flex; flex-direction: column; gap: .5rem; padding: 1.25rem; border: 1px solid var(--ifm-color-emphasis-300); border-radius: 10px; color: inherit; text-decoration: none; }
+.design-guide-grid a:hover { border-color: var(--ifm-color-primary); }
+.design-guide-grid strong { color: var(--ifm-color-primary); }
+.design-guide-grid img { width: 100%; height: auto; border-radius: 6px; background: #f4f7fb; }
+.design-guide-grid span { font-size: .95rem; line-height: 1.55; }
+@media (max-width: 600px) { .design-guide-grid { grid-template-columns: 1fr; } }
+
+/* Blog index: a compact list of posts, not a stack of full-size articles.
+   Selectors use the stable page classes and element structure, since the
+   theme's own class names are hashed per build. */
+.blog-list-page main article {
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+/* The theme gives each post Infima's margin-bottom--xl (5rem, !important).
+   With future.v4 cascade layers a layered !important beats any site rule,
+   so offset it instead: sibling margins collapse, 5rem - 4rem = 1rem. */
+.blog-list-page main article + article { margin-top: -4rem; }
+.blog-list-page main article:first-of-type { padding-top: 0; }
+.blog-list-page main article > header > h2 {
+  font-size: 1.5rem;
+  line-height: 1.3;
+  margin-bottom: 0.25rem;
+}
+.blog-list-page main article > header > h2 a { color: var(--ifm-heading-color); }
+.blog-list-page main article > header > h2 a:hover { color: var(--ifm-color-primary); }
+.blog-list-page main article > header > div:first-of-type {
+  margin: 0 0 0.5rem !important;
+  font-size: 0.875rem;
+  color: var(--ifm-color-emphasis-700);
+}
+/* Every post has the same author; the post page still shows it. */
+.blog-list-page main article > header > .row { display: none; }
+.blog-list-page main article > .markdown { margin-bottom: 0.25rem; }
+.blog-list-page main article > footer { margin-top: 0.5rem !important; font-size: 0.875rem; }
+
+/* Blog columns are narrower than the docs; let small tables fit them. */
+.blog-wrapper .markdown .table-scroll table { min-width: 0; width: auto; }
+
+/* ---- Site-wide quiet layout ------------------------------------------ */
+
+.navbar {
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  font-size: 0.925rem;
+}
+.navbar__title { font-weight: 700; }
+
+/* Admonitions: a plain tinted block, no coloured edge bar, no icon header. */
+.theme-admonition {
+  border: 0;
+  border-top: 1px solid var(--ifm-color-emphasis-300);
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+  background: var(--ifm-color-emphasis-100);
+  color: var(--ifm-font-color-base);
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+}
+.theme-admonition > div:first-child {
+  text-transform: none;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+.theme-admonition > div:first-child svg { display: none; }
+.theme-admonition > div:first-child span { margin-right: 0; }
+.theme-admonition a { color: var(--ifm-color-primary); }
+
+/* Tables: booktabs rules instead of a boxed grid with stripes. */
+.markdown table {
+  border-collapse: collapse;
+  border-top: 1.5px solid var(--ifm-color-emphasis-600);
+  border-bottom: 1.5px solid var(--ifm-color-emphasis-600);
+  font-size: 0.9rem;
+}
+.markdown table thead tr { border-bottom: 1px solid var(--ifm-color-emphasis-500); }
+.markdown table tr { border-top: 0; background: none; }
+.markdown table tbody tr + tr { border-top: 1px solid var(--ifm-color-emphasis-200); }
+.markdown table th,
+.markdown table td { border: 0; padding: 0.45rem 0.9rem 0.45rem 0; }
+.markdown table th { text-align: left; font-weight: 600; }
+
+/* Code: flat panels. */
+.markdown pre,
+.theme-code-block { box-shadow: none; }
+.theme-code-block { border: 1px solid var(--ifm-color-emphasis-200); }
+
+/* Figures from the manual: white page, plain caption. */
+/* Markdown images are rewritten to hashed /assets/images/ paths; every
+   SVG image in the docs is a manual figure. */
+.markdown img[src$=".svg"] {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #fff;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  padding: 0.5rem 0;
+}
+
+/* Sidebar and table of contents: smaller, denser. */
+.menu { font-size: 0.9rem; }
+.menu__link { padding: 0.25rem 0.6rem; }
+.table-of-contents { font-size: 0.8rem; }
+
+/* Footer: compact and light. */
+.footer { border-top: 1px solid var(--ifm-color-emphasis-200); font-size: 0.85rem; }
+.footer__links { margin-bottom: 0.75rem; }
+.footer__link-item { color: var(--ifm-font-color-base); }
+.footer__copyright { font-size: 0.8rem; color: var(--ifm-color-emphasis-700); max-width: 52rem; margin: 0 auto; }
+.footer__logo { max-width: 48px; }
+
+/* Infima sizes markdown headings with its own variables; set them here. */
+.markdown h1:first-child { --ifm-h1-font-size: 2rem; margin-bottom: 1rem; }
+.markdown > h2 { --ifm-h2-font-size: 1.45rem; --ifm-h2-vertical-rhythm-top: 1.6; }
+.markdown > h3 { --ifm-h3-font-size: 1.15rem; }
+article header h1 { font-size: 2rem; }
+
+/* Breadcrumbs as plain text, not pills. */
+.breadcrumbs__link { background: none !important; padding: 0 0.2rem; font-size: 0.8rem; }
+.breadcrumbs__item--active .breadcrumbs__link { color: var(--ifm-color-emphasis-800); }
+
+/* The theme shows the footer logo at half opacity until hover. NSF requires
+   its full-color logo, so show it at full strength all the time. */
+.footer a[class*="footerLogoLink"] { opacity: 1; }

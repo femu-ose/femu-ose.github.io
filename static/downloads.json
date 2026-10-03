@@ -1,0 +1,133 @@
+{
+  "format_version": 1,
+  "implementation_reference": "39a55eeb637b23c26b3a2ce9254399c9e0b1b3be",
+  "path_base": "Paths are relative to the website base URL.",
+  "artifacts": [
+    {
+      "path": "configs/blackbox.conf",
+      "kind": "configuration",
+      "bytes": 423,
+      "sha256": "c33f1cac0c76e2ffcec50b97a062cb4a8fdd6a376fd82219f08b318ac700bfe7"
+    },
+    {
+      "path": "configs/channel-suspend.conf",
+      "kind": "configuration",
+      "bytes": 521,
+      "sha256": "cc5d51d8fdea99dde38f786a3612850a0a4daa164feb4d159d6ac1e7851a0ad2"
+    },
+    {
+      "path": "configs/csd.conf",
+      "kind": "configuration",
+      "bytes": 478,
+      "sha256": "4c756556921f3cddefd7af0bba672dcf5bbad42ac96f93598dc31d038b04cf11"
+    },
+    {
+      "path": "configs/dftl.conf",
+      "kind": "configuration",
+      "bytes": 470,
+      "sha256": "b6dc2b21e95536fd5c0368efdbb53f9c8d3369dd2d3d0b19c9e5d9c37e5240d9"
+    },
+    {
+      "path": "configs/fast.conf",
+      "kind": "configuration",
+      "bytes": 449,
+      "sha256": "39f1d3125b72fd93a7fd8d2b3d58019eee499a62105a35cbe8343c45f8904aa6"
+    },
+    {
+      "path": "configs/fdp.conf",
+      "kind": "configuration",
+      "bytes": 509,
+      "sha256": "158ee37bf1e0489fdeb4f27bf0da65c9602830f9b2f21ac5021c1b93b53be0d7"
+    },
+    {
+      "path": "configs/gc-cost-benefit.conf",
+      "kind": "configuration",
+      "bytes": 448,
+      "sha256": "ed6d18c1eafa88cea77a8016d5832c246ef75525a737601f1b0a126376a837bf"
+    },
+    {
+      "path": "configs/hybrid.conf",
+      "kind": "configuration",
+      "bytes": 451,
+      "sha256": "0dc8f001fd9d7c90e2a377220cccbf310d1c59c04cce114fa54f940b3f90038f"
+    },
+    {
+      "path": "configs/kv.conf",
+      "kind": "configuration",
+      "bytes": 423,
+      "sha256": "72cd1f772983493478b56703eebd40ff178bbd439f05bbea33789df513c84dfb"
+    },
+    {
+      "path": "configs/mixed.conf",
+      "kind": "configuration",
+      "bytes": 486,
+      "sha256": "78a6901a9b11b35fdbcbea93945643aadc5d18dd80f7cbcf4a33d065bb1e9f84"
+    },
+    {
+      "path": "configs/nossd-link.conf",
+      "kind": "configuration",
+      "bytes": 275,
+      "sha256": "bf64e45606f12aecdbc9e94eb2d53b212f193eac2908cb9ecd862e07abfe772a"
+    },
+    {
+      "path": "configs/nossd.conf",
+      "kind": "configuration",
+      "bytes": 193,
+      "sha256": "d85e4d2489b7e6d780bfce78c3e1e06a231dab2aa26e6c95698c6ae680e2a6f5"
+    },
+    {
+      "path": "configs/openchannel.conf",
+      "kind": "configuration",
+      "bytes": 301,
+      "sha256": "5d687ce6d7e64aafde02950a3460b4933ab7fd50e9401e0e71ee0d39cb69536e"
+    },
+    {
+      "path": "configs/overprovisioned.conf",
+      "kind": "configuration",
+      "bytes": 420,
+      "sha256": "568a260c3d34ec6e13764b9d832253bb479c95af3356327cfc01e252bb5db26c"
+    },
+    {
+      "path": "configs/qlc.conf",
+      "kind": "configuration",
+      "bytes": 451,
+      "sha256": "9382fad9b6e634c5580624d400930d5eaa4a57545c352e22d00a423ff6853e72"
+    },
+    {
+      "path": "configs/read-cache.conf",
+      "kind": "configuration",
+      "bytes": 469,
+      "sha256": "ccc4aa31aa2c54d0e49643d38f2f3e1be2ae9a7903059fcbb6a4de2aa8888c2a"
+    },
+    {
+      "path": "configs/refresh.conf",
+      "kind": "configuration",
+      "bytes": 533,
+      "sha256": "b4d133fd27504bb65ae27aefb98913164b37fa00e2b10de184fcf0108ebe08e5"
+    },
+    {
+      "path": "configs/write-buffer.conf",
+      "kind": "configuration",
+      "bytes": 494,
+      "sha256": "d20d6cf0b2d6b7611e45c818601a8c217ef74acae6626bf38543e197118a8791"
+    },
+    {
+      "path": "configs/zns.conf",
+      "kind": "configuration",
+      "bytes": 343,
+      "sha256": "1ae95a204457c3afdad1898d2b3a93dd7f9c96c1ca2fb0f7dfdb3987d612215b"
+    },
+    {
+      "path": "tutorials/ecc-boundary.patch",
+      "kind": "tutorial patch",
+      "bytes": 591,
+      "sha256": "cc35a9048e63b66ce31366e152ce8683632e3fb7abe3837c6a9c79c54b182c41"
+    },
+    {
+      "path": "tools/decode-femu-stats.py",
+      "kind": "analysis tool",
+      "bytes": 1974,
+      "sha256": "787824640a27f91ea18ffb6490ba5297ff16c7a5748265978cc483e59fd48193"
+    }
+  ]
+}

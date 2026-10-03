@@ -1,0 +1,121 @@
+/* Landing page: one narrow, centred column of compact text, sections
+   separated by rules. No cards, no shaded panels. */
+
+.page {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+.page p,
+.page li {
+  text-align: justify;
+  hyphens: auto;
+}
+
+.hero {
+  padding: 3rem 0 1.75rem;
+}
+.title {
+  text-align: center;
+  font-size: 2.4rem;
+  font-weight: 800;
+  margin-bottom: 0.25rem;
+  color: var(--ifm-color-primary-darkest);
+}
+[data-theme='dark'] .title { color: var(--ifm-color-primary); }
+.subtitle {
+  text-align: center !important;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  color: var(--ifm-color-emphasis-700);
+  margin-bottom: 1.75rem;
+}
+.lede {
+  margin-bottom: 0.75rem;
+}
+.uses {
+  padding-left: 1.4rem;
+  margin-bottom: 1.25rem;
+}
+.uses li {
+  margin-bottom: 0.4rem;
+}
+.uses li::marker {
+  font-weight: 700;
+  color: var(--ifm-color-primary);
+}
+.meta {
+  font-size: 0.825rem;
+  color: var(--ifm-color-emphasis-700);
+  text-align: left !important;
+  margin: 0;
+}
+
+.figure {
+  margin: 0;
+  padding: 1.75rem 0;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+}
+.figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #fff;
+}
+.figure figcaption {
+  margin-top: 0.6rem;
+  font-size: 0.825rem;
+  line-height: 1.5;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.section {
+  padding: 1.75rem 0;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+}
+.section h2 {
+  font-size: 1.35rem;
+  margin-bottom: 0.5rem;
+}
+.last {
+  padding-bottom: 3rem;
+}
+.sectionLead {
+  margin-bottom: 0.75rem;
+}
+
+.modeTable {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.9rem;
+}
+.modeTable tr {
+  background: none !important;
+  border: 0;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+.modeTable tr:first-child { border-top: 1px solid var(--ifm-color-emphasis-400); }
+.modeTable tr:last-child { border-bottom: 1px solid var(--ifm-color-emphasis-400); }
+.modeTable td {
+  border: 0;
+  padding: 0.4rem 1rem 0.4rem 0;
+  vertical-align: baseline;
+}
+.modeName { font-weight: 600; white-space: nowrap; }
+.modeSelect { white-space: nowrap; }
+.modeSelect code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 0.8rem;
+  color: var(--ifm-color-emphasis-700);
+}
+.after { font-size: 0.9rem; }
+@media (max-width: 700px) {
+  .modeSelect { display: none; }
+  .page p, .page li { text-align: left; }
+}
