@@ -268,10 +268,11 @@ the source revision used to validate a design diagram.
 
 ## Changes made with coding agents
 
-Contributions written with AI coding agents are welcome, as the repository
-README says. You remain the author: read and review every generated line,
-run the tests yourself, and say in the pull request description which parts
-were substantially tool-generated, so reviewers know where to look harder.
+Contributions made with AI coding tools are welcome. You remain the author:
+understand and be able to explain every line, run the tests yourself, add an
+`Assisted-by:` line to each commit a tool helped write, and open an issue first
+for a change of more than about 300 lines. The [AI policy](ai-policy.md) has the
+full rules.
 
 ## Keep the change reviewable
 

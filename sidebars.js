@@ -52,7 +52,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Community',
-      items: ['community', 'community/first-test', 'community/developer-path', 'community/teaching', 'community/contributing', 'community/governance', 'community/licensing'],
+      items: ['community', 'community/first-test', 'community/developer-path', 'community/teaching', 'community/contributing', 'community/ai-policy', 'community/governance', 'community/licensing'],
     },
   ],
 };
