@@ -199,9 +199,7 @@ const config = {
           'Any opinions, findings and conclusions or recommendations expressed ' +
           'in this material are those of the author(s) and do not necessarily ' +
           'reflect the views of the National Science Foundation.<br/>' +
-          `FEMU is open source under the GNU GPL v2.0 or later; this site's own pages are CC BY 4.0. ` +
-          'Page views are counted with <a href="https://www.goatcounter.com">GoatCounter</a>, without cookies. ' +
-          `© ${new Date().getFullYear()} MoatLab.`,
+          `FEMU is open source under the GNU GPL v2.0 or later; this site's own pages are CC BY 4.0. © ${new Date().getFullYear()} MoatLab.`,
       },
       prism: {
         theme: readableLightCodeTheme,
