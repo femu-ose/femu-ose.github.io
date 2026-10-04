@@ -3,12 +3,12 @@ title: "NVMe frontend"
 description: "The NVMe frontend is the part of -device femu that a guest driver talks to: the PCI function, the controller registers, the admin and I/O queues, the poller..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/nvme-frontend.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/nvme-frontend.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/nvme-frontend.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/nvme-frontend.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -62,13 +62,15 @@ vectors at config offset 0x50, a PCIe capability at 0x80, and MSI-X with
 ```text
  BAR0, reg_size bytes
  offset   register   FEMU behaviour
- 0x0000   CAP        MQES = entries, CQR = cqr, AMS = 1, TO = 0xf, DSTRD = stride,
+ 0x0000   CAP        MQES = entries, CQR = cqr, AMS = 0, TO = 0xf, DSTRD = stride,
                      NSSRS = 0, CSS = NVM + I/O command sets by CSI,
-                     MPSMIN = mpsmin, MPSMAX = mpsmax                      read only
- 0x0008   VS         0x00010400 (1.4)                                      read only
+                     MPSMIN = mpsmin, MPSMAX = mpsmax,
+                     CRMS = CRWMS (not with OCSSD)                         read only
+ 0x0008   VS         0x00020100 (2.1); 0x00010400 (1.4) with OCSSD         read only
  0x000c   INTMS      set interrupt mask bits (MSI and pin; ignored with MSI-X)
  0x0010   INTMC      clear interrupt mask bits; a held MSI is sent when unmasked
- 0x0014   CC         EN, SHN, MPS, IOSQES, IOCQES; see the state machine below
+ 0x0014   CC         EN, SHN, MPS, IOSQES, IOCQES, CSS; AMS must be 0 (round
+                     robin); see the state machine below
  0x001c   CSTS       RDY, CFS, SHST                                        read only
  0x0020   NSSR       reads 0; writes ignored (no subsystem reset)
  0x0024   AQA        admin ASQS and ACQS, 1..4095 (0's based): 2..4096 entries
@@ -76,6 +78,7 @@ vectors at config offset 0x50, a PCIe capability at 0x80, and MSI-X with
  0x0030   ACQ        admin CQ base, 64 bits, may be written as two dwords
  0x0038   CMBLOC     cmbloc                                                read only
  0x003c   CMBSZ      cmbsz                                                 read only
+ 0x0068   CRTO       CRWMT = CAP.TO, CRIMT = 0 (reads 0 with OCSSD)        read only
  0x1000   doorbells: DB = 4 << stride bytes
           0x1000 + (2 * qid)     * DB   SQ qid tail
           0x1000 + (2 * qid + 1) * DB   CQ qid head
@@ -110,6 +113,7 @@ mapped directly and has no CMB case.
                     v                                                      |
         nvme_start_ctrl():                                                 |
           check MPS against CAP, IOSQES/IOCQES, AQA, ASQ/ACQ alignment      |
+          check CC.CSS against CAP.CSS (000b and 110b are offered)         |
           map the admin CQ and SQ                                          |
           run each distinct mode's start_ctrl hook                         |
           nvme_start_dataplane(): create pollers on the first enable,      |
@@ -373,9 +377,21 @@ Things to note:
   submission order.
 - **Full completion queues.** A due completion whose CQ has no free slot waits
   in the poller's backlog, and the poller retries it every sweep.
-- **Abort** marks a command that is still in the SQ (not yet fetched) so that
-  it completes as aborted when fetched. A command already fetched is not
-  aborted.
+- **Abort** looks for the command in the SQ between head and tail with the
+  pollers paused. If it is there, the controller records it in its own state
+  (the SQ itself is never written) and the Abort completes with dword 0 bit 0
+  clear; the command then completes with Command Abort Requested when it is
+  fetched, without running. A command already fetched is not aborted, and the
+  Abort completes with bit 0 set. Admin commands run one at a time, so the
+  Aborts outstanding together are the one running and those still in the
+  admin SQ; with more than `acl` of them waiting, the running one fails with
+  Abort Command Limit Exceeded. A command queued behind an Abort on the admin
+  queue can be aborted too.
+- **Media errors carry DNR.** Unrecovered Read Error (a block marked by Write
+  Uncorrectable, or an injected read error) and Compare Failure always set Do
+  Not Retry, on every command that can return them: a retry would fail again.
+- **Admin commands use PRPs.** An admin command whose PSDT is not 00b fails
+  with Invalid Field in Command.
 
 ## Completion timing
 
@@ -490,6 +506,47 @@ of its own mode, so I/O dispatches on the namespace, not the controller.
 Admin commands go to the controller's table; Get Log Page tries the named
 namespace's table first, then the controller's.
 
+### Capability registry
+
+`hw/femu/nvme-caps.c` is the one place that says what the controller
+handles. `nvme_admin_effects()` and `nvme_io_effects()` return the Commands
+Supported and Effects entry of an admin opcode, or of an I/O opcode in one
+command set, and zero for an opcode that is not handled.
+`nvme_log_support()` returns the Supported Log Pages entry of a log id in one
+command set.
+
+An I/O opcode's entry for a command set is what the namespaces of that set
+handle between them (`nvme_ns_io_effects()` for one namespace): Flush, the
+optional commands and I/O Management, which `nvme_io_cmd()` serves itself,
+and then the mode's own table, so log 05h lists the Open-Channel vector
+commands, the CSD commands and the key value commands of the modes present,
+and leaves Read and Write out for Open-Channel 1.2, which refuses them. A
+command set with no namespace reports what a namespace of it would handle.
+The admin entries add the commands of the controller's mode: BBSSD 0xEF, the
+Open-Channel and CSD admin commands. `nvme_caps_id_ctrl()` fills OACS, ONCS, OCFS, LPA and SANICAP
+from those three each time Identify Controller is answered. LPA bit 5 stays
+clear: setting it would oblige a Command Scope in every log 05h entry, and
+Linux warns about any I/O entry bit beyond CSUPP and LBCC as an unusual
+effect.
+
+Logs 05h and 00h are built from the same functions, and `nvme_io_cmd()` runs
+an optional NVM command (Compare, Dataset Management, Write Zeroes, Copy,
+Verify, Write Uncorrectable) only where `nvme_io_effects()` lists it for the
+namespace's command set. Features follow the same rule through
+`nvme_fid_supported()`, which Get Features, Set Features and log 12h share.
+
+The `caps-*` qtests check the registry against dispatch. Four differences are
+known and left for a decision, and the test holds each to its current
+answer: I/O Management Send and Receive take their no-operation on every
+namespace though log 05h lists them only for NVM with FDP on; 0xEE answers
+Invalid Field outside Open-Channel; the Changed Zone List (BFh) and Chunk
+Information (CAh) pages answer when the command names another command set;
+and with a subsystem whose FDP is off the FDP pages answer FDP Disabled
+without being listed. Outside the test's reach, log 00h takes its command
+set from CDW14 even when CC.CSS selects NVM only, Get Features serves the
+Select field while ONCS bit 4 is clear, and CNS 1Ch always lists the NVM,
+zoned and key value sets.
+
 ### Namespace routing
 
 `nvme_ns()` maps an NSID to a namespace that is both allocated and attached
@@ -516,18 +573,28 @@ Namespace Management.
 | Supported Log Pages | 00h | lists the ids the controller advertises (04h only with Namespace Management) |
 | Error Information | 01h | newest `elpe` + 1 entries |
 | SMART / Health | 02h | host totals from the pollers, media wear, `temperature` |
-| Firmware Slot | 03h | |
+| Firmware Slot | 03h | one slot, read-only; Identify FRMW reports the same |
 | Changed Namespace List | 04h | namespaces whose attributes changed |
 | Commands Supported and Effects | 05h | per command set (NVM, zoned, KV) |
 | Device Self-test | 06h | tests complete at once |
 | Telemetry Host / Controller | 07h, 08h | 07h: header plus the C0h counters captured by the last Create; 08h: header only |
-| Endurance Group | 09h | with `femu-subsys` |
+| Endurance Group | 09h | with `femu-subsys`; Identify reports the group (CTRATT bit 4, ENDGIDMAX, ENDGID) with it |
 | Persistent Event | 0Dh | kept in `pel_file` if set |
 | LBA Status | 0Eh | |
+| Feature Identifiers Supported and Effects | 12h | built from the check Get and Set Features use; per command set (CSI) when CC.CSS is 110b |
+| NVMe-MI Commands Supported and Effects | 13h | all zero: no NVMe-MI Send or Receive |
 | FDP Configurations, RUH Usage, Statistics, Events | 20h-23h | with FDP |
 | Sanitize Status | 81h | |
 | Changed Zone List | BFh | ZNS, from the mode |
+| Chunk Information | CAh | Open-Channel 2.0, from the mode |
 | FEMU media counters | C0h | WAF and FTL counters |
+
+Get Log Page refuses an id that log 00h lists for no command set with
+Invalid Log Page (`nvme_log_answered()`). Logs 00h, 05h and 12h refuse a
+CSI other than NVM, KV and zoned with I/O Command Set Not Supported when
+CC.CSS selects by CSI. The one exception is the FDP pages
+on a controller with a subsystem: while FDP is off they are not listed but
+still answer, with FDP Disabled.
 
 Get and Set Features answer Arbitration (01h), Power Management (02h, one
 power state), LBA Range Type (03h), Temperature Threshold (04h), Error
@@ -535,7 +602,10 @@ Recovery (05h), Volatile Write Cache (06h, only with `vwc=1`), Number of
 Queues (07h), Interrupt Coalescing (08h), Interrupt Vector Configuration
 (09h), Write Atomicity (0Ah), Asynchronous Event Configuration (0Bh),
 Timestamp (0Eh), Host Behavior Support (16h), Command Set Profile (19h), FDP
-(1Dh, 1Eh), Key Value Configuration (20h) and Software Progress Marker (80h).
+(1Dh, 1Eh, only with `femu-subsys`), Key Value Configuration (20h, only with
+a KV namespace) and Software Progress Marker (80h). Any other identifier, or
+one of these without what it needs, fails with Invalid Field in Command, and
+log 12h lists exactly the identifiers that answer.
 Only the FDP features report a saved value: FDP Mode is fixed at realize,
 FDP Events can be changed at run time. A controller reset
 (`nvme_reset_features()`) restores Arbitration, Power Management, the
@@ -627,6 +697,16 @@ registers with no guest. Cases that target this chapter include:
 | `cq-full` | completions wait for CQ space |
 | `delete-sq-in-flight`, `ns-retire-pollers` | queue and namespace removal with I/O in flight |
 | `aer-limit` | the AER limit |
+| `abort` | Abort leaves the SQ unwritten, aborts queued admin and I/O commands, and enforces ACL |
+| `cc-css` | an unoffered CC.CSS fails the enable |
+| `admin-psdt` | admin commands naming SGLs are refused |
+| `media-dnr` | Unrecovered Read and Compare Failure set DNR |
+| `fid-effects`, `fid-effects-kv`, `fid-effects-fdp` | log 12h agrees with Get Features; log 13h is zero |
+| `frmw` | FRMW and the firmware slot log agree |
+| `caps-*` (22 configurations: every mode, the optional commands on, off and in pairs, Namespace Management, Streams, PI, FDP, mixed namespace modes) | every admin opcode, every I/O opcode on every namespace and every log id per command set is answered exactly when logs 05h and 00h list it; log 12h agrees with Get Features; OACS, ONCS, OCFS, LPA, SANICAP, VWC, FRMW, SGLS, CNS 1Ch and the Copy limits in Identify Namespace agree with the logs and with what the controller does; ONCS and the Format bit match what the configuration asks for; VS, CAP.CRMS, CRTO and BPCAP match the reported version (2.1, or 1.4 for Open-Channel), CAP.AMS is 0, and LPA bit 5 and every command scope are clear |
+| `ns-mgmt-before-identify` | a managed bbssd namespace is addressed correctly before the host reads Identify Controller |
+| `v2-refusals` | CC.AMS other than round robin fails the enable; Identify CNS 00h on a KV namespace fails with Invalid I/O Command Set while CNS 08h answers; logs 00h and 05h refuse an unknown CSI; CNS 07h for KV is refused under CC.CSS 000b while CNS 1Ah is not; CNS 1Fh answers an allocated NSID and refuses 0 and FFFFFFFFh |
+| `endgrp-reported` | with a subsystem and FDP off, CTRATT bit 4, ENDGIDMAX and the ENDGID of a block and a KV namespace (CNS 08h, and CNS 05h for KV) report the one endurance group |
 | `features-reset`, `features-reset-vwc` | features return to defaults on reset |
 | `admin-fuzz`, `io-fuzz` and its variants | structured fuzzing of admin and I/O commands |
 
@@ -667,12 +747,13 @@ The documentation example above (`frontend-sharded-pollers`) is started by
   `femu_ftl_process_req()` if it charges time on the FTL thread. A mode that
   charges time on the poller adds it to `req->expire_time` in its `io_cmd`.
 - **A new I/O command shared by all block modes**: add it to `nvme_io_cmd()`
-  and to the Commands Supported and Effects tables at the top of
-  `hw/femu/nvme-admin.c`.
-- **A new admin command, feature or log page**: `nvme_admin_cmd()`,
-  `nvme_set_feature()`, `nvme_get_feature()` and the support tables
-  `nvme_feature_support[]` and `nvme_feature_cap[]`, `nvme_get_log()` and
-  `nvme_supported_log_pages()`.
+  and to `nvme_io_effects()` in `hw/femu/nvme-caps.c`.
+- **A new admin command, feature or log page**: `nvme_admin_cmd()` and
+  `nvme_admin_effects()`; `nvme_set_feature()`, `nvme_get_feature()` and the
+  support tables `nvme_feature_support[]` and `nvme_feature_cap[]` (with
+  `nvme_fid_supported()` for a feature that needs something else present);
+  `nvme_get_log()` and `nvme_log_support()`. An Identify bit that sums up
+  commands or pages is derived in `nvme_caps_id_ctrl()`, not set by hand.
 - **A new host-side cost**: add it next to the host-link and firmware-CPU
   models in `nvme_process_cq_cpl()`.
 - **Anything that changes state the I/O path reads**: wrap it in
@@ -688,6 +769,7 @@ The documentation example above (`frontend-sharded-pollers`) is started by
 | --- | --- |
 | `hw/femu/femu.c` | `nvme_init_pci()`, `nvme_init_cmb()`, `nvme_init_ctrl()` (Identify Controller, CAP), `nvme_check_constraints()`, `nvme_mmio_write()`, `nvme_write_bar()`, `nvme_process_db_admin()`, `nvme_process_db_io()`, `nvme_start_ctrl()`, `nvme_clear_ctrl()`, `nvme_reset_features()`, `femu_ftl_thread()`, `femu_ftl_process_req()`, `femu_needs_ftl_thread()`, `nvme_register_extensions()`, `nvme_register_extensions_ns()`, `femu_realize()`, `femu_exit()` |
 | `hw/femu/nvme-admin.c` | `nvme_create_sq()`, `nvme_create_cq()`, `nvme_del_sq()`, `nvme_del_cq()`, `nvme_init_poller()`, `nvme_start_dataplane()`, `nvme_set_db_memory()`, `nvme_identify()`, `nvme_get_feature()`, `nvme_set_feature()`, `nvme_get_log()`, `nvme_abort_req()`, `nvme_admin_cmd()`, `nvme_process_aers()`, `nvme_process_sq_admin()` |
+| `hw/femu/nvme-caps.c` | `nvme_admin_effects()`, `nvme_io_effects()`, `nvme_ns_io_effects()`, `nvme_log_support()`, `nvme_log_answered()`, `nvme_caps_id_ctrl()` |
 | `hw/femu/nvme-io.c` | `nvme_poller()`, `nvme_process_sq_io()`, `nvme_update_sq_eventidx()`, `nvme_process_cq_cpl()`, `nvme_post_cqe()`, `nvme_rw()`, `nvme_io_cmd()` |
 | `hw/femu/nvme-util.c` | `nvme_pause_pollers()`, `nvme_resume_pollers()`, `nvme_update_sq_tail()`, `nvme_update_cq_head()`, `nvme_update_cq_eventidx()`, `nvme_init_sq()`, `nvme_init_cq()` |
 | `hw/femu/intr.c` | `nvme_isr_notify_io()`, `nvme_isr_notify_admin()`, `nvme_irq_update()`, `nvme_irq_mask_changed()`, `nvme_setup_virq()`, vector notifiers |

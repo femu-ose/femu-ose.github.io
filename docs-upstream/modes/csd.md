@@ -3,12 +3,12 @@ title: "Computational storage (CSD)"
 description: "CSD mode (femu_mode=4) emulates a computational storage drive. On top of a normal NVMe namespace, the device has its own memory (function data memory, FDM)..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/modes/csd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/modes/csd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/csd.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/modes/csd.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/csd.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/modes/csd.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -78,6 +78,14 @@ The FEMU device in that script is:
 -device femu,devsz_mb=4096,namespaces=1,femu_mode=4,secsz=512,secs_per_pg=8,pgs_per_blk=256,blks_per_pl=256,pls_per_lun=1,luns_per_ch=8,nchs=8,pg_rd_lat=40000,pg_wr_lat=200000,blk_er_lat=2000000,ch_xfer_lat=0,gc_thres_pcent=75,gc_thres_pcent_high=95,fdm_size=64,nr_cu=4,nr_thread=4,time_slice=200000,context_switch_time=200,csf_runtime_scale=3
 ```
 
+The preset `hw/femu/scripts/configs/csd.conf` describes the same device
+without the three scheduler properties that have no effect.
+[`ssd-config.sh`](../tutorials/09-ssd-config-files.md) expands it to:
+
+```
+-device femu,id=nvme0,devsz_mb=4096,namespaces=1,secsz=512,secs_per_pg=8,pgs_per_blk=256,blks_per_pl=256,pls_per_lun=1,luns_per_ch=8,nchs=8,pg_rd_lat=40000,pg_wr_lat=200000,blk_er_lat=2000000,gc_thres_pcent=75,gc_thres_pcent_high=95,fdm_size=64,nr_cu=4,csf_runtime_scale=3,femu_mode=4
+```
+
 `run-csd.sh` does not set `csd_program_dir`, so it runs phantom programs
 only. To load your own programs, add the directory after the other
 `FEMU_OPTIONS` lines in `run-csd.sh`:
@@ -107,6 +115,9 @@ namespace; see the [BlackBox guide](blackbox.md#configuration).
 - `csf_runtime_scale`: a program that declares no run time and no scale of
   its own holds its unit for its measured host run time times this value
   (default 3).
+  A completion carries the program's result, so it never arrives before the
+  host has run the program: a run time, declared or scaled, shorter than the
+  host's own is not reached. QEMU warns once when that happens.
 - `csd_program_dir`: the host directory programs load from.
 - `nr_thread`, `time_slice` and `context_switch_time` are accepted so CEMU
   configurations still start. They have no effect, and a value other than
@@ -217,7 +228,7 @@ sudo ./csd/csd-passthru /dev/nvme0n1 bench 4096 32
 ```
 
 `bench` reports the average latency of device memory writes, reads and
-namespace-to-memory copies. [hw/femu/tests/csd/README.md](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/tests/csd/README.md)
+namespace-to-memory copies. [hw/femu/tests/csd/README.md](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/tests/csd/README.md)
 lists every subcommand, the eBPF steps and the program ABI.
 
 The vendor log page C0h counts the namespace's NAND traffic as for
@@ -295,7 +306,7 @@ please also cite:
 
 ## Related pages
 
-- [hw/femu/tests/csd/README.md](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/tests/csd/README.md): the guest tool
+- [hw/femu/tests/csd/README.md](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/tests/csd/README.md): the guest tool
   and program ABI
 - [BlackBox SSD](blackbox.md): the FTL under the namespace
 - [Timing model: KV and CSD](../concepts/timing-model.md#kv-and-csd)

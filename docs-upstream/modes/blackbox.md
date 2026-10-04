@@ -3,12 +3,12 @@ title: "BlackBox SSD (BBSSD)"
 description: "BlackBox mode (femu_mode=1) emulates a conventional NVMe SSD: the device runs its own flash translation layer (FTL), garbage collection (GC) and NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/modes/blackbox.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/modes/blackbox.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/modes/blackbox.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/modes/blackbox.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -118,6 +118,11 @@ Background GC starts when the share of lines in use reaches
 - `fifo`: the oldest closed line.
 - `d-choice`: samples 4 candidate lines at random (a line can be drawn
   twice) and takes the one with the fewest valid pages.
+
+`random` and `d-choice` draw from a generator seeded by `gc_seed` (default
+0), so the same configuration and workload pick the same victims and give the
+same write amplification on every run. Set a different `gc_seed` per run to
+vary them.
 
 ### Mapping and caches
 

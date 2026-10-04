@@ -3,12 +3,12 @@ title: "Tutorial 04: Flexible Data Placement"
 description: "You start a BlackBox SSD with Flexible Data Placement (FDP), read its FDP configuration and status with nvme-cli, write through a placement identifier and..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/tutorials/04-fdp.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/tutorials/04-fdp.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/tutorials/04-fdp.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/tutorials/04-fdp.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/tutorials/04-fdp.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/tutorials/04-fdp.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

@@ -3,12 +3,12 @@ title: "Flexible Data Placement (FDP)"
 description: "Flexible Data Placement lets the host tell the SSD which writes belong together. The device groups its NAND into reclaim units and offers a few reclaim unit..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/features/fdp.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/features/fdp.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/fdp.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/features/fdp.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/fdp.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/features/fdp.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -99,6 +99,8 @@ apply. Two properties are specific to FDP
 
 - `gc_strategy`: how GC picks a victim reclaim unit: 0 greedy (default),
   1 cost-benefit, 2 random, 4 per-handle. `gc_policy` does not apply under FDP.
+  The random strategy draws from a generator seeded by `gc_seed`, so it
+  repeats run to run.
 - `fdp_trim_erase_all`: non-zero makes a deallocate reset every reclaim unit
   instead of the given ranges.
 

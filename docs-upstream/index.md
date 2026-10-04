@@ -4,12 +4,12 @@ description: "Start with the goal you have. What changed since the last release 
 slug: /
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/README.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/README.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/README.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/README.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/README.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/README.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -53,8 +53,8 @@ and what the guest needs. In short:
 | A conventional SSD with a device FTL, GC and WAF | BlackBox SSD (`femu_mode=1`) | `run-blackbox.sh` | [BlackBox](modes/blackbox.md) |
 | A Zoned Namespace SSD | ZNS (`femu_mode=3`) | `run-zns.sh` | [ZNS](modes/zns.md) |
 | A host-managed OpenChannel SSD | OCSSD (`femu_mode=0`) | `run-whitebox.sh` | [OCSSD](modes/ocssd.md) |
-| A key-value SSD | KV (`femu_mode=5`) | none | [KV](modes/kvssd.md) |
-| Computational storage | CSD (`femu_mode=4`) | `run-csd.sh` | [CSD](modes/csd.md), [CSD guest tools](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/tests/csd/README.md) |
+| A key-value SSD | KV (`femu_mode=5`) | `run-kvssd.sh` | [KV](modes/kvssd.md) |
+| Computational storage | CSD (`femu_mode=4`) | `run-csd.sh` | [CSD](modes/csd.md), [CSD guest tools](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/tests/csd/README.md) |
 | Flexible Data Placement | BBSSD with `femu-subsys,fdp=on` | `run-blackbox-fdp.sh` | [FDP](features/fdp.md) |
 | Create and delete namespaces from the guest | NoSSD or BBSSD with `ns_mgmt=on` | none | [Namespace management](features/ns-management-and-pi.md#namespace-management) |
 | Per-block metadata and protection information | NoSSD or BBSSD with `meta`, `mc`, `pi=on` | none | [Metadata and PI](features/ns-management-and-pi.md#metadata-and-protection-information) |
@@ -78,6 +78,9 @@ The guest kernel each mode needs is in
 - [Log pages and counters](reference/log-pages-and-counters.md): vendor log C0h
   (WAF and media counters), telemetry, supported log pages, asynchronous
   events, keeping the Persistent Event log in a file.
+- [QMP query-femu](reference/query-femu.md): the FTL state of a bbssd
+  namespace (geometry, write counters, line states) from the host, with no
+  guest tools.
 - [Changelog](changelog.md): what changed since femu-v9.0.1, including
   properties that are now refused and settings whose effect changed.
 - [Scripts and tools](reference/scripts.md): every shipped script and tool,
@@ -112,8 +115,9 @@ and a source map:
   [NoSSD](design/nossd.md) and [CXL SSD](design/cxl-ssd.md).
 
 The same pages, with figures, are collected in one PDF:
-[the FEMU Manual](pathname:///pdf/femu-manual.pdf). The Markdown pages are the reference
-when the two differ.
+[the FEMU Manual](https://femu-ose.github.io/pdf/femu-manual.pdf), hosted on the
+[FEMU website](https://femu-ose.github.io/). The Markdown pages are the reference when the
+two differ.
 
 ## I want to measure or tune
 
@@ -139,8 +143,10 @@ when the two differ.
 - [Code structure](development/code-structure.md): what lives where under
   `hw/femu/`, and where to start a change. [Architecture](concepts/architecture.md)
   explains how the parts work together.
-- [Contributing](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/CONTRIBUTING.md): style, tests, sign-off and pull
+- [Contributing](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/CONTRIBUTING.md): style, tests, sign-off and pull
   requests.
+- [AI policy](ai-policy.md): using AI coding tools, disclosure with
+  `Assisted-by:`, and what is not allowed.
 - `hw/femu/scripts/gen-property-docs.py` regenerates the property reference,
   and `hw/femu/scripts/check-doc-links.py` checks that every relative link in
   the docs resolves. CI runs both.
@@ -148,8 +154,8 @@ when the two differ.
 ## How to cite
 
 If you use FEMU in your research, cite the FAST '18 paper. The BibTeX entry
-is in [the README](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/README.md#primary-citation), and
-[CITATION.cff](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/CITATION.cff) has the same entry for citation tools.
+is in [the README](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/README.md#primary-citation), and
+[CITATION.cff](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/CITATION.cff) has the same entry for citation tools.
 If you use FDP, the CXL SSD or CSD, also cite the paper that mode comes from:
 [WARP](features/fdp.md#citation) (FAST '26), [Cylon](modes/cxl-ssd.md#citation)
 (FAST '26) or [CEMU](modes/csd.md#citation) (ASPLOS '26).

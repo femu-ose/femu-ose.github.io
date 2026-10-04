@@ -3,12 +3,12 @@ title: "FEMU design"
 description: "This is the design document for FEMU's emulated storage devices. It explains how FEMU is built, one component per chapter, so you can predict what a..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/README.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/README.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/README.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/README.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/README.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/README.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -101,7 +101,7 @@ the same FTL and NAND timing code, each device with its own instance.
  QEMU PROCESS          v                                           v
  +-------------------------------------------+  +--------------------------------------+
  | 1. INTERFACE   -device femu               |  | 1. INTERFACE   -device femu-cxl-ssd  |
- |    PCIe NVMe controller, NVMe 1.4         |  |    CXL Type-3 volatile memory,       |
+ |    PCIe NVMe controller, NVMe 2.1         |  |    CXL Type-3 volatile memory,       |
  |    BAR0 registers + doorbells             |  |    subclass of cxl-type3             |
  |    BAR4 MSI-X, MSI, pin; BAR2 CMB         |  |    I/O overlay "femu-cxl-media" on   |
  |  -device femu-subsys (optional)           |  |    each reachable CXL window         |
@@ -131,7 +131,7 @@ the same FTL and NAND timing code, each device with its own instance.
                        |
  +---------------------v---------------------------------------------------------------+
  | 5. NAND TIMING  nand-media.c: busy-until time per LUN or plane, channel bus,       |
- |                 cell-type tables, suspend, ECC     timing.c: OCSSD timestamps       |
+ |                 cell-type tables, suspend, ECC     oc-timing.c: OCSSD 0xEE times    |
  +-------------------------------------------------------------------------------------+
 
  6. MEMORY BACKEND (data only; layers 4 and 5 never touch it)
@@ -402,7 +402,7 @@ vCPUs keep running.
 | `hw/femu/nvme-admin.c`, `nvme-io.c`, `nvme-util.c`, `dma.c`, `intr.c` | the NVMe frontend |
 | `hw/femu/nvme-pel.c`, `nvme-pi.c`, `nvme-streams.c` | Persistent Event Log, protection information, Streams |
 | `hw/femu/nossd/`, `bbssd/`, `zns/`, `ocssd/`, `kvssd/`, `csd/` | the modes; `bbssd/` also holds the FTL |
-| `hw/femu/nand/`, `hw/femu/timing-model/` | NAND timing |
+| `hw/femu/nand/`, `hw/femu/ocssd/oc-timing.c` | NAND timing |
 | `hw/femu/backend/dram.c` | the memory backend |
 | `hw/femu/cxlssd/` | the CXL SSD |
 | `hw/femu/lib/` | rings and the priority queue |

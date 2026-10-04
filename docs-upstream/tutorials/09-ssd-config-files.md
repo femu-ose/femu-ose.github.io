@@ -3,12 +3,12 @@ title: "Tutorial 09: configuration files"
 description: "You describe a device in a short INI-style file instead of a long -device femu,... line, expand it with ssd-config.sh, let the script catch a misspelled..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/tutorials/09-ssd-config-files.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/tutorials/09-ssd-config-files.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/tutorials/09-ssd-config-files.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/tutorials/09-ssd-config-files.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/tutorials/09-ssd-config-files.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/tutorials/09-ssd-config-files.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -148,6 +148,11 @@ controller joined to it:
 ```text
 -device femu-subsys,id=femu-subsys-0,nqn=subsys0,fdp=on,fdp.nruh=4,fdp.nrg=1,fdp.nru=256 -device femu,id=nvme0,devsz_mb=4096,namespaces=1,secsz=512,secs_per_pg=8,pgs_per_blk=256,blks_per_pl=256,pls_per_lun=1,luns_per_ch=8,nchs=8,femu_mode=1,subsys=femu-subsys-0
 ```
+
+Every mode has a file to start from: `bbssd.conf`, `zns.conf`,
+`nossd.conf`, `ocssd.conf`, `csd.conf` and `kvssd.conf`. The
+[scripts reference](../reference/scripts.md#configuration-files) lists
+them all.
 
 ## 5. Boot it
 

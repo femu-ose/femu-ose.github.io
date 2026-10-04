@@ -3,12 +3,12 @@ title: "Runtime properties and counters"
 description: "QOM properties that a running device exposes. Read and set them through QMP at /machine/peripheral/<id>, where <id> is the id= given on -device:"
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/reference/runtime-properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/reference/runtime-properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/runtime-properties.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/reference/runtime-properties.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/runtime-properties.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/reference/runtime-properties.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -51,6 +51,8 @@ or in the HMP monitor with `qom-get` and `qom-set`. Event counters are cleared b
 | `control-status` | `uint64` | Read-only result of the last control command: 0 success, 1 error, 2 a Get LSA command still queued |
 | `flush-cache` | `bool` | Write-only: true revokes direct mappings, writes dirty pages back, drops unpinned pages and waits for the modelled media time |
 | `stats-reset` | `bool` | Write-only: true copies the counters to the last-* properties, then clears the event counters |
+| `fast-load` | `bool` | Accesses skip only their wait for the modelled media time; the FTL, cache and counters still run. For warmup and loading, not for measurement. Setting false waits for the queued NAND work first; default off, changeable with qom-set |
+| `fast-load-drain-ns` | `uint64` | Read-only: ns the last fast-load switch to false waited for queued NAND work |
 
 ### Cache counters
 

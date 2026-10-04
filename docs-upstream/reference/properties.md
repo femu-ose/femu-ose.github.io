@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/reference/properties.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/reference/properties.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,7 +28,7 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 145 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 148 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
@@ -70,7 +70,7 @@ Devices:
 | --- | --- | --- | --- |
 | `vid` | `uint16` | `7453` | PCI vendor ID, also reported as the Identify Controller PCI Vendor ID |
 | `did` | `uint16` | `7967` | PCI device ID of the controller function |
-| `acl` | `uint8` | `3` | Abort Command Limit reported in Identify Controller (0's based); it does not change how Abort is handled |
+| `acl` | `uint8` | `3` | Abort Command Limit reported in Identify Controller (0's based); an Abort run with more than acl others queued behind it fails |
 | `cqr` | `uint8` | `1` | CAP.CQR: 1 requires physically contiguous queues, 0 allows PRP-list queues |
 | `vwc` | `uint8` | `0` | 1 advertises a volatile write cache, which the host can turn off with feature 06h to stop bbssd buffering writes; 0 advertises none and refuses feature 06h. Flush drains the bbssd write buffer either way; 0 or 1 |
 | `temperature` | `uint16` | `323` | Composite temperature in kelvin reported by the SMART log and compared with the temperature threshold feature; default 323 (50 C) |
@@ -131,9 +131,11 @@ Devices:
 | `cmd_addr_lat` | `int32` | `0` | bbssd, CSD, KV: command and address phase on the channel bus in ns; the bus is modelled only when this, pg_xfer_lat (or ch_xfer_lat) or status_lat is non-zero |
 | `pg_xfer_lat` | `int32` | `0` | bbssd, CSD, KV: page data transfer phase on the channel bus in ns; 0 uses ch_xfer_lat |
 | `status_lat` | `int32` | `0` | bbssd, CSD, KV: status read phase on the channel bus in ns |
-| `tplpbsy` | `int32` | `0` | No effect, kept for compatibility; programs are issued one plane at a time. A value other than the default warns at realize |
-| `tplrbsy` | `int32` | `0` | No effect, kept for compatibility; reads are issued one plane at a time. A value other than the default warns at realize |
+| `tplpbsy` | `int32` | `0` | bbssd, CSD: busy time in ns between the planes of a multi-plane program; only with mp_program, and a value without it warns at realize. Negative is refused |
+| `tplrbsy` | `int32` | `0` | bbssd, CSD: busy time in ns between the planes of a multi-plane read; only with mp_read, and a value without it warns at realize. Negative is refused |
 | `tplebsy` | `int32` | `0` | bbssd, CSD, KV: busy time in ns between the planes of a multi-plane erase, which garbage collection issues when pls_per_lun > 1 |
+| `mp_program` | `int32` | `0` | bbssd, CSD: non-zero charges programs of the same page on several planes of a LUN as one multi-plane command (one array time); needs pls_per_lun > 1 and no FDP, and warns at realize otherwise |
+| `mp_read` | `int32` | `0` | bbssd, CSD: non-zero charges host reads of the same page on several planes of a LUN as one multi-plane command (one array time); needs pls_per_lun > 1 and no FDP, and warns at realize otherwise |
 | `trcbsy` | `int32` | `0` | No effect, kept for compatibility; no mode enables the cache read model. A value other than the default warns at realize |
 | `trim_lat_ns` | `int32` | `0` | bbssd, CSD: time in ns charged per Dataset Management deallocate range; refused with FDP |
 | `pe_suspend` | `int32` | `0` | bbssd, CSD, KV: non-zero lets a read suspend a program or erase on its LUN instead of waiting for it to finish |
@@ -162,6 +164,7 @@ Devices:
 | `gc_thres_pcent` | `int32` | `75` | bbssd, CSD: percent of lines in use at which background garbage collection starts, 1 to 100; KV uses it only as the fraction of NAND usable for values |
 | `gc_thres_pcent_high` | `int32` | `95` | bbssd, CSD: percent of lines in use at which garbage collection is forced, from gc_thres_pcent to 100; under FDP it keeps at least one reclaim unit free unless it is 100 |
 | `gc_policy` | `str` | unset | bbssd, CSD without FDP: line victim policy, one of greedy, random, cost-benefit, fifo or d-choice; unset is greedy |
+| `gc_seed` | `uint64` | `0` | bbssd, CSD: seed for the victims the random and d-choice gc_policy and the FDP random gc_strategy pick; the same seed and workload pick the same victims, so vary it to vary runs |
 | `gc_strategy` | `int32` | `0` | bbssd with FDP: reclaim unit victim strategy, 0 greedy, 1 cost-benefit, 2 random or 4 per-handle |
 | `mapping` | `str` | unset | bbssd, CSD: logical-to-physical mapping scheme, one of page, dftl, hybrid or fast; unset is page, and FDP supports only page |
 | `mapping_cache_mb` | `uint32` | `0` | bbssd, CSD with mapping=dftl: size of the cached mapping table in MiB; 0 means 4 |
@@ -269,7 +272,7 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 
 ## `femu-cxl-ssd`: CXL Type-3 SSD
 
-`-device femu-cxl-ssd` has 24 properties of its own, 10 inherited from `cxl-type3` and 50 QOM properties listed in [runtime-properties.md](runtime-properties.md).
+`-device femu-cxl-ssd` has 24 properties of its own, 10 inherited from `cxl-type3` and 52 QOM properties listed in [runtime-properties.md](runtime-properties.md).
 
 ### Cache
 
@@ -341,7 +344,7 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 
 These exist only when QEMU runs under qtest (`-accel qtest`) and serve FEMU's own tests. They are not part of the user interface.
 
-- `femu`: `x-ftl-check`, `x-ns-test`, `x-oc12-clock`, `x-stream-test`
+- `femu`: `x-ftl-check`, `x-ftl-trace`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-query-delay-ms`, `x-stream-test`
 - `femu-cxl-ssd`: `test-change-dpa`, `test-media-disabled`, `test-slot-reservation`
 
 ## Environment variables

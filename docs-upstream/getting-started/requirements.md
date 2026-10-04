@@ -3,12 +3,12 @@ title: "Requirements"
 description: "What the host and the guest need before you build and run FEMU. The quick start assumes everything on this page."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/getting-started/requirements.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/getting-started/requirements.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/getting-started/requirements.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/getting-started/requirements.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/getting-started/requirements.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/getting-started/requirements.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -82,7 +82,7 @@ host RAM needed = devsz_mb (the emulated SSD) + guest RAM (-m) + about 1 GiB for
 | Launcher | `devsz_mb` | Guest `-m` | Free host RAM needed |
 | --- | --- | --- | --- |
 | `run-blackbox.sh` (BBSSD) | 12288 | 4G | about 17 GiB |
-| `run-nossd.sh`, `run-zns.sh`, `run-whitebox.sh`, `run-csd.sh` | 4096 | 4G | about 9 GiB |
+| `run-nossd.sh`, `run-zns.sh`, `run-whitebox.sh`, `run-csd.sh`, `run-kvssd.sh` | 4096 | 4G | about 9 GiB |
 
 To fit a smaller host, lower `ssd_size` in `run-blackbox.sh` and the geometry
 with it (see [the property reference](../reference/properties.md)).

@@ -3,12 +3,12 @@ title: "CXL SSD (femu-cxl-ssd)"
 description: "The device comes from Cylon (FAST '26); the user guide has its citation."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/cxl-ssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/cxl-ssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/cxl-ssd.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/cxl-ssd.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/cxl-ssd.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/cxl-ssd.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -184,9 +184,9 @@ table stays empty and `cxl_ssd=` is refused.
 | --- | --- | --- |
 | `FemuCxlSsd` | `qemu-adapter.c` | `parent_obj` (the `CXLType3Dev`), `media`, `component_overlay`, `lsa_queue` (queued control commands) |
 | `FemuCxlWindow` | `qemu-adapter.c` | One per fixed window that can reach a FEMU endpoint: the window and its `io` overlay region. Shared by all FEMU devices; removed when the last one leaves |
-| `FemuCxlMedia` | `qemu-adapter.h` | `backend` (payload pointer and size), `cache`, `direct` (DER state), `cca`; the gate (`busy`, `accesses`, `exclusive_waiters`, `idle` condition variable); `pages` (pages held by accesses in progress); `invalidations` (generation); `lock`, `wake`, `work`, `worker` (the FTL worker); `ns.ssd` (the private FTL); NVMe link fields `nvme`, `nvme_ranges`, `nvme_taken`, `nvme_done`, `nvme_bh`; counters |
+| `FemuCxlMedia` | `qemu-adapter.h` | `backend` (payload pointer and size), `cache`, `direct` (DER state), `cca`; the gate (`busy`, `accesses`, `exclusive_waiters`, `idle` condition variable); `pages` (pages held by accesses in progress); `invalidations` (generation); `lock`, `worker_cond`, `work`, `worker` (the FTL worker); `ns.ssd` (the private FTL); NVMe link fields `nvme`, `nvme_ranges`, `nvme_taken`, `nvme_done`, `nvme_bh`; counters |
 | `FemuCxlOp` | `qemu-adapter.h` | One access, flush or eviction chain: the media time `ns` it has accumulated and the pages it holds itself |
-| `FemuCxlWork` | `qemu-adapter.h` | One FTL request on the worker queue: an `NvmeRequest`, the returned `latency`, `done` |
+| `FemuCxlWork` | `qemu-adapter.h` | One FTL request on the worker queue: an `NvmeRequest`, the returned `latency`, `done`, and `done_cond`, the waiter's condition variable |
 | `FemuCxlCache`, `FemuCxlSet`, `FemuCxlEntry` | `cache.h` | `nsets`, `ways`, `policy`, `entries` and `ghosts` hash tables; per set the `small`, `main`, `ghost` and `pinned` queues; per entry `lpn`, `dirty`, `freq`, `queue`, `der_hits`, `der_displaced` |
 | `FemuCxlDer` | `der.h` | `maps` (mapped pages), `available`, `cylon`, `fast` (Cylon state), `ratio`, `installed` (memslot aliases, oldest first), replacement state, DER counters |
 | `FemuCxlMap` | `qemu-adapter.c` | One memslot alias: first page, page count, alias region, queue link |
@@ -301,7 +301,7 @@ and the `idle` condition variable:
 | --- | --- |
 | Guest access, `concurrent-misses` in effect | Shared (`femu_cxl_enter_access()`) |
 | Guest access otherwise | Exclusive (`femu_cxl_enter()`) |
-| `flush-cache`, `stats-reset`, `cache-ways`, prefetch and `der-ratio` changes, every control command | Exclusive |
+| `flush-cache`, `stats-reset`, `fast-load`, `cache-ways`, prefetch and `der-ratio` changes, every control command | Exclusive |
 | Each caching API chunk | Exclusive |
 | The NVMe link bottom half that drops cache entries | Exclusive |
 
@@ -422,7 +422,11 @@ The FTL worker (`cxl_worker()` in `cxlssd.c`, thread `femu-cxl-ftl`) is the
 only thread of the device itself that changes FTL and NAND state; with a
 linked NVMe controller, that controller's FTL thread is the other one, and
 both run under `s->lock`. Callers queue a
-`FemuCxlWork` on `s->work` under `s->lock` and wait for `done`; the worker
+`FemuCxlWork` on `s->work` under `s->lock`, wake the worker on
+`s->worker_cond` and wait for `done` on the request's own `done_cond`, which
+lives on the caller's stack. The worker signals only that condition, so each
+request is woken individually and no waiter wakes for another request. The
+worker
 calls `bb_ftl_process_req()` with an 8-sector request (one 4 KiB page of
 512-byte sectors) and returns its latency. Requests are served in arrival
 order, and the NAND model overlaps them where they reach different LUNs.
@@ -853,7 +857,7 @@ the binary. This table explains how they interact.
 | Cylon media switches (same table) | `cylon-first-touch-program`, `cylon-free-writeback` | Change the media model to match published Cylon experiments; off for normal use |
 | [Direct mapping](../reference/properties.md#direct-mapping-der) | `der`, `der-replace-rate`, `cylon-kernel-ack`, `concurrent-misses` | `der=memslot` is refused under TCG. `der=cylon` without `cylon-kernel-ack=on` is refused. `der-replace-rate` matters only for `memslot`. `concurrent-misses=auto` follows whether DER is available |
 | [Caching API, control channel and logs](../reference/properties.md#caching-api-control-channel-and-logs) | `cca`, `lsa-control`, `log-dir`, `tracefs-dir`, `log-limit` | `cca=off` registers no BAR5. `lsa-control=on` refuses an `lsa` backend. `log-limit=0` opens no I/O log and takes no statistics appends. `tracefs-dir` unset makes commands 91 and 81 no-ops on the host |
-| [Actions and control](../reference/runtime-properties.md#actions-and-control) | `der-ratio`, `control-command`, `control-argument`, `control-status`, `flush-cache`, `stats-reset` | Run time only. `der-ratio` needs a direct mode and no uncached ranges; `memslot` refuses a ratio that needs more aliases than are free |
+| [Actions and control](../reference/runtime-properties.md#actions-and-control) | `der-ratio`, `control-command`, `control-argument`, `control-status`, `flush-cache`, `stats-reset`, `fast-load`, `fast-load-drain-ns` | Run time only, except `fast-load`, which `-device` also accepts. `der-ratio` needs a direct mode and no uncached ranges; `memslot` refuses a ratio that needs more aliases than are free. `fast-load=false` holds the gate alone while it waits for the NAND timelines, with the BQL dropped and `lock` released |
 
 `run-cxlssd.sh` uses defaults that follow Cylon's launch script and differ
 from the device's (a cache of 1/20 of the media, direct mapped, 8 by 8

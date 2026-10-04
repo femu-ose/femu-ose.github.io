@@ -3,12 +3,12 @@ title: "Namespace management, metadata and protection information"
 description: "This page covers two optional NVMe features of NoSSD and BlackBox controllers:"
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/features/ns-management-and-pi.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/features/ns-management-and-pi.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/ns-management-and-pi.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/features/ns-management-and-pi.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/ns-management-and-pi.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/features/ns-management-and-pi.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -171,8 +171,9 @@ of a full CQ. Detach retires only the selected controllers. Reset preserves
 attachments. Transport removal stops its workers and drops its attachments
 without releasing the subsystem's namespaces.
 
-CNS 10h/11h describe the common allocated set. CNS 02h describes the issuing
-controller's attachments. CNS 12h lists attached controllers and CNS 13h
+CNS 10h/11h describe the common allocated set, and CNS 1Fh gives the
+command-set-independent structure (CNS 08h) of an allocated namespace,
+attached or not. CNS 02h describes the issuing controller's attachments. CNS 12h lists attached controllers and CNS 13h
 lists eligible controllers, in ascending order with inclusive CNTID
 filtering. Attach/detach records changes and sends enabled Attached
 Namespace Attribute Changed notices on each affected controller. Delete does

@@ -3,12 +3,12 @@ title: "Parameter manual"
 description: "This manual explains how to configure an emulated device: the ways a parameter reaches FEMU, then every group of parameters by component, with what each one..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/reference/parameter-manual.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/reference/parameter-manual.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/reference/parameter-manual.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/reference/parameter-manual.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -592,7 +592,7 @@ to anything but its default prints a warning at realize.
 
 | Device | Properties |
 | --- | --- |
-| `femu` | `serial`, `ms`, `ms_max`, `dlfeat`, `tplpbsy`, `tplrbsy`, `trcbsy`, `nr_thread`, `time_slice`, `context_switch_time` |
+| `femu` | `serial`, `ms`, `ms_max`, `dlfeat`, `trcbsy`, `nr_thread`, `time_slice`, `context_switch_time` |
 
 `nr_thread` is still refused at 0 by CSD. Identify Controller reports a
 serial number FEMU generates, whatever `serial` says.

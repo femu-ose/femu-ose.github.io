@@ -3,12 +3,12 @@ title: "Key-value SSD (KV)"
 description: "KV mode (femu_mode=5) emulates an SSD with the NVMe Key Value command set. The namespace stores values under keys instead of blocks at addresses: the host..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/modes/kvssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/modes/kvssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/kvssd.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/modes/kvssd.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/kvssd.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/modes/kvssd.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -46,11 +46,30 @@ key-value devices, without key-value hardware.
 
 ## Launch
 
-There is no KV launcher. Start from `run-nossd.sh` or `run-blackbox.sh` and
-replace the FEMU device with:
+From `build-femu/`:
+
+```bash
+./run-kvssd.sh
+```
+
+The FEMU device in that script is:
+
+```
+-device femu,devsz_mb=4096,namespaces=1,femu_mode=5,secsz=512,secs_per_pg=8,pgs_per_blk=256,blks_per_pl=256,pls_per_lun=1,luns_per_ch=8,nchs=8,pg_rd_lat=40000,pg_wr_lat=200000,blk_er_lat=2000000,gc_thres_pcent=75
+```
+
+The geometry and timing above are the defaults, so the shortest KV device
+is:
 
 ```
 -device femu,devsz_mb=4096,namespaces=1,femu_mode=5
+```
+
+The preset `hw/femu/scripts/configs/kvssd.conf` describes the launcher's
+device; [`ssd-config.sh`](../tutorials/09-ssd-config-files.md) expands it to:
+
+```
+-device femu,id=nvme0,devsz_mb=4096,namespaces=1,secsz=512,secs_per_pg=8,pgs_per_blk=256,blks_per_pl=256,pls_per_lun=1,luns_per_ch=8,nchs=8,pg_rd_lat=40000,pg_wr_lat=200000,blk_er_lat=2000000,gc_thres_pcent=75,femu_mode=5
 ```
 
 ## Configuration

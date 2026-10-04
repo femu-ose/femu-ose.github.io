@@ -3,12 +3,12 @@ title: "FDP: Flexible Data Placement"
 description: "This chapter describes how FEMU implements NVMe Flexible Data Placement (FDP): how the subsystem builds reclaim groups, reclaim units and reclaim unit..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/fdp.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/fdp.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/fdp.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/fdp.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -85,8 +85,10 @@ with a single FDP configuration when the subsystem is realized:
 When a controller joins, `nvme_ns_init_fdp()` gives namespace 1 every
 handle in order: placement handle `i` is RUH `i`, the namespace's ENDGID is
 1, and each handle's RUAMW starts at a full unit. The controller then sets
-CTRATT bits 4 (Endurance Groups) and 19 (FDP) and ENDGIDMAX = 1, and the
-effects log lists I/O Management Send and Receive.
+CTRATT bit 19 (FDP), and the effects log lists I/O Management Send and
+Receive. CTRATT bit 4 (Endurance Groups), ENDGIDMAX = 1 and each
+namespace's ENDGID = 1 come with any subsystem, FDP or not, since its one
+endurance group is what log 09h reports.
 
 The BlackBox side (`bb.c`, `ftl-fdp.c`) adds the following, for a CSD
 namespace as for a bbssd one, since CSD runs the same FTL
@@ -311,8 +313,8 @@ only its range.
 ## Log pages and features
 
 All four FDP log pages take endurance group 1 in the Log Specific
-Identifier, and need a subsystem; 21h, 22h and 23h fail with FDP Disabled
-when FDP is off. The supported log pages list (00h) shows them only while
+Identifier, and need a subsystem (without one they fail with Invalid Log
+Page); 21h, 22h and 23h fail with FDP Disabled when FDP is off. The supported log pages list (00h) shows them only while
 FDP is on.
 
 | Log | Content | Code |

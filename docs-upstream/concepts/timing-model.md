@@ -3,12 +3,12 @@ title: "Timing model"
 description: "FEMU makes an emulated SSD take as long as a real one would. This page explains how it computes that time, how it makes the guest wait for it, which..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/concepts/timing-model.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/concepts/timing-model.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/timing-model.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/concepts/timing-model.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/timing-model.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/concepts/timing-model.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -63,7 +63,7 @@ Optional host-link and firmware-CPU models apply on top of any NVMe mode (see
 ## NAND operations
 
 `nand_media_op()` in `hw/femu/nand/nand-media.c` computes one read, program or
-erase. BBSSD, CSD, KV and ZNS all use it; OCSSD uses its own older model.
+erase. BBSSD, CSD, KV, ZNS and both Open-Channel versions use it.
 
 ### Operation times
 
@@ -187,14 +187,17 @@ the program. `zns_num_wc` sets the number of caches (default:
 
 ## OCSSD
 
-OCSSD keeps a busy-until time per chip (LUN) and per channel in
-`hw/femu/timing-model/timing.c`. A write first moves its data over the channel,
-then programs the chip; a read occupies the chip, then moves its data out.
+Both Open-Channel versions keep their busy-until times in the shared media
+layer above, with the LUN gate. Open-Channel 1.2 keeps one per chip (LUN)
+and one per channel; Open-Channel 2.0 keeps one per LUN, with the bus off. A
+write first moves its data over the channel, then programs the chip; a read
+occupies the chip, then moves its data out.
 Open-Channel 1.2 charges channel transfer only with `oc12_channel_timing=on`,
 using `ch_xfer_lat` per page or the `flash_type` table value when that is 0.
 Open-Channel 2.0 charges no channel time. Read, program and erase times come
 from the `flash_type` table (SLC, MLC, TLC, QLC) and can be changed at run
-time with vendor admin command 0xEE.
+time with vendor admin command 0xEE. `hw/femu/ocssd/oc-timing.c` copies the
+table times at init and handles 0xEE.
 
 Properties: [OCSSD](../reference/properties.md#ocssd-open-channel).
 
@@ -265,6 +268,11 @@ the deadline and spins for the rest. Other properties:
 
 `flush-cache` (QMP) and cache control commands on BAR5 also wait for the
 media time of the write-backs they cause, on the thread that runs them.
+
+`fast-load=true` removes only the wait at the end of an access; the FTL and
+the NAND timelines still advance. Setting it back to false waits until the
+latest LUN and channel busy-until time has passed, so the next access sees
+an idle model. See [Fast load](../modes/cxl-ssd.md#fast-load).
 
 Properties: [femu-cxl-ssd
 cache](../reference/properties.md#cache), [NAND geometry and

@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/CHANGELOG.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/CHANGELOG.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -40,6 +40,8 @@ listed one by one.
 - A CXL caching API is served on BAR5, with a guest library, the `ccactl` tool and a guest self-test ([924714c18](https://github.com/MoatLab/FEMU/commit/924714c18), [1235e87d2](https://github.com/MoatLab/FEMU/commit/1235e87d2), [ec3af4ba4](https://github.com/MoatLab/FEMU/commit/ec3af4ba4), [0a357d11e](https://github.com/MoatLab/FEMU/commit/0a357d11e), [defd999b8](https://github.com/MoatLab/FEMU/commit/defd999b8)).
 - Cache misses to different pages wait for the media together, by default only while a direct mode is active, and long media waits sleep instead of spinning ([b72d14dbe](https://github.com/MoatLab/FEMU/commit/b72d14dbe), [64d424dd2](https://github.com/MoatLab/FEMU/commit/64d424dd2), [133c553ca](https://github.com/MoatLab/FEMU/commit/133c553ca), [145fcfe4b](https://github.com/MoatLab/FEMU/commit/145fcfe4b)).
 - A bbssd NVMe controller can share a `femu-cxl-ssd` medium through `cxl_ssd=<id>`, with writes, deallocates and flips kept consistent between the two front ends ([146a240dc](https://github.com/MoatLab/FEMU/commit/146a240dc), [d73a5b780](https://github.com/MoatLab/FEMU/commit/d73a5b780), [a7a3c5678](https://github.com/MoatLab/FEMU/commit/a7a3c5678), [353bbe107](https://github.com/MoatLab/FEMU/commit/353bbe107), [287e5c885](https://github.com/MoatLab/FEMU/commit/287e5c885), [6783d50af](https://github.com/MoatLab/FEMU/commit/6783d50af)).
+- A runtime `fast-load` switch on `femu-cxl-ssd` lets warmup and data loading skip the wait for modelled media time while the FTL, cache and counters still run. Switching it off waits for the queued NAND work, reported in `fast-load-drain-ns`, so measurement starts on an idle model.
+- The `femu-cxl-ssd` FTL worker wakes only the access whose request it finished, instead of every waiting access. On a `der=cylon` test with 8 and 16 vCPUs doing random reads that all miss a 256-page cache, throughput rose about 40% (65k to 91k and 70k to 98k accesses/s), because waiters no longer wake for other requests.
 
 #### New modes and data placement
 
@@ -47,6 +49,7 @@ listed one by one.
 - FDP placement features can be read and enabled by a Linux host, and the host sees its active reclaim unit and remaining space ([8f00c7117](https://github.com/MoatLab/FEMU/commit/8f00c7117), [9a66fe52d](https://github.com/MoatLab/FEMU/commit/9a66fe52d)).
 - Computational Storage Drive mode (`femu_mode=4`) with program load and execute commands, routed through the bbssd FTL ([eb01bb73b](https://github.com/MoatLab/FEMU/commit/eb01bb73b), [50b65ca91](https://github.com/MoatLab/FEMU/commit/50b65ca91)).
 - CSD `nr_cu` and `csf_runtime_scale` now take effect ([202ab7afb](https://github.com/MoatLab/FEMU/commit/202ab7afb)).
+- A CSD runtime shorter than the program's own run on the host cannot be reached, since the completion carries the result; QEMU now warns once when that happens ([b8e8d6b45](https://github.com/MoatLab/FEMU/commit/b8e8d6b45)).
 - Key-value SSD mode (`femu_mode=5`) with store, retrieve, list, delete and exist commands ([e72465909](https://github.com/MoatLab/FEMU/commit/e72465909)).
 - Every KV namespace has its own command set and key space, the KV command set is advertised to the host, and the KV Configuration feature is served ([39664d242](https://github.com/MoatLab/FEMU/commit/39664d242), [e62db84f2](https://github.com/MoatLab/FEMU/commit/e62db84f2), [e4949509c](https://github.com/MoatLab/FEMU/commit/e4949509c)).
 
@@ -84,6 +87,7 @@ listed one by one.
 - SMART reports host data units and command counts, available spare (with an optional `nand_bad_blocks` model), percentage used (from the cell type or `pe_cycles_rated`) and media errors ([f07d117f1](https://github.com/MoatLab/FEMU/commit/f07d117f1), [a20d9ac94](https://github.com/MoatLab/FEMU/commit/a20d9ac94), [a8a28d451](https://github.com/MoatLab/FEMU/commit/a8a28d451), [df8a3492a](https://github.com/MoatLab/FEMU/commit/df8a3492a), [e25ddf7be](https://github.com/MoatLab/FEMU/commit/e25ddf7be)).
 - The Endurance Group log is filled in ([074b63f4f](https://github.com/MoatLab/FEMU/commit/074b63f4f)).
 - Media counters (write amplification, host and relocated pages, write buffer hits, read reclaims, retention refreshes) are reported in vendor log page C0h ([e57448e41](https://github.com/MoatLab/FEMU/commit/e57448e41), [4cb1f9ba7](https://github.com/MoatLab/FEMU/commit/4cb1f9ba7), [e9746f6bf](https://github.com/MoatLab/FEMU/commit/e9746f6bf), [e7f182b87](https://github.com/MoatLab/FEMU/commit/e7f182b87)).
+- A QMP command, `query-femu`, reports the geometry, write counters, line counts and per-line state of bbssd namespaces to the host. The FTL thread copies the state between two requests ([reference](reference/query-femu.md)).
 - Opt-in power loss model (`power_loss`) that drops data still held in the volatile write buffer and records the event in SMART and the event log ([46602b0e7](https://github.com/MoatLab/FEMU/commit/46602b0e7), [303c77aef](https://github.com/MoatLab/FEMU/commit/303c77aef), [7679c443d](https://github.com/MoatLab/FEMU/commit/7679c443d)).
 
 #### ZNS
@@ -116,6 +120,7 @@ listed one by one.
 - More than one plane per LUN (`pls_per_lun`) in bbssd, FDP and KV, with a line's planes erased in one operation ([0f554fb7d](https://github.com/MoatLab/FEMU/commit/0f554fb7d), [3699e980d](https://github.com/MoatLab/FEMU/commit/3699e980d), [9c8228d28](https://github.com/MoatLab/FEMU/commit/9c8228d28), [7276af2d8](https://github.com/MoatLab/FEMU/commit/7276af2d8)).
 - Channel bus phases (`cmd_addr_lat`, `pg_xfer_lat`, `status_lat`, `ch_xfer_lat`) are added to the timing when set ([c274ba7d9](https://github.com/MoatLab/FEMU/commit/c274ba7d9)).
 - A read can suspend an in-flight program or erase (`pe_suspend`, `tsusp_ns`) ([9ec423985](https://github.com/MoatLab/FEMU/commit/9ec423985), [6a5c498a8](https://github.com/MoatLab/FEMU/commit/6a5c498a8)).
+- Opt-in multi-plane program and read (`mp_program`, `mp_read`, with `pls_per_lun > 1`): host programs or reads of the same page on several planes of a LUN take one array time, plus `tplpbsy` or `tplrbsy` between planes. Placement and page counts do not change. The defaults leave the timing unchanged, FDP is not affected, and a negative busy time is refused.
 - Optional debug logging to study whether deleted data remains on the device ([18ba6557c](https://github.com/MoatLab/FEMU/commit/18ba6557c), [45e61ae41](https://github.com/MoatLab/FEMU/commit/45e61ae41)).
 
 #### Timing and fault models
@@ -175,7 +180,7 @@ was not doing anything.
 
 #### Accepted with a warning (still no effect)
 
-- `serial`, `ms`, `ms_max`, `dlfeat`, `tplpbsy`, `tplrbsy`, `trcbsy`, and the CSD `nr_thread`, `time_slice` and `context_switch_time` are still accepted, but nothing reads them, so a value other than the default now prints one warning at realize naming the property; for `ms` it points to `meta` ([f67568880](https://github.com/MoatLab/FEMU/commit/f67568880)).
+- `serial`, `ms`, `ms_max`, `dlfeat`, `trcbsy`, and the CSD `nr_thread`, `time_slice` and `context_switch_time` are still accepted, but nothing reads them, so a value other than the default now prints one warning at realize naming the property; for `ms` it points to `meta` ([f67568880](https://github.com/MoatLab/FEMU/commit/f67568880)). `tplpbsy` and `tplrbsy` were on this list; they now set the multi-plane program and read busy times, and warn only when set without `mp_program` or `mp_read`.
 
 #### Behaviour changes (still boots, numbers move)
 
@@ -263,6 +268,7 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - FDP GC moves all of a reclaim unit's pages before erasing any block, retires each moved page's old copy, and runs foreground GC per page. A pass that stopped part way used to leave the unit with erased blocks counted again later ([c7b373186](https://github.com/MoatLab/FEMU/commit/c7b373186)).
 - FDP GC takes a new unit for a collection destination that was dropped when it filled with nothing free, and collects a unit with no valid pages without one. GC used to stop for good once the destination was gone, so a full device stayed full even after the host deallocated everything ([22a0fc5ee](https://github.com/MoatLab/FEMU/commit/22a0fc5ee)).
 - An FDP handle whose last unit filled with nothing free reports no room in RUH Status. It used to report the room of its retired unit, which GC could free and give to another handle ([4e7a06666](https://github.com/MoatLab/FEMU/commit/4e7a06666)).
+- The `random` and `d-choice` GC policies and FDP's random reclaim strategy draw victims from a generator seeded by the new `gc_seed` property instead of the wall clock and `rand()`, so the same configuration and workload give the same victims and WAF on every run. `fifo` finds its victim at the top of a queue ordered by close order instead of scanning every line, with the same victims as before ([04ba1c0aa](https://github.com/MoatLab/FEMU/commit/04ba1c0aa)).
 
 #### Spec conformance and host compatibility
 
@@ -285,6 +291,20 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - With `namespace_modes`, the controller's model number and serial come from its own `femu_mode` instead of the namespace brought up last ([efdb98643](https://github.com/MoatLab/FEMU/commit/efdb98643), [c3f968029](https://github.com/MoatLab/FEMU/commit/c3f968029)).
 - SMART wear counters are summed across namespaces ([4a4f0d9bf](https://github.com/MoatLab/FEMU/commit/4a4f0d9bf)).
 - Counters fixed to move in every mode: FDP and KV write amplification and bytes, KV relocations, FDP erases ([f4b3ac376](https://github.com/MoatLab/FEMU/commit/f4b3ac376), [980fb7886](https://github.com/MoatLab/FEMU/commit/980fb7886), [37464e4bd](https://github.com/MoatLab/FEMU/commit/37464e4bd), [ce20d8c06](https://github.com/MoatLab/FEMU/commit/ce20d8c06), [4c7d9c22a](https://github.com/MoatLab/FEMU/commit/4c7d9c22a), [749e09fef](https://github.com/MoatLab/FEMU/commit/749e09fef), [2a16553c9](https://github.com/MoatLab/FEMU/commit/2a16553c9), [ba0c49338](https://github.com/MoatLab/FEMU/commit/ba0c49338)).
+- OC 1.2 enforces its bad block table: a write or erase that names a factory bad, grown bad or device reserved block fails with Write Fault. Set Bad Block Table marks the plane it is given instead of another block's plane, and keeps the table's counts current ([933addb72](https://github.com/MoatLab/FEMU/commit/933addb72)).
+- Abort no longer rewrites the aborted command in the host's submission queue: the controller marks it and completes it with Command Abort Requested when fetched. An Abort run with more than `acl` others queued behind it fails with Abort Command Limit Exceeded ([7b7eaf133](https://github.com/MoatLab/FEMU/commit/7b7eaf133)).
+- Logs 12h (Feature Identifiers Supported and Effects) and 13h (NVMe-MI Commands Supported and Effects) are answered and listed in log 00h. A feature that needs something absent, such as Volatile Write Cache without `vwc=1`, is an invalid field for every selector ([7b36b4c25](https://github.com/MoatLab/FEMU/commit/7b36b4c25)).
+- Enabling with a CC.CSS value that CAP.CSS does not offer fails the controller, and admin commands that name SGLs are refused ([992dc9911](https://github.com/MoatLab/FEMU/commit/992dc9911), [2ff5e3925](https://github.com/MoatLab/FEMU/commit/2ff5e3925)).
+- Every Unrecovered Read Error and Compare Failure sets Do Not Retry ([f8efff85a](https://github.com/MoatLab/FEMU/commit/f8efff85a)).
+- Identify reports one read-only firmware slot, matching the firmware log ([989df3cea](https://github.com/MoatLab/FEMU/commit/989df3cea)).
+- OACS, ONCS, OCFS, LPA, SANICAP and logs 00h and 05h are built from one capability registry, and a qtest checks them against what every mode answers ([a1c67d97f](https://github.com/MoatLab/FEMU/commit/a1c67d97f), [933fb3f15](https://github.com/MoatLab/FEMU/commit/933fb3f15)).
+- Log 05h lists each mode's own commands (BBSSD 0xEF, the Open-Channel and CSD commands, Flush on KV namespaces) and no longer lists Read and Write for Open-Channel 1.2, which refuses them ([99eabe2c1](https://github.com/MoatLab/FEMU/commit/99eabe2c1)).
+- Log 00h lists the Open-Channel 2.0 chunk information page (CAh) ([209b499b6](https://github.com/MoatLab/FEMU/commit/209b499b6)).
+- Get Log Page answers a page log 00h lists for no command set with Invalid Log Page, so the endurance group and FDP pages without a subsystem no longer answer Invalid Field ([87d5f1372](https://github.com/MoatLab/FEMU/commit/87d5f1372)).
+- A zoned namespace reports no Copy limits in Identify Namespace, since it refuses Copy ([92b3763a3](https://github.com/MoatLab/FEMU/commit/92b3763a3)).
+- The controller reports NVMe 2.1 instead of 1.4, with what that requires: CAP.CRMS and the CRTO register, BPCAP 01b, Identify CNS 1Fh, CNS 00h refused for a Key Value namespace (Invalid I/O Command Set), CSI-specific log pages refused for an unknown command set, and CNS 07h refused for a set CC.CSS does not enable. Open-Channel stays at 1.4 ([409db7bb3](https://github.com/MoatLab/FEMU/commit/409db7bb3)).
+- CAP.AMS no longer claims weighted round robin, which nothing arbitrated by, and enabling with another CC.AMS fails ([409db7bb3](https://github.com/MoatLab/FEMU/commit/409db7bb3)).
+- A controller in a subsystem reports its endurance group (CTRATT bit 4, ENDGIDMAX, each namespace's ENDGID, the Key Value Identify structure included) whether or not FDP is on, as log 09h already did ([409db7bb3](https://github.com/MoatLab/FEMU/commit/409db7bb3)).
 
 ### Documentation and tooling
 
@@ -301,6 +321,8 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - `femu-test.sh` checks a device from inside the guest for block, zoned, KV and CSD namespaces ([9fee8190c](https://github.com/MoatLab/FEMU/commit/9fee8190c), [2244a1b9c](https://github.com/MoatLab/FEMU/commit/2244a1b9c), [c17a31ea9](https://github.com/MoatLab/FEMU/commit/c17a31ea9)).
 - `make-guest-image.sh` builds an Ubuntu 24.04 guest image, and the run scripts accept `IMGDIR`, `OSIMGF` and another SSH port ([e877f2dc0](https://github.com/MoatLab/FEMU/commit/e877f2dc0), [e74535012](https://github.com/MoatLab/FEMU/commit/e74535012), [66bb3068e](https://github.com/MoatLab/FEMU/commit/66bb3068e)).
 - The build script fails on a compile error, and the config self-test fails when FEMU does not survive ([a1bf37caf](https://github.com/MoatLab/FEMU/commit/a1bf37caf), [da7c1fcfe](https://github.com/MoatLab/FEMU/commit/da7c1fcfe)).
+- The config self-test requires each device to come up, not only its property names to be accepted. That caught `zns.conf`, which asked for more active zones than it has and was refused at every size ([b509a23a5](https://github.com/MoatLab/FEMU/commit/b509a23a5)).
+- Config presets for OCSSD, CSD, KV and NoSSD (NoSSD with link and firmware time from the NVMeCHA controller), and a `run-kvssd.sh` launcher ([04eb9b06d](https://github.com/MoatLab/FEMU/commit/04eb9b06d)).
 - A key-value probe tool and a corrected KV wire format description ([9ab75f5dc](https://github.com/MoatLab/FEMU/commit/9ab75f5dc)).
 - `pin.sh` no longer names a CPU past the last one, and now pins the pollers, the FTL thread and the CXL SSD's `femu-cxl-ftl` and `femu-cxl-cca` threads as well as the vCPUs ([e29fe6ee2](https://github.com/MoatLab/FEMU/commit/e29fe6ee2), [56e0e2f27](https://github.com/MoatLab/FEMU/commit/56e0e2f27)).
 - Every launcher, the legacy scripts and `make-guest-image.sh` name QEMU's threads with `debug-threads=on` ([e29fe6ee2](https://github.com/MoatLab/FEMU/commit/e29fe6ee2), [56e0e2f27](https://github.com/MoatLab/FEMU/commit/56e0e2f27)).

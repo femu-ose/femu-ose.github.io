@@ -3,12 +3,12 @@ title: "OCSSD: the Open-Channel extension"
 description: "This chapter describes how FEMU emulates an Open-Channel SSD (femu_mode=0). It covers the internals: the two protocol versions, their address formats, the..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/ocssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/ocssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ocssd.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/ocssd.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ocssd.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/ocssd.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -81,8 +81,8 @@ appears, and SPDK can drive it from user space.
             |  timing                  |  timing
             v                          v
    +---------------------------------------------+
-   | per-chip and per-channel busy-until times   |
-   | timing-model/timing.c                       |
+   | per-LUN and per-channel busy-until times    |
+   | nand/nand-media.c (shared media layer)      |
    +---------------------------------------------+
                          |
                 expire_time on the request
@@ -144,9 +144,12 @@ still name a unit the device does not have; such an address is refused.
 
 Per namespace (`NvmeNamespace`):
 
-- `bbtbl`: one bad block table per LUN, `blocks * planes` bytes. The host
-  reads it with admin command 0xF2 and marks blocks with 0xF1, which indexes
-  by block number only and ignores the plane.
+- `bbtbl`: one bad block table per LUN, `blocks * planes` bytes, one byte
+  per plane in the order block 0 plane 0, block 0 plane 1, and so on. The
+  host reads it with admin command 0xF2 and marks blocks with 0xF1, which
+  sets the entry for the block and plane in each address and keeps the
+  header counts (factory bad, grown bad, device reserved, host reserved) in
+  step.
 - `tbl`: a table the host can read with admin command 0xEA (Get L2P Table).
   FEMU fills it with "unmapped" at start-up and never updates it.
 
@@ -162,6 +165,10 @@ Per namespace (`NvmeNamespace`):
 | 0xEA | admin | `oc12_get_l2p_tbl()` | the `tbl` described above |
 | 0xF2 | admin | `oc12_bbt_get()` | bad block table of one LUN |
 | 0xF1 | admin | `oc12_bbt_set()` | mark one or more blocks |
+
+The Commands Supported and Effects log (05h) lists these commands, the
+timing command 0xEE, and for 2.0 its own vector commands and admin 0xC1;
+for 1.2 it leaves plain Read and Write out.
 
 A vector command carries either one PPA in the command or a list of PPAs in
 host memory. Read and write accept only PRP data pointers, check the list
@@ -180,6 +187,22 @@ Range before the backend is reached; an LBA format with metadata (`meta`)
 makes read and write fail with Invalid Field; and an address outside the
 geometry on erase or on a bad block command fails with Invalid Field.
 
+### Bad blocks
+
+Write and erase check every address against `bbtbl`. An entry with bit 0
+(factory bad), bit 1 (grown bad) or bit 2 (device reserved) set makes the
+block unusable. Bit 3 (host reserved) and bit 4 (media manager reserved)
+record the host's own allocation, so the device does not refuse them. A
+single-plane access (control bits 1:0 zero) checks the plane in the
+address; a dual- or quad-plane access checks the block on every plane.
+
+A command that names an unusable block fails as a whole with Write Fault
+(status type 2h, code 80h, the 1.2 error code for data that cannot be
+committed) and Do Not Retry. Nothing in it is written or erased, so every
+bit of the per-address status in completion dwords 0 and 1 is set. Reads
+are not checked. Clearing an entry with 0xF1 makes the block usable again.
+The table starts empty; `nand_bad_blocks` does not seed it.
+
 In both versions the generic NVM commands (Flush, Dataset Management,
 Compare, Write Zeroes, Copy, Verify, Write Uncorrectable) are handled by
 `nvme_io_cmd()` on raw LBAs before the Open-Channel handler is consulted,
@@ -195,8 +218,8 @@ when `oncs` turns them on. They do not follow the Open-Channel rules.
   `oc12_meta_blk_set_erased()`, which returns at its first line.
 - Reads do not check the state, so an unwritten sector returns whatever the
   backend holds.
-- Blocks marked bad in `bbtbl` are still read, written and erased; the table
-  is only storage for the host.
+- Blocks marked bad in `bbtbl` can still be read; write and erase are
+  refused (see [Bad blocks](#bad-blocks)).
 
 Write the host FTL as if these rules applied, because real devices apply
 them.
@@ -345,17 +368,28 @@ namespace reports 16 metadata bytes per sector.
 
 ## Timing
 
-Both versions use the same busy-until model in
-`hw/femu/timing-model/timing.c`. The controller keeps one time per chip
-(LUN) and one per channel:
+Both versions use the shared media layer (`nand_media_op()` in
+`hw/femu/nand/nand-media.c`), each with its own `NandMedia` and the LUN gate.
+Open-Channel 2.0 charges no channel time and uses flat lower-page times,
+through `oc20_chip_op()`. Open-Channel 1.2 uses per-page-type tables, through
+`oc12_media_op()`; with `oc12_channel_timing=on` the bus is staged, otherwise
+it is off. Vendor command 0xEE refreshes the times of either version
+(`oc20_refresh_timing()`, `oc12_refresh_timing()`). With 1.2 channel timing on,
+one channel lock covers a page's transfer and its chip time together, so two
+commands that reach the same channel and chip at once complete in an order the
+host would also see from one queue; before, their phases could interleave. A
+single command stream gets the same times as before. The controller keeps one
+time per chip (LUN) and, for 1.2, one per channel:
 
-- `chip_next_avail_time[ch * num_lun + lun]`, at most 128 chips.
-- `chnl_next_avail_time[ch]` and a list of reserved intervals per channel,
-  at most 32 channels.
+- `lun_avail[ch * num_lun + lun]` in `Oc12Ctrl` or `Oc20Ctrl`, at most 128
+  chips.
+- `Oc12Ctrl.ch_avail[ch]`, at most 32 channels, and the media layer's list
+  of booked read windows per channel. For 1.2 the list has no cap
+  (`policy.bus_res_unbounded`).
 
-`advance_chip_timestamp()` starts an operation at the larger of "now" and the
-chip's busy-until time, adds the operation's latency, and returns the new
-busy-until time. Latencies come from the built-in table for
+An operation starts at the larger of "now" and the chip's busy-until time,
+adds the operation's latency, and the end becomes the new busy-until
+time. Latencies come from the built-in table for
 [`flash_type`](../reference/properties.md#ocssd-open-channel) (1 SLC, 2 MLC,
 3 TLC, 4 QLC) in `hw/femu/nand/nand.h`, by operation and page type. The
 NAND timing properties of the black-box mode (`pg_rd_lat` and the others)
@@ -395,8 +429,10 @@ Version differences:
   charged.
 
 The time is computed on the poller when the command arrives, and stored as
-the request's `expire_time`. Chip and channel times are protected by one spin
-lock each, so several pollers can time commands at once.
+the request's `expire_time`. For 1.2 with channel timing, the channel's spin
+lock (`chnl_locks[]`) covers the bus and its LUNs; otherwise a chip's time
+is updated with a compare-and-swap. So several pollers can time commands at
+once.
 
 ## Parameters
 
@@ -451,6 +487,12 @@ mode does report:
   `oc12-channel-*` cases for channel time. For 2.0: `oc20-vector-io`,
   `oc20-set-chunks`, `oc20-log-length`, `oc20-sgl-refused` and `oc20-fuzz`,
   a fuzzer over the command fields.
+- `oc12-trace-on` and `oc12-trace-off` pin the time of each 1.2 command
+  exactly, with and without channel time, through the qtest-only
+  `x-oc12-trace`. The workload uses TLC pages of each type, part pages, two
+  planes, erases of several blocks, 40 queued reads on one channel and a
+  0xEE change of the NAND times. A change to the 1.2 timing model must not
+  move these times.
 - The documentation check starts each OCSSD example in this guide and in
   the mode guide, and sends Identify; it does not move data in this mode.
 - No guest test runs in CI: LightNVM needs a guest kernel older than 5.15,
@@ -459,8 +501,8 @@ mode does report:
 ## Limits
 
 - One namespace per controller.
-- 1.2 does not enforce erase-before-write, does not reset sector state on
-  erase, and does not act on its bad block table (see above).
+- 1.2 does not enforce erase-before-write and does not reset sector state on
+  erase (see above). Its bad block table is enforced on write and erase only.
 - 2.0 does not model page types or channel transfer, and charges one page
   time per chunk run regardless of how many pages the run covers.
 - 2.0 does not store per-sector metadata.
@@ -493,12 +535,13 @@ Refusals at realize are listed in the
 
 | File | Contents |
 | --- | --- |
-| [`hw/femu/ocssd/oc12.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/ocssd/oc12.c), [`oc12.h`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/ocssd/oc12.h) | 1.2 commands, PPA format, sector metadata, bad block tables, init and exit |
-| [`hw/femu/ocssd/oc20.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/ocssd/oc20.c), [`oc20.h`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/ocssd/oc20.h) | 2.0 commands, chunk descriptors, write pointer rules, geometry, log page |
-| [`hw/femu/timing-model/timing.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/timing-model/timing.c) | chip and channel busy-until times, geometry bound check |
-| [`hw/femu/nand/nand.h`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/nand/nand.h), [`nand.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/nand/nand.c) | per-cell-type latency tables and page-type tables |
-| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/femu.c) | `nvme_register_extensions()`, realize-time checks |
-| [`hw/femu/nvme-io.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/nvme-io.c) | `nvme_io_cmd()` dispatch, completion queue |
+| [`hw/femu/ocssd/oc12.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/ocssd/oc12.c), [`oc12.h`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/ocssd/oc12.h) | 1.2 commands, PPA format, sector metadata, bad block tables, init and exit |
+| [`hw/femu/ocssd/oc20.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/ocssd/oc20.c), [`oc20.h`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/ocssd/oc20.h) | 2.0 commands, chunk descriptors, write pointer rules, geometry, log page |
+| [`hw/femu/ocssd/oc-timing.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/ocssd/oc-timing.c), [`oc-timing.h`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/ocssd/oc-timing.h) | `flash_type` times (`set_latency()`), geometry bound check, 0xEE |
+| [`hw/femu/nand/nand-media.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/nand/nand-media.c) | chip and channel busy-until times for both versions |
+| [`hw/femu/nand/nand.h`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/nand/nand.h), [`nand.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/nand/nand.c) | per-cell-type latency tables and page-type tables |
+| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/femu.c) | `nvme_register_extensions()`, realize-time checks |
+| [`hw/femu/nvme-io.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/nvme-io.c) | `nvme_io_cmd()` dispatch, completion queue |
 
 ## Related pages
 

@@ -3,12 +3,12 @@ title: "Code structure"
 description: "All FEMU code, scripts, tests and documentation live under hw/femu/, so the rest of the tree stays QEMU. A top-level femu-scripts link points to..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/development/code-structure.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/development/code-structure.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/development/code-structure.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/development/code-structure.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/development/code-structure.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/development/code-structure.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -27,32 +27,32 @@ is in [architecture](../concepts/architecture.md).
 
 | Path | What is there |
 | --- | --- |
-| [`femu.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/femu.c) | QOM types `femu` and `femu-subsys`, property definitions, realize and exit, the FTL thread, mode registration |
-| [`femu-props.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/femu-props.c) | Help text for every `femu` and `femu-subsys` property (what `-device femu,help` prints) |
-| [`nvme.h`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/nvme.h) | NVMe structures, the `femu_mode` enum and the controller state `FemuCtrl` |
-| [`nvme-admin.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/nvme-admin.c) | Admin commands, starting the pollers, namespace management, asynchronous events |
-| [`nvme-io.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/nvme-io.c) | I/O commands and the poller loop that fetches submissions and posts completions |
-| [`nvme-util.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/nvme-util.c) | Deallocation state per LBA (TRIM, Write Zeroes with deallocate, DULBE), queue head and tail and completion posting helpers, poller pause and resume, the Timestamp feature |
-| [`nvme-pel.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/nvme-pel.c) | Persistent Event log and its `pel_file` |
-| [`nvme-pi.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/nvme-pi.c) | Metadata and protection information |
-| [`nvme-streams.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/nvme-streams.c) | Streams directive |
-| [`dma.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/dma.c) | PRP and SGL mapping, copies between guest memory and the device |
-| [`intr.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/intr.c) | MSI-X, MSI and pin interrupts |
-| [`bbssd/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/bbssd) | BlackBox mode (`bb.c`) and its FTL: geometry, data path, mapping schemes, read cache, GC and lines, FDP, the bridge to the NAND media layer |
-| [`zns/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/zns) | ZNS mode (`zns.c`) and its zone FTL (`zftl.c`) |
-| [`ocssd/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/ocssd) | Open-Channel 1.2 (`oc12.c`) and 2.0 (`oc20.c`) |
-| [`nossd/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/nossd) | NoSSD mode (`nop.c`) |
-| [`kvssd/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/kvssd) | Key-value mode: commands, its FTL, Identify and features |
-| [`csd/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/csd) | Computational storage mode and its private commands |
-| [`cxlssd/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/cxlssd) | `femu-cxl-ssd`: QOM glue, the page cache, the DER modes, the caching API |
-| [`nand/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/nand) | NAND media layer: per-cell-type timing tables and the timing of each operation |
-| [`timing-model/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/timing-model) | Per-chip and per-channel timestamps used by Open-Channel |
-| [`backend/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/backend) | The DRAM backend that holds the emulated medium |
-| [`lib/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/lib), [`inc/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/inc) | Lock-free rings and the priority queue, and their headers |
-| [`scripts/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/scripts) | Build and launch scripts, configs, guest tools, documentation tooling ([scripts reference](../reference/scripts.md)) |
-| [`tools/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/tools) | Guest tools for the CXL caching API |
-| [`tests/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/tests) | Unit tests, the qtest file, CSD guest tests ([testing](../guides/testing.md)) |
-| [`docs/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs) | This documentation ([doc map](../index.md)) |
+| [`femu.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/femu.c) | QOM types `femu` and `femu-subsys`, property definitions, realize and exit, the FTL thread, mode registration |
+| [`femu-props.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/femu-props.c) | Help text for every `femu` and `femu-subsys` property (what `-device femu,help` prints) |
+| [`nvme.h`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/nvme.h) | NVMe structures, the `femu_mode` enum and the controller state `FemuCtrl` |
+| [`nvme-admin.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/nvme-admin.c) | Admin commands, starting the pollers, namespace management, asynchronous events |
+| [`nvme-caps.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/nvme-caps.c) | What the controller advertises: the Commands Supported and Effects and Supported Log Pages entries, and the Identify bits derived from them |
+| [`nvme-io.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/nvme-io.c) | I/O commands and the poller loop that fetches submissions and posts completions |
+| [`nvme-util.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/nvme-util.c) | Deallocation state per LBA (TRIM, Write Zeroes with deallocate, DULBE), queue head and tail and completion posting helpers, poller pause and resume, the Timestamp feature |
+| [`nvme-pel.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/nvme-pel.c) | Persistent Event log and its `pel_file` |
+| [`nvme-pi.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/nvme-pi.c) | Metadata and protection information |
+| [`nvme-streams.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/nvme-streams.c) | Streams directive |
+| [`dma.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/dma.c) | PRP and SGL mapping, copies between guest memory and the device |
+| [`intr.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/intr.c) | MSI-X, MSI and pin interrupts |
+| [`bbssd/`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/bbssd) | BlackBox mode (`bb.c`) and its FTL: geometry, data path, mapping schemes, read cache, GC and lines, FDP, the bridge to the NAND media layer |
+| [`zns/`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/zns) | ZNS mode (`zns.c`) and its zone FTL (`zftl.c`) |
+| [`ocssd/`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/ocssd) | Open-Channel 1.2 (`oc12.c`) and 2.0 (`oc20.c`); their `flash_type` times, geometry check and vendor command 0xEE (`oc-timing.c`) |
+| [`nossd/`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/nossd) | NoSSD mode (`nop.c`) |
+| [`kvssd/`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/kvssd) | Key-value mode: commands, its FTL, Identify and features |
+| [`csd/`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/csd) | Computational storage mode and its private commands |
+| [`cxlssd/`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/cxlssd) | `femu-cxl-ssd`: QOM glue, the page cache, the DER modes, the caching API |
+| [`nand/`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/nand) | NAND media layer: per-cell-type timing tables and the timing of each operation |
+| [`backend/`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/backend) | The DRAM backend that holds the emulated medium |
+| [`lib/`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/lib), [`inc/`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/inc) | Lock-free rings and the priority queue, and their headers |
+| [`scripts/`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/scripts) | Build and launch scripts, configs, guest tools, documentation tooling ([scripts reference](../reference/scripts.md)) |
+| [`tools/`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/tools) | Guest tools for the CXL caching API |
+| [`tests/`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/tests) | Unit tests, the qtest file, CSD guest tests ([testing](../guides/testing.md)) |
+| [`docs/`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs) | This documentation ([doc map](../index.md)) |
 
 ## Making a change
 
@@ -60,7 +60,7 @@ is in [architecture](../concepts/architecture.md).
 
 *Figure: Contributing a change: one logical change with a failing test and its docs, checked locally with checkpatch, `make check` and `make check-docs`, then the four CI jobs run on the pull request.*
 
-[CONTRIBUTING.md](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/CONTRIBUTING.md) has the process: style
+[CONTRIBUTING.md](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/CONTRIBUTING.md) has the process: style
 (`checkpatch.pl`), tests, sign-off and pull requests. For a new property,
 add its help text in `femu-props.c` and regenerate the property reference
 ([keeping the documentation correct](docs-maintenance.md)). For a new mode,

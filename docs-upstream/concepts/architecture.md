@@ -3,12 +3,12 @@ title: "FEMU architecture"
 description: "FEMU is QEMU with a set of emulated storage devices under hw/femu/. This page describes those devices as a stack of layers, from what the guest sees down to..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/concepts/architecture.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/concepts/architecture.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/architecture.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/concepts/architecture.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/architecture.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/concepts/architecture.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -50,7 +50,7 @@ goes straight to the memory backend.
 | 2. Frontend | `hw/femu/nvme-io.c`, `hw/femu/nvme-admin.c`, `hw/femu/dma.c`, `hw/femu/lib/`, `hw/femu/cxlssd/cxlssd.c`, `hw/femu/cxlssd/cache.c` | `femu-poller`, vCPU threads |
 | 3. Mode backends | `hw/femu/nossd/`, `hw/femu/bbssd/bb.c`, `hw/femu/zns/zns.c`, `hw/femu/ocssd/`, `hw/femu/kvssd/`, `hw/femu/csd/` | `femu-poller` |
 | 4. FTL | `hw/femu/bbssd/`, `hw/femu/zns/zftl.c`, `hw/femu/kvssd/kvssd-ftl.c` | `FEMU-FTL-Thread`, `femu-poller` (KV), `femu-cxl-ftl` |
-| 5. NAND media timing | `hw/femu/nand/`, `hw/femu/timing-model/` | the caller's thread |
+| 5. NAND media timing | `hw/femu/nand/`, `hw/femu/ocssd/oc-timing.c` | the caller's thread |
 | 6. Memory backend | `hw/femu/backend/dram.c`; for CXL, a QEMU memory backend object | the thread that copies the data |
 
 ## 1. Guest-visible interface
@@ -200,7 +200,7 @@ the controller's.
 
 | Mode | `femu_mode` | Code | What the I/O handler does | Where time is computed |
 | --- | --- | --- | --- | --- |
-| OCSSD | 0 | `hw/femu/ocssd/oc12.c` (`lver=1`), `hw/femu/ocssd/oc20.c` (`lver=2`) | Open-Channel vector commands; the host runs the FTL | in the poller, from chip and channel timestamps (`hw/femu/timing-model/timing.c`) |
+| OCSSD | 0 | `hw/femu/ocssd/oc12.c` (`lver=1`), `hw/femu/ocssd/oc20.c` (`lver=2`) | Open-Channel vector commands; the host runs the FTL | in the poller, from chip and channel busy-until times (`hw/femu/nand/nand-media.c`) |
 | BBSSD | 1 | `hw/femu/bbssd/bb.c` | Read and Write through `nvme_rw()` | FTL thread, `bb_ftl_process_req()` |
 | NoSSD | 2 | `hw/femu/nossd/nop.c` | Read and Write through `nvme_rw()` | none |
 | ZNS | 3 | `hw/femu/zns/zns.c` | zoned command set, zone state machine | FTL thread, `zns_ftl_process_req()` |
@@ -303,8 +303,8 @@ phases is modelled only when one of those phases has a non-zero time.
 
 Read, program and erase times come either from flat properties or from
 built-in per-cell-type tables (`hw/femu/nand/nand.h` for BBSSD, CSD and KV;
-`hw/femu/zns/zns.h` for ZNS). OCSSD uses the older
-chip and channel timestamp model in `hw/femu/timing-model/timing.c`.
+`hw/femu/zns/zns.h` for ZNS). OCSSD also uses the media layer, with its
+`flash_type` times set in `hw/femu/ocssd/oc-timing.c`.
 
 [Timing model](timing-model.md) explains the rules and the properties that
 control them.

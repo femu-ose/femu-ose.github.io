@@ -3,12 +3,12 @@ title: "CSD: the computational storage extension"
 description: "This chapter describes how FEMU emulates a computational storage drive (femu_mode=4): the device memory, how programs are loaded and run, how compute time..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/csd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/csd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/csd.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/csd.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/csd.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/csd.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -344,6 +344,12 @@ many programs run at once in device time;
 [`csf_runtime_scale`](../reference/properties.md#csd-computational-storage)
 stands for how much slower the device's cores are than the host's.
 
+The completion carries the program's return value, so the poller cannot post
+it before the worker has finished the run. A runtime shorter than the host's
+own run time, declared or scaled below 1, is therefore not reached: the guest
+sees the host's time. `csd_finish_locked()` warns once when a run's runtime
+is shorter than its measured host time.
+
 ## Parameters
 
 Properties: [CSD](../reference/properties.md#csd-computational-storage). The
@@ -446,11 +452,11 @@ Refusal messages are listed in the
 
 | File | Contents |
 | --- | --- |
-| [`hw/femu/csd/csd.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/csd/csd.c) | state, every CSD command, program loading, compute unit threads, execution |
-| [`hw/femu/csd/csd.h`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/csd/csd.h) | command layouts, opcodes, program types |
-| [`hw/femu/tests/csd/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/tests/csd/README.md) | guest tool, example programs, program ABI |
-| [`hw/femu/bbssd/`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/bbssd/ftl.c) | the black-box FTL under the namespace |
-| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/femu.c) | the one-CSD-namespace check, FTL thread start |
+| [`hw/femu/csd/csd.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/csd/csd.c) | state, every CSD command, program loading, compute unit threads, execution |
+| [`hw/femu/csd/csd.h`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/csd/csd.h) | command layouts, opcodes, program types |
+| [`hw/femu/tests/csd/`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/tests/csd/README.md) | guest tool, example programs, program ABI |
+| [`hw/femu/bbssd/`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/bbssd/ftl.c) | the black-box FTL under the namespace |
+| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/femu.c) | the one-CSD-namespace check, FTL thread start |
 
 ## Related pages
 

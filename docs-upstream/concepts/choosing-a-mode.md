@@ -3,12 +3,12 @@ title: "Choosing a mode"
 description: "An NVMe femu device emulates one kind of SSD, chosen with femu_mode. Features such as Flexible Data Placement or several namespaces are added on top of a..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/concepts/choosing-a-mode.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/concepts/choosing-a-mode.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/choosing-a-mode.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/concepts/choosing-a-mode.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/choosing-a-mode.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/concepts/choosing-a-mode.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -126,7 +126,7 @@ medium's size.
 
 *Figure: Modes against layers: the interface each mode offers, where its FTL runs, which timing model it uses, where its data lives and which thread charges its time; below, the features each mode supports (CUs are CSD compute units).*
 
-Generated from [`modes.py`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/modes.py): how to turn each mode or feature
+Generated from [`modes.py`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/modes.py): how to turn each mode or feature
 on, the guest kernel and tools it needs, what the host needs, and what CI
 checks. [requirements.md](../getting-started/requirements.md#kernel-per-mode)
 has the guest kernel configuration in more detail.
@@ -138,7 +138,7 @@ has the guest kernel configuration in more detail.
 | [Zoned Namespace (ZNS)](../modes/zns.md) | zoned storage research | `femu_mode=3` | 5.9 or newer with `CONFIG_BLK_DEV_ZONED=y`; 4 KiB guest pages | nvme-cli 1.12 or newer for `nvme zns` | none beyond the common ones | `run-zns.sh` | CI: realize, Identify, write and read back |
 | [Open-Channel SSD 1.2](../modes/ocssd.md) | host-managed FTL research | `femu_mode=0,lver=1` | 4.16 to 5.14 (LightNVM was removed in 5.15) | LightNVM tools, or SPDK on newer kernels | none beyond the common ones | `run-whitebox.sh` | CI: realize, Identify |
 | [Open-Channel SSD 2.0](../modes/ocssd.md) | host-managed FTL research | `femu_mode=0` (`lver=2` is the default) | 4.17 to 5.14 (LightNVM was removed in 5.15) | LightNVM tools, or SPDK on newer kernels | none beyond the common ones | `run-whitebox.sh` | CI: realize, Identify |
-| [Key-value SSD (KV)](../modes/kvssd.md) | key-value store research | `femu_mode=5` | 6.0 or newer; no block device, the namespace is `/dev/ngXnY` | nvme-cli `io-passthru`, `hw/femu/scripts/kv-probe.c` | none beyond the common ones | none | CI: realize, Identify, store and retrieve |
+| [Key-value SSD (KV)](../modes/kvssd.md) | key-value store research | `femu_mode=5` | 6.0 or newer; no block device, the namespace is `/dev/ngXnY` | nvme-cli `io-passthru`, `hw/femu/scripts/kv-probe.c` | none beyond the common ones | `run-kvssd.sh` | CI: realize, Identify, store and retrieve |
 | [Computational storage (CSD)](../modes/csd.md) | running programs next to the data | `femu_mode=4,fdm_size=<MiB>` | any with the NVMe driver | `hw/femu/tests/csd` tools | `csd_program_dir` for shared-library programs; `--enable-csd-ubpf` build for eBPF programs | `run-csd.sh` | CI: realize, Identify, write and read back |
 | [Flexible Data Placement (FDP)](../features/fdp.md) | placement hints on a BBSSD | `femu-subsys,fdp=on,fdp.nruh=<n>` and `femu,femu_mode=1,subsys=<id>` | any with the NVMe driver; placement hints need passthrough or io_uring commands | nvme-cli with `nvme fdp` | none beyond the common ones | `run-blackbox-fdp.sh` | CI: realize, Identify, write and read back |
 | [Multiple namespaces](../features/multi-namespace.md) | several namespaces, each with its own mode | `namespaces=<n>`, optionally `namespace_sizes` and `namespace_modes` | any with the NVMe driver (ZNS namespaces need what ZNS needs) | nvme-cli | none beyond the common ones | none | CI: realize, Identify, write and read back |

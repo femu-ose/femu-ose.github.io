@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/ftl.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/ftl.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -212,6 +212,7 @@ typedef struct line {
     int ipc, vpc;        /* invalid and valid pages over the whole line */
     size_t pos;          /* slot in the victim priority queue, 0 if none */
     uint64_t close_time; /* when the line filled; age-based policies */
+    uint64_t close_seq;  /* order in which lines filled; the FIFO key */
     uint64_t stream_tag; /* Streams: the stream whose data it holds */
     bool reclaiming;     /* being rewritten by read reclaim */
     ...
@@ -219,7 +220,7 @@ typedef struct line {
 ```
 
 `struct line_mgmt` keeps a free list (a FIFO), a victim priority queue keyed
-by valid page count, and a full list.
+by valid page count (by `close_seq` under `gc_policy=fifo`), and a full list.
 
 ## Address mapping
 
@@ -445,7 +446,7 @@ refuses it.
 ```
 
 An open line belongs to no list; invalidations only lower its valid count.
-When a line fills, `close_time` is set. The free list is a FIFO: lines are
+When a line fills, `close_time` and `close_seq` are set. The free list is a FIFO: lines are
 taken from the head and returned to the tail. The FTL has no explicit wear
 levelling; the FIFO spreads erases over the free lines.
 
@@ -497,16 +498,24 @@ combined, or when the victim holds valid pages and no line is free.
 | `gc_policy` | Chooses | Cost per choice |
 | --- | --- | --- |
 | `greedy` | the line with the fewest valid pages: the top of the priority queue | O(log n) |
-| `random` | a uniformly random line of the queue (`rand()`); a background step puts it back if it fails the 1/8 filter | O(log n) |
+| `random` | a uniformly random line of the queue, drawn from the seeded generator; a background step puts it back if it fails the 1/8 filter | O(log n) |
 | `cost-benefit` | the largest age x (1 - u) / 2u, with u = vpc / pgs_per_line and age = now - close_time, compared in 128-bit integers; a line with no valid pages always wins | O(n) scan |
-| `fifo` | the line with the oldest `close_time`, whatever its valid count | O(n) scan |
-| `d-choice` | the fewest valid pages among 4 queue slots picked from the host clock; a slot can be picked twice | O(1) sample |
+| `fifo` | the line that filled first (lowest `close_seq`), whatever its valid count: the top of the queue, which this policy orders by `close_seq` | O(1) to find, O(log n) to remove |
+| `d-choice` | the fewest valid pages among 4 queue slots drawn from the seeded generator; a slot can be picked twice | O(1) sample |
 
 Only lines in the victim queue are candidates. A line that closed with every
 page valid stays in the full list until something invalidates one of its
-pages. `d-choice` samples by the host clock, so its picks differ between runs.
-`random` uses the process-wide, unseeded `rand()` stream, so it repeats only
-when the order of collections, and of other `rand()` users, repeats.
+pages. Under `fifo` the queue is keyed by `close_seq`, which does not change
+while a line is queued, so an invalidation lowers the valid count without
+moving the line.
+
+`random`, `d-choice` and the FDP `gc_strategy=2` (random) draw from a
+splitmix64 generator in each namespace's FTL (`ftl_gc_rand()`), seeded from
+`gc_seed` (default 0). The same configuration, seed and command sequence pick
+the same victims and give the same write amplification; give each run a
+different `gc_seed` to vary it. The other policies use no random numbers.
+`cost-benefit` still reads the host clock for line age, so its picks depend
+on when commands arrive.
 
 ### Collecting a line
 
@@ -768,7 +777,8 @@ still open for writing when the next write checks it.
 
 `err_read_unc_ppm` and `err_write_fail_ppm` turn a rate into a period,
 `1000000 / ppm`, at least 1. Every Nth Read command completes with
-Unrecovered Read Error and every Nth Write command with Write Fault. The
+Unrecovered Read Error (with DNR, as every Unrecovered Read Error in FEMU
+is) and every Nth Write command with Write Fault. The
 counters run per namespace FTL, so a run repeats exactly. The command is
 still timed and, for a write, still programmed and mapped; only its status
 changes. The injected counts feed SMART Media and Data Integrity Errors.
@@ -919,7 +929,7 @@ does inside the FTL and what it interacts with.
 | `secsz`, `secs_per_pg` | page size; LPN = byte offset / page size | the LBA format; DFTL entries per translation page |
 | `pgs_per_blk` | pages per block and per line column; the log-block merge unit | at most 512 with `nand_cell_type` |
 | `blks_per_pl` | the number of lines | the watermarks and the reserve are fractions of it |
-| `pls_per_lun`, `luns_per_ch`, `nchs` | line width and write striping | parallelism; `tplebsy` for multi-plane erase |
+| `pls_per_lun`, `luns_per_ch`, `nchs` | line width and write striping | parallelism; `tplebsy` for multi-plane erase; `mp_program`, `mp_read` for multi-plane program and read |
 | `devsz_mb`, `namespaces`, `namespace_sizes` | the exposed capacity | must fit the usable lines per namespace |
 | `op_pcent` | exposes a fixed fraction of raw NAND | overrides `devsz_mb`; refused with `cxl_ssd` |
 
@@ -932,6 +942,7 @@ does inside the FTL and what it interacts with.
 | `gc_thres_pcent` | background GC watermark | must not exceed `gc_thres_pcent_high` |
 | `gc_thres_pcent_high` | forced GC watermark; sizes the reserve | lower values cost exposed capacity |
 | `gc_policy` | line victim selection | refused with FDP |
+| `gc_seed` | seed for the `random` and `d-choice` policies and FDP random reclaim | no effect on the other policies |
 | `gc_strategy` | reclaim unit victim selection | FDP only |
 | `mapping` | L2P scheme | `hybrid` and `fast` reserve a line and refuse Streams; FDP needs `page` |
 | `mapping_cache_mb` | DFTL cache size | used only with `mapping=dftl` |
@@ -1011,18 +1022,21 @@ What the automated tests check:
 | Area | Test | Checks |
 | --- | --- | --- |
 | BAST merges | unit test `test-femu-hybrid-oracle`; qtests `hybrid-oracle-*`, `hybrid-batch-occupancy`, `hybrid-destage-occupancy`, `hybrid-switch-trim-erase`, `hybrid-trim-occupancy` | the unit test checks the reference model; the qtests compare FEMU's switch, full merge and erase counts against it, including deallocate and the write buffer |
-| Victim queue | unit test `test-femu-pqueue` | priority queue operations, including random pop |
+| Victim queue | unit test `test-femu-pqueue` | priority queue operations, including random pop driven by the caller's number |
+| Reproducible GC | qtests `gc-seed-d-choice`, `gc-seed-random`, `gc-seed-fifo` | two devices with the same configuration and 2048 random page writes report the same relocation count every 32 writes and the same WAF; a third with another `gc_seed` differs (FIFO: matches) |
 | NAND timing | unit test `test-femu-nand-media` | the media layer the FTL calls |
 | C0h counters | qtest `media-counters` | host and NAND page counts and the WAF move with writes |
 | Write buffer | qtest `buffer-counters`, `flush-without-vwc` and `power-loss-*` | hit counts; Flush (also with `vwc=0`), FUA, write-back, cache disable, shutdown and power-cut rollback |
 | Streams | qtest `streams-gc` and the other `streams-*` cases | stream placement and GC of stream lines |
 | GC with no free line | qtests `gc-no-destination`, `gc-no-destination-hot-cold`, `streams-gc-floor`, `gc-no-destination-fdp` | on a geometry whose forced watermark rounds to zero, random single-page and 64-page writes never fail, no mapping names an erased page and no valid page is orphaned (read through the qtest-only `x-ftl-check` property) |
+| Charged work for a fixed workload | qtests `ftl-trace-bbssd`, `ftl-trace-hot-cold`, `ftl-trace-fdp` | a seeded queue-depth-one write and read workload with collection gives exact command, host, NAND, relocated-page and erase counts and exact read, program and erase commands charged to the media layer (qtest-only `x-ftl-trace`); a refactor of the allocator, collection or media charge must not move them. A different victim policy or a dropped or duplicated charge fails it. The modelled-latency sum depends on host load and is only held to 25%, so NAND timing values are left to `test-femu-nand-media` |
+| Multi-plane program and read | qtests `ftl-trace-mp-off`, `ftl-trace-mp-on`, `ftl-trace-mp-one-plane`, `ftl-trace-mp-fdp-off`, `ftl-trace-mp-fdp-read`, `mp-program-scopes-off`, `mp-program-scopes-on`, `multiplane-warnings`, `config-refused` | with two planes per LUN and reads of 16 pages, `mp_program=1,mp_read=1` keeps every command, page and erase count of the same workload with them off, issues fewer read and program commands, and models less time before collection starts, where that time is exact; with one plane the trace equals `ftl-trace-bbssd`; under FDP the trace with `mp_read=1` equals the one without it; a full row written by Write Zeroes or by a buffer write-back takes 4 program commands instead of 8; a setting that changes nothing warns and a negative busy time is refused |
 | Format, Sanitize | qtests `format-ftl`, `sanitize` | after Format, GC relocates nothing; Sanitize status and zeroed data (the FTL state is not checked) |
 | Robustness | qtests `io-fuzz`, `io-fuzz-fdp`, `config-refused` | malformed I/O, refused configurations |
 | Start-up | `doc-examples` | every tagged example on this page and the BlackBox guide starts and moves one block |
 
-No automated test checks the behaviour of the `random`, `cost-benefit`,
-`fifo` and `d-choice` policies, `dftl` and `fast` mapping, hot/cold
+Apart from the reproducibility checks above, no automated test checks the
+behaviour of the `random`, `cost-benefit`, `fifo` and `d-choice` policies, `dftl` and `fast` mapping, hot/cold
 separation, the read cache, read reclaim, retention refresh, read and write
 fault insertion on BlackBox, or the wear and spare figures. They are covered only by the
 start-up examples and by guest runs during development; `femu-test.sh`
@@ -1040,8 +1054,8 @@ calibrated against a specific commercial drive.
 - There is no explicit wear levelling, and bad blocks do not affect
   placement.
 - Read reclaim and retention refresh act only on reads followed by writes.
-- `d-choice` GC is not reproducible run to run, and `random` only when
-  everything else that calls `rand()` repeats too.
+- `cost-benefit` GC uses the host clock for age, so it is not reproducible
+  run to run.
 - An injected write fault still programs and maps the data.
 - FAST merge counts and DFTL and read cache hit rates are not exported.
 - Each namespace's FTL is built from the whole geometry, so host memory for

@@ -305,11 +305,19 @@ const sidebars = {
       "items": [
         {
           "type": "doc",
+          "id": "ai-policy"
+        },
+        {
+          "type": "doc",
           "id": "cxlssd"
         },
         {
           "type": "doc",
           "id": "hiops"
+        },
+        {
+          "type": "doc",
+          "id": "reference/query-femu"
         }
       ]
     }

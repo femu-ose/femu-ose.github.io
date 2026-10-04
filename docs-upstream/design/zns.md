@@ -3,12 +3,12 @@ title: "ZNS: the zoned namespace model"
 description: "This chapter describes how FEMU implements the NVMe Zoned Namespace (ZNS) command set: the zone state machine, how zones are laid out on the emulated NAND,..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/zns.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/zns.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/zns.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/zns.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/zns.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/zns.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -259,7 +259,9 @@ Zone Management Receive. Other I/O opcodes go through the common path in
 - Compare is checked like a Read (`zns_check_compare()`).
 - Dataset Management, Write Zeroes, Copy and Write Uncorrectable fail with
   Invalid Opcode on a zoned namespace: they would change blocks without
-  going through the state machine.
+  going through the state machine. The command effects log for CSI 2 leaves
+  them out, and Identify Namespace reports no Copy limits (MSSRL, MCL and
+  MSRC are zero) even when `oncs` turns Copy on.
 - Verify runs the common path without zone state or boundary checks.
 - Flush and the I/O Management commands behave as on any namespace.
 

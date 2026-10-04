@@ -3,12 +3,12 @@ title: "NoSSD"
 description: "NoSSD mode (femu_mode=2, the default) emulates an NVMe drive with no media model. Reads and writes copy data between guest memory and a host DRAM buffer and..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/modes/nossd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/modes/nossd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/nossd.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/modes/nossd.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/nossd.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/modes/nossd.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -89,6 +89,20 @@ poller sweep, which adds work per command.
 
 ```
 -device femu,devsz_mb=4096,pcie_bandwidth_mbps=3500,pcie_prop_delay_ns=1000
+```
+
+The preset `hw/femu/scripts/configs/nossd.conf` sets all three to the
+figures of the NVMeCHA FPGA controller with a null backend (Qiu et al.,
+IEEE TCAD, doi:10.1109/TCAD.2021.3088784): a 7000 MB/s link and about
+2.4 us per 4 KiB read. A 4 KiB transfer at 7000 MB/s takes 585 ns, so with 1300 ns of
+link delay and 500 ns of firmware a 4 KiB Read or Write costs 2385 ns, and
+the link holds 4 KiB I/O near the controller's 1.7 million IOPS. FEMU charges
+writes the same as reads, below the controller's 3.2 us, and the guest also
+sees FEMU's own per-command time on top.
+[`ssd-config.sh`](../tutorials/09-ssd-config-files.md) expands it to:
+
+```
+-device femu,id=nvme0,devsz_mb=4096,namespaces=1,pcie_bandwidth_mbps=7000,pcie_prop_delay_ns=1300,fw_cpu_ns=500,femu_mode=2
 ```
 
 ### Optional commands and features

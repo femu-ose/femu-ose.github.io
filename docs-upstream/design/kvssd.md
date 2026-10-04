@@ -3,12 +3,12 @@ title: "KV: the key-value extension"
 description: "This chapter describes how FEMU emulates a key-value SSD (femu_mode=5): the NVMe Key Value command set as implemented, the device-side index and value..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/kvssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/kvssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/kvssd.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/design/kvssd.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/kvssd.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/kvssd.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -188,7 +188,11 @@ namespace does not change, which is what the specification asks.
 Admin side (`hw/femu/kvssd/kvssd-admin.c`): Identify with CSI 01h answers the
 I/O command set specific Namespace and Controller structures and the format
 query (CNS 0Ah); there is one KV format with a 16-byte key, a 2 MiB value
-and the key limit above. Set and Get Features 20h (Key Value Configuration)
+and the key limit above. Identify CNS 00h belongs to the NVM Command Set, so
+for a KV namespace it fails with Invalid I/O Command Set. A host reads the
+common attributes and readiness from CNS 08h, as Linux does, and the size
+and format from the KV structure above, which reports the same NMIC and
+ENDGID. Set and Get Features 20h (Key Value Configuration)
 read and write EDNEK.
 
 ## Store, step by step
@@ -367,12 +371,12 @@ Refusal messages are listed in the
 
 | File | Contents |
 | --- | --- |
-| [`hw/femu/kvssd/kvssd.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/kvssd/kvssd.c) | command parsing, registration, init and exit |
-| [`hw/femu/kvssd/kvssd-ftl.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/kvssd/kvssd-ftl.c) | index, value arena, NAND placement, reclaim, compaction, timing, self-test |
-| [`hw/femu/kvssd/kvssd-admin.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/kvssd/kvssd-admin.c) | Identify structures, Key Value Configuration feature |
-| [`hw/femu/kvssd/kvssd.h`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/kvssd/kvssd.h) | `FemuKvssdState`, `FemuKvssdMappingEntry`, `FemuKvIndexOps` |
-| [`hw/femu/bbssd/ftl-media.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/bbssd/ftl-media.c) | `ssd_advance_status()`, the media model KV charges through |
-| [`hw/femu/nvme-admin.c`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/nvme-admin.c) | Identify and feature routing to the KV handlers |
+| [`hw/femu/kvssd/kvssd.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/kvssd/kvssd.c) | command parsing, registration, init and exit |
+| [`hw/femu/kvssd/kvssd-ftl.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/kvssd/kvssd-ftl.c) | index, value arena, NAND placement, reclaim, compaction, timing, self-test |
+| [`hw/femu/kvssd/kvssd-admin.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/kvssd/kvssd-admin.c) | Identify structures, Key Value Configuration feature |
+| [`hw/femu/kvssd/kvssd.h`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/kvssd/kvssd.h) | `FemuKvssdState`, `FemuKvssdMappingEntry`, `FemuKvIndexOps` |
+| [`hw/femu/bbssd/ftl-media.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/bbssd/ftl-media.c) | `ssd_advance_status()`, the media model KV charges through |
+| [`hw/femu/nvme-admin.c`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/nvme-admin.c) | Identify and feature routing to the KV handlers |
 
 ## Related pages
 

@@ -3,12 +3,12 @@ title: "Open-Channel SSD (OCSSD)"
 description: "OCSSD mode (femu_mode=0) emulates an Open-Channel SSD, also called a \"white-box\" SSD. The device has no FTL. The host sees the NAND geometry (channels or..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/modes/ocssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/modes/ocssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/ocssd.md`](https://github.com/MoatLab/FEMU/blob/39a55eeb637b23c26b3a2ce9254399c9e0b1b3be/hw/femu/docs/modes/ocssd.md) at FEMU `39a55eeb6` (2026-10-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/ocssd.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/modes/ocssd.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -66,6 +66,14 @@ changes `lver`:
 `run-whitebox.sh` lets you change `ssd_size`, `num_channels` and
 `num_chips_per_channel`. Keep the other values unless you have a reason to
 change them.
+
+The same Open-Channel 2.0 device is the preset `hw/femu/scripts/configs/ocssd.conf`
+(set `lver = 1` in it for 1.2). [`ssd-config.sh`](../tutorials/09-ssd-config-files.md)
+expands it to:
+
+```
+-device femu,id=nvme0,lver=2,devsz_mb=4096,namespaces=1,lnum_ch=2,lnum_lun=4,lnum_pln=2,lpgs_per_blk=512,lsecs_per_pg=4,lsec_size=4096,lmetasize=16,nlbaf=5,lba_index=3,mdts=10,femu_mode=0
+```
 
 ## Configuration
 
@@ -142,7 +150,8 @@ Open-Channel support. FEMU's Open-Channel 2.0 controller also accepts the
 plain NVMe Read and Write commands that SPDK sends.
 
 The 2.0 chunk information log page (CAh) reports each chunk's state, write
-pointer and wear, 32 bytes per chunk. It needs an explicit namespace, and
+pointer and wear, 32 bytes per chunk. The Supported Log Pages log (00h)
+lists it for the NVM command set. It needs an explicit namespace, and
 `--log-len` must not exceed 32 times the chunk count. This reads the first
 128 chunks:
 
