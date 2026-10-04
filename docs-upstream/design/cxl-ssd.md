@@ -3,12 +3,12 @@ title: "CXL SSD (femu-cxl-ssd)"
 description: "The device comes from Cylon (FAST '26); the user guide has its citation."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/cxl-ssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/00b40928c51e649e93a089e7b78a1bb2ff19c779/hw/femu/docs/design/cxl-ssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/cxl-ssd.md`](https://github.com/MoatLab/FEMU/blob/9e1d0b4fb319a677f0f1577a8250047ede40899e/hw/femu/docs/design/cxl-ssd.md) at FEMU `9e1d0b4fb` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/cxl-ssd.md`](https://github.com/MoatLab/FEMU/blob/00b40928c51e649e93a089e7b78a1bb2ff19c779/hw/femu/docs/design/cxl-ssd.md) at FEMU `00b40928c` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -877,7 +877,7 @@ describes each one; this table says where each family comes from.
 | [Cache](../reference/runtime-properties.md#cache-counters): `cache-hits`, `cache-misses`, `read-*`, `write-*`, `cache-inserts`, `cache-evictions`, `cache-entries`, `prefetch-inserts` | `femu_cxl_access()` and the cache library | Trapped lookups only; direct hits are invisible |
 | [Snapshots](../reference/runtime-properties.md#snapshot-counters): `last-*` | `stats-reset`, control command 1 | Copies taken before the event counters are cleared |
 | [Media](../reference/runtime-properties.md#media-counters): `media-reads`, `media-writes`, `media-time-ns`, `media-full` | `femu_cxl_media()` | Never cleared by `stats-reset`; take differences. `media-writes` comes from the FTL and includes linked NVMe programs |
-| [Direct mapping](../reference/runtime-properties.md#direct-mapping-counters): `der-active`, `der-probes`, `der-mapped`, `der-remaps`, `der-revocations`, `der-quiet-revocations`, `der-replacements`, `der-fallbacks` | DER code in `qemu-adapter.c` | `der-mapped` is a gauge and the evidence that mapping is active |
+| [Direct mapping](../reference/runtime-properties.md#direct-mapping-counters): `der-active`, `der-probes`, `der-mapped`, `der-remaps`, `der-revocations`, `der-quiet-revocations`, `der-replacements`, `der-fallbacks`, `der-emul-exit`, `der-emul-fills`, `der-emul-failures` | DER code in `qemu-adapter.c` | `der-mapped` is a gauge and the evidence that mapping is active |
 | [Caching API](../reference/runtime-properties.md#caching-api-counters): `cca-*` | `cca.c` | `cca-pinned` and `cca-uncached` are gauges |
 | [Other](../reference/runtime-properties.md#other-counters): `invalidations`, `nvme-drops`, `log-dropped` | Invalidation sites, NVMe drop BH, log writers | `invalidations` is a generation, not an error count |
 
