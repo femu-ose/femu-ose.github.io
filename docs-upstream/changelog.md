@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/00b40928c51e649e93a089e7b78a1bb2ff19c779/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/00b40928c51e649e93a089e7b78a1bb2ff19c779/hw/femu/docs/CHANGELOG.md) at FEMU `00b40928c` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/docs/CHANGELOG.md) at FEMU `57920cdcf` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -41,7 +41,7 @@ listed one by one.
 - Cache misses to different pages wait for the media together, by default only while a direct mode is active, and long media waits sleep instead of spinning ([b72d14dbe](https://github.com/MoatLab/FEMU/commit/b72d14dbe), [64d424dd2](https://github.com/MoatLab/FEMU/commit/64d424dd2), [133c553ca](https://github.com/MoatLab/FEMU/commit/133c553ca), [145fcfe4b](https://github.com/MoatLab/FEMU/commit/145fcfe4b)).
 - A bbssd NVMe controller can share a `femu-cxl-ssd` medium through `cxl_ssd=<id>`, with writes, deallocates and flips kept consistent between the two front ends ([146a240dc](https://github.com/MoatLab/FEMU/commit/146a240dc), [d73a5b780](https://github.com/MoatLab/FEMU/commit/d73a5b780), [a7a3c5678](https://github.com/MoatLab/FEMU/commit/a7a3c5678), [353bbe107](https://github.com/MoatLab/FEMU/commit/353bbe107), [287e5c885](https://github.com/MoatLab/FEMU/commit/287e5c885), [6783d50af](https://github.com/MoatLab/FEMU/commit/6783d50af)).
 - A runtime `fast-load` switch on `femu-cxl-ssd` lets warmup and data loading skip the wait for modelled media time while the FTL, cache and counters still run. Switching it off waits for the queued NAND work, reported in `fast-load-drain-ns`, so measurement starts on an idle model.
-- With `der=cylon` on a host kernel that has `KVM_CAP_CYLON_FAULT_EXIT`, an instruction KVM cannot decode (VEX, EVEX, most SSE with a memory operand) on an unmapped page no longer hangs its vCPU: FEMU fills and maps the page and the guest runs the instruction natively, or stops the VM with a report when the page cannot be mapped or the instruction makes no progress (100,000 consecutive refills at one RIP). New property `cylon-emul-exit` and counters `der-emul-exit`, `der-emul-fills` and `der-emul-failures`.
+- With `der=cylon` on a host kernel that has `KVM_CAP_CYLON_FAULT_EXIT`, an instruction KVM cannot decode (VEX, EVEX, most SSE with a memory operand) on an unmapped page no longer hangs its vCPU: FEMU fills and maps the page and the guest runs the instruction natively, or stops the VM with a report when the page cannot be mapped or the instruction makes no progress (100,000 consecutive refills at one RIP). Instruction fetches from an unmapped page (for example a shared library cached on the CXL node) are mapped, not emulated, so code such as `endbr64` runs natively. New property `cylon-emul-exit` and counters `der-emul-exit`, `der-emul-fills`, `der-emul-fetch-fills` and `der-emul-failures`.
 - The `femu-cxl-ssd` FTL worker wakes only the access whose request it finished, instead of every waiting access. On a `der=cylon` test with 8 and 16 vCPUs doing random reads that all miss a 256-page cache, throughput rose about 40% (65k to 91k and 70k to 98k accesses/s), because waiters no longer wake for other requests.
 
 #### New modes and data placement

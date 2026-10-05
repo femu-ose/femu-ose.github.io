@@ -3,12 +3,12 @@ title: "Tutorial 02: garbage collection and write amplification"
 description: "You make garbage collection (GC) run on a BlackBox SSD, measure the write amplification factor (WAF) of one run from the counters in log page C0h, and then..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/00b40928c51e649e93a089e7b78a1bb2ff19c779/hw/femu/docs/tutorials/02-gc-and-waf.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/docs/tutorials/02-gc-and-waf.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/tutorials/02-gc-and-waf.md`](https://github.com/MoatLab/FEMU/blob/00b40928c51e649e93a089e7b78a1bb2ff19c779/hw/femu/docs/tutorials/02-gc-and-waf.md) at FEMU `00b40928c` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/tutorials/02-gc-and-waf.md`](https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/docs/tutorials/02-gc-and-waf.md) at FEMU `57920cdcf` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

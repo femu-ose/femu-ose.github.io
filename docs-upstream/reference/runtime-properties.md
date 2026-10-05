@@ -3,12 +3,12 @@ title: "Runtime properties and counters"
 description: "QOM properties that a running device exposes. Read and set them through QMP at /machine/peripheral/<id>, where <id> is the id= given on -device:"
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/00b40928c51e649e93a089e7b78a1bb2ff19c779/hw/femu/docs/reference/runtime-properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/docs/reference/runtime-properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/runtime-properties.md`](https://github.com/MoatLab/FEMU/blob/00b40928c51e649e93a089e7b78a1bb2ff19c779/hw/femu/docs/reference/runtime-properties.md) at FEMU `00b40928c` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/runtime-properties.md`](https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/docs/reference/runtime-properties.md) at FEMU `57920cdcf` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -105,6 +105,7 @@ or in the HMP monitor with `qom-get` and `qom-set`. Event counters are cleared b
 | `der-fallbacks` | `uint64` | Read-only: refused direct mapping attempts and device disablements |
 | `der-emul-exit` | `bool` | Read-only: whether the host kernel returns Cylon accesses it cannot emulate to FEMU (KVM_CAP_CYLON_FAULT_EXIT) |
 | `der-emul-fills` | `uint64` | Read-only: exits for an access KVM could not decode that FEMU served by a fill and a mapping, repeats and cache hits included; not instructions or unique pages; stats-reset keeps it |
+| `der-emul-fetch-fills` | `uint64` | Read-only: the der-emul-fills exits for code the guest executed from an unmapped page; stats-reset keeps it |
 | `der-emul-failures` | `uint64` | Read-only: such exits FEMU could not serve (unmappable page or no progress); each one stops the VM; stats-reset keeps it |
 
 ### Caching API counters

@@ -3,12 +3,12 @@ title: "CXL SSD design"
 description: "The opt-in femu-cxl-ssd device subclasses QEMU's CXL Type-3 device. It takes an ordinary volatile memory backend, preserving standard decoder translation,..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/00b40928c51e649e93a089e7b78a1bb2ff19c779/hw/femu/docs/cxlssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/docs/cxlssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/cxlssd.md`](https://github.com/MoatLab/FEMU/blob/00b40928c51e649e93a089e7b78a1bb2ff19c779/hw/femu/docs/cxlssd.md) at FEMU `00b40928c` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/cxlssd.md`](https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/docs/cxlssd.md) at FEMU `57920cdcf` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -320,8 +320,18 @@ the capability when it installs the slot, unless `cylon-emul-exit=off`, and
 reports it in `der-emul-exit`. The capability is per VM: once one device
 turns it on, `cylon-emul-exit=off` on another device cannot turn it off.
 Without it, KVM fails the decode as stock KVM does: a `#UD` in guest user
-mode, an internal-error exit in guest kernel mode. A failure to fetch the
-instruction bytes never takes this exit.
+mode, an internal-error exit in guest kernel mode.
+
+Instruction fetches from unmapped Cylon pages are mapped, not emulated.
+When the guest executes code on such a page (for example a shared library
+whose page cache is on the CXL node), KVM checks before emulating anything
+whether RIP, or the tail of an instruction that crosses into the page, lies on
+the faulting page. If so, the exit carries that code page with the fetch flag,
+and FEMU fills and maps it; the direct mapping allows execution, and the
+guest runs the code natively. Emulating code instead fails on instructions
+KVM lacks: `endbr64`, the first instruction of most library functions,
+became a `#UD` (SIGILL) in the guest. `der-emul-fetch-fills` counts these
+exits (they are part of `der-emul-fills`).
 
 FEMU fills the page as a read miss (cache insert, media time and delay,
 counters), maps it, and the guest runs the instruction again natively. A
