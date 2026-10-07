@@ -4,12 +4,12 @@ description: "Start with the goal you have. What changed since the last release 
 slug: /
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/docs/README.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/hw/femu/docs/README.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/README.md`](https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/docs/README.md) at FEMU `57920cdcf` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/README.md`](https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/hw/femu/docs/README.md) at FEMU `256724ad8` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -54,7 +54,7 @@ and what the guest needs. In short:
 | A Zoned Namespace SSD | ZNS (`femu_mode=3`) | `run-zns.sh` | [ZNS](modes/zns.md) |
 | A host-managed OpenChannel SSD | OCSSD (`femu_mode=0`) | `run-whitebox.sh` | [OCSSD](modes/ocssd.md) |
 | A key-value SSD | KV (`femu_mode=5`) | `run-kvssd.sh` | [KV](modes/kvssd.md) |
-| Computational storage | CSD (`femu_mode=4`) | `run-csd.sh` | [CSD](modes/csd.md), [CSD guest tools](https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/tests/csd/README.md) |
+| Computational storage | CSD (`femu_mode=4`) | `run-csd.sh` | [CSD](modes/csd.md), [CSD guest tools](https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/hw/femu/tests/csd/README.md) |
 | Flexible Data Placement | BBSSD with `femu-subsys,fdp=on` | `run-blackbox-fdp.sh` | [FDP](features/fdp.md) |
 | Create and delete namespaces from the guest | NoSSD or BBSSD with `ns_mgmt=on` | none | [Namespace management](features/ns-management-and-pi.md#namespace-management) |
 | Per-block metadata and protection information | NoSSD or BBSSD with `meta`, `mc`, `pi=on` | none | [Metadata and PI](features/ns-management-and-pi.md#metadata-and-protection-information) |
@@ -143,7 +143,7 @@ two differ.
 - [Code structure](development/code-structure.md): what lives where under
   `hw/femu/`, and where to start a change. [Architecture](concepts/architecture.md)
   explains how the parts work together.
-- [Contributing](https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/CONTRIBUTING.md): style, tests, sign-off and pull
+- [Contributing](https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/CONTRIBUTING.md): style, tests, sign-off and pull
   requests.
 - [AI policy](ai-policy.md): using AI coding tools, disclosure with
   `Assisted-by:`, and what is not allowed.
@@ -154,8 +154,8 @@ two differ.
 ## How to cite
 
 If you use FEMU in your research, cite the FAST '18 paper. The BibTeX entry
-is in [the README](https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/README.md#primary-citation), and
-[CITATION.cff](https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/CITATION.cff) has the same entry for citation tools.
+is in [the README](https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/README.md#primary-citation), and
+[CITATION.cff](https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/CITATION.cff) has the same entry for citation tools.
 If you use FDP, the CXL SSD or CSD, also cite the paper that mode comes from:
 [WARP](features/fdp.md#citation) (FAST '26), [Cylon](modes/cxl-ssd.md#citation)
 (FAST '26) or [CEMU](modes/csd.md#citation) (ASPLOS '26).

@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/docs/design/ftl.md) at FEMU `57920cdcf` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/hw/femu/docs/design/ftl.md) at FEMU `256724ad8` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -596,6 +596,11 @@ picks that victim policy; `gc_policy` and the other FTL knobs listed under
 and the [FDP guide](../features/fdp.md) describe
 it.
 
+Both collectors record a page move through one helper, `ssd_gc_move_page()`,
+and time it through `ssd_gc_charge_move()`. Each keeps its own destination
+and write frontier: line GC writes to the data or stream pointer, FDP to the
+handle's collection reclaim unit.
+
 ## Write buffer
 
 ![The BBSSD write buffer with buffer_size=10 and buffer_thres_pcent=80: a write that finds the buffer at its watermark first programs the two oldest pages and pays for them.](/img/manual/ftl-write-buffer.svg)
@@ -1022,22 +1027,25 @@ What the automated tests check:
 | Area | Test | Checks |
 | --- | --- | --- |
 | BAST merges | unit test `test-femu-hybrid-oracle`; qtests `hybrid-oracle-*`, `hybrid-batch-occupancy`, `hybrid-destage-occupancy`, `hybrid-switch-trim-erase`, `hybrid-trim-occupancy` | the unit test checks the reference model; the qtests compare FEMU's switch, full merge and erase counts against it, including deallocate and the write buffer |
-| Victim queue | unit test `test-femu-pqueue` | priority queue operations, including random pop driven by the caller's number |
+| Victim queue | unit test `test-femu-pqueue` | priority queue operations, including random pop driven by the caller's number; pop, remove and random pop leave the detached element's index at 0; pop equals removing the top and random pop equals removing the drawn slot, slot for slot |
 | Reproducible GC | qtests `gc-seed-d-choice`, `gc-seed-random`, `gc-seed-fifo` | two devices with the same configuration and 2048 random page writes report the same relocation count every 32 writes and the same WAF; a third with another `gc_seed` differs (FIFO: matches) |
 | NAND timing | unit test `test-femu-nand-media` | the media layer the FTL calls |
 | C0h counters | qtest `media-counters` | host and NAND page counts and the WAF move with writes |
 | Write buffer | qtest `buffer-counters`, `flush-without-vwc` and `power-loss-*` | hit counts; Flush (also with `vwc=0`), FUA, write-back, cache disable, shutdown and power-cut rollback |
 | Streams | qtest `streams-gc` and the other `streams-*` cases | stream placement and GC of stream lines |
 | GC with no free line | qtests `gc-no-destination`, `gc-no-destination-hot-cold`, `streams-gc-floor`, `gc-no-destination-fdp` | on a geometry whose forced watermark rounds to zero, random single-page and 64-page writes never fail, no mapping names an erased page and no valid page is orphaned (read through the qtest-only `x-ftl-check` property) |
-| Charged work for a fixed workload | qtests `ftl-trace-bbssd`, `ftl-trace-hot-cold`, `ftl-trace-fdp` | a seeded queue-depth-one write and read workload with collection gives exact command, host, NAND, relocated-page and erase counts and exact read, program and erase commands charged to the media layer (qtest-only `x-ftl-trace`); a refactor of the allocator, collection or media charge must not move them. A different victim policy or a dropped or duplicated charge fails it. The modelled-latency sum depends on host load and is only held to 25%, so NAND timing values are left to `test-femu-nand-media` |
+| Charged work for a fixed workload | qtests `ftl-trace-bbssd`, `ftl-trace-hot-cold`, `ftl-trace-fdp` | a seeded queue-depth-one write and read workload with collection gives exact command, host, NAND, relocated-page and erase counts and exact read, program and erase commands charged to the media layer, and a digest of the order in which lines or reclaim units were collected (qtest-only `x-ftl-trace`; the digest is the last field, a running FNV-style hash of each collected victim's id, updated once per collection, read reclaim included); a refactor of the allocator, collection or media charge must not move them. A different victim policy or a dropped or duplicated charge fails it. The modelled-latency sum depends on host load and is only held to 25%, so NAND timing values are left to `test-femu-nand-media` |
+| Victim order of each policy | qtests `ftl-trace-random`, `ftl-trace-d-choice`, `ftl-trace-fifo`, `ftl-trace-fdp-random`, `ftl-trace-fdp-noisy`, `ftl-trace-fdp-noisy-ii`, `ftl-trace-fdp-reread` | the same workload under `gc_policy=random`, `d-choice` and `fifo`, and under FDP `gc_strategy=2` and `4`, gives exact counts, with a fixed `gc_seed` where the policy samples. The NOISY cases write two placement identifiers, so the per-handle heaps compare their tops; in `-ii` one handle is Initially Isolated and has no heap of its own. `ftl-trace-fdp-reread` reads a page after each overwrite, which adds background passes whose refusals move the greedy tie order. A changed draw, tie break or heap key fails the matching case: the victim digest catches a change that leaves the counts equal, such as FDP random with `gc_seed=7` and each draw one higher; cost-benefit has no exact pin, because it reads the host real-time clock |
+| Read reclaim | qtest `ftl-trace-read-reclaim` | with `read_reclaim_limit=2` and a read after each overwrite, 83 lines are rewritten, some of them taken from the victim heap, and the trace counts are exact |
+| Refused FDP strategies | qtest `fdp-gc-strategy-refused` | `gc_strategy` values other than 0, 1, 2 and 4 are refused at realize |
 | Multi-plane program and read | qtests `ftl-trace-mp-off`, `ftl-trace-mp-on`, `ftl-trace-mp-one-plane`, `ftl-trace-mp-fdp-off`, `ftl-trace-mp-fdp-read`, `mp-program-scopes-off`, `mp-program-scopes-on`, `multiplane-warnings`, `config-refused` | with two planes per LUN and reads of 16 pages, `mp_program=1,mp_read=1` keeps every command, page and erase count of the same workload with them off, issues fewer read and program commands, and models less time before collection starts, where that time is exact; with one plane the trace equals `ftl-trace-bbssd`; under FDP the trace with `mp_read=1` equals the one without it; a full row written by Write Zeroes or by a buffer write-back takes 4 program commands instead of 8; a setting that changes nothing warns and a negative busy time is refused |
 | Format, Sanitize | qtests `format-ftl`, `sanitize` | after Format, GC relocates nothing; Sanitize status and zeroed data (the FTL state is not checked) |
 | Robustness | qtests `io-fuzz`, `io-fuzz-fdp`, `config-refused` | malformed I/O, refused configurations |
 | Start-up | `doc-examples` | every tagged example on this page and the BlackBox guide starts and moves one block |
 
-Apart from the reproducibility checks above, no automated test checks the
-behaviour of the `random`, `cost-benefit`, `fifo` and `d-choice` policies, `dftl` and `fast` mapping, hot/cold
-separation, the read cache, read reclaim, retention refresh, read and write
+Apart from the exact counts above, no automated test checks the
+behaviour of the `cost-benefit` policy, `dftl` and `fast` mapping, hot/cold
+separation, the read cache, retention refresh, read and write
 fault insertion on BlackBox, or the wear and spare figures. They are covered only by the
 start-up examples and by guest runs during development; `femu-test.sh`
 ([guest-side tests](../guides/testing.md#guest-side-tests)) checks that the
@@ -1072,8 +1080,9 @@ calibrated against a specific commercial drive.
    `pgs_per_line / 8` invalid pages, return NULL and leave the queue as it
    was.
 3. Remove the chosen line with `pqueue_remove()` (or `pqueue_pop()` for the
-   top), set `line->pos = 0` and decrement `lm->victim_line_cnt`.
-   `reclaim_line()` expects a line that is in no list.
+   top), which sets `line->pos` to 0. The victim count is the queue size,
+   so there is no counter to keep. `reclaim_line()` expects a line that is
+   in no list.
 4. Add `{ .name = "<name>", .select_victim_line = ... }` to
    `femu_ftl_policies[]`. `femu_ftl_policy_known()` then accepts the name.
 5. Describe it in the `gc_policy` description in `hw/femu/femu-props.c`,

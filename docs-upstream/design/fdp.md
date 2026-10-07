@@ -3,12 +3,12 @@ title: "FDP: Flexible Data Placement"
 description: "This chapter describes how FEMU implements NVMe Flexible Data Placement (FDP): how the subsystem builds reclaim groups, reclaim units and reclaim unit..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/docs/design/fdp.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/hw/femu/docs/design/fdp.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/docs/design/fdp.md) at FEMU `57920cdcf` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/hw/femu/docs/design/fdp.md) at FEMU `256724ad8` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -245,7 +245,9 @@ because its last unit filled with no free unit to follow it.
   group's free units are at or below
   `(1 - gc_thres_pcent / 100) * units`, it runs one pass. A background pass
   puts its victim back, whatever the policy, unless the victim is empty or
-  at least 1/8 of its pages are invalid.
+  an erase would give back at least 1/8 of its pages. Those pages are the
+  invalid ones plus, for a unit that RUH Update retired part written, the
+  ones it never wrote.
 - Foreground: before a placed write and before each of its pages, while
   free units are at or below `(1 - gc_thres_pcent_high / 100) * units` (at
   least one unless `gc_thres_pcent_high` is 100), it
@@ -438,7 +440,8 @@ last:
 
 | Check | What it covers |
 | --- | --- |
-| qtest cases in `hw/femu/tests/qtest/femu-test.c` | `fdp-events`, `fdp-features`, `fdp-report-length`, `fdp-ruh-usage`, `fdp-write-zeroes`, `fdp-write-zeroes-placed`, `fdp-ruh-update`, `fdp-ruh-update-full`, `wide-lba-fdp`, `io-fuzz-fdp`, `copy-fdp`, `log-contents-fdp`, `ns-mgmt-unavailable-fdp`, `fdp-csd-knobs`, `fdp-csd-runs` |
+| qtest cases in `hw/femu/tests/qtest/femu-test.c` | `fdp-events`, `fdp-features`, `fdp-report-length`, `fdp-ruh-usage`, `fdp-write-zeroes`, `fdp-write-zeroes-placed`, `fdp-ruh-update`, `fdp-ruh-update-full`, `fdp-background-gc`, `wide-lba-fdp`, `io-fuzz-fdp`, `copy-fdp`, `log-contents-fdp`, `ns-mgmt-unavailable-fdp`, `fdp-csd-knobs`, `fdp-csd-runs`, `fdp-gc-strategy-refused` |
+| Exact traces and victim-order digests (qtest-only `x-ftl-trace`) | `ftl-trace-fdp` and `ftl-trace-fdp-reread` (greedy), `ftl-trace-fdp-random` (`gc_strategy=2`), `ftl-trace-fdp-noisy` and `ftl-trace-fdp-noisy-ii` (`gc_strategy=4` on two handles, the second one Initially Isolated in `-ii`), `ftl-trace-fdp-trim-erase-all` (`fdp_trim_erase_all=1` while both kinds of heap hold victims; afterwards the mapping holds exactly the pages written since) |
 | Documentation examples | each tagged FDP example starts under qtest and moves one block |
 | `hw/femu/scripts/fdp-test-nvme-admin.sh` | in-guest nvme-cli checks against the `run-blackbox-fdp.sh` configuration; manual |
 | `hw/femu/tests/unit/test-pqueue.c` | the priority queue the victim queues are built on |
@@ -470,9 +473,12 @@ last:
   hook, but `fdp_advance_ru_pointer()` retires a unit after its first line;
   it must walk `ru->lines[]` first.
 - A new victim policy: add a value to the GC strategy enum in
-  `bbssd/ftl.h`, a case in `select_victim_ru()`, and accept it in the
-  geometry checks of `bbssd/ftl-geom.c`. Keep the two heap positions
-  (`pos` for the group queue, `ruh_pos` for a handle queue) separate.
+  `bbssd/ftl.h`, a case in `select_victim_ru()` that chooses a unit without
+  removing it, and accept the value in the geometry checks of
+  `bbssd/ftl-geom.c`. Queue, remove and reorder victims only through
+  `fdp_victim_enqueue()`, `fdp_victim_dequeue()` and
+  `fdp_victim_reprioritize()`, which keep the group heap (`pos`) and the
+  handle heap (`ruh_pos`) in step.
 - A new event: generate it with `nvme_fdp_record_event()` after checking the
   handle's filter, and add the type to `nvme_fdp_events_supported[]` and
   `nvme_fdp_evf_shifts[]` in `nvme.h`.

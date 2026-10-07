@@ -3,12 +3,12 @@ title: "Computational storage (CSD)"
 description: "CSD mode (femu_mode=4) emulates a computational storage drive. On top of a normal NVMe namespace, the device has its own memory (function data memory, FDM)..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/docs/modes/csd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/hw/femu/docs/modes/csd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/csd.md`](https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/docs/modes/csd.md) at FEMU `57920cdcf` (2026-10-04), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/csd.md`](https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/hw/femu/docs/modes/csd.md) at FEMU `256724ad8` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -228,7 +228,7 @@ sudo ./csd/csd-passthru /dev/nvme0n1 bench 4096 32
 ```
 
 `bench` reports the average latency of device memory writes, reads and
-namespace-to-memory copies. [hw/femu/tests/csd/README.md](https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/tests/csd/README.md)
+namespace-to-memory copies. [hw/femu/tests/csd/README.md](https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/hw/femu/tests/csd/README.md)
 lists every subcommand, the eBPF steps and the program ABI.
 
 The vendor log page C0h counts the namespace's NAND traffic as for
@@ -306,7 +306,7 @@ please also cite:
 
 ## Related pages
 
-- [hw/femu/tests/csd/README.md](https://github.com/MoatLab/FEMU/blob/57920cdcfb9de0ebbac718f337d460684d9629e1/hw/femu/tests/csd/README.md): the guest tool
+- [hw/femu/tests/csd/README.md](https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/hw/femu/tests/csd/README.md): the guest tool
   and program ABI
 - [BlackBox SSD](blackbox.md): the FTL under the namespace
 - [Timing model: KV and CSD](../concepts/timing-model.md#kv-and-csd)
