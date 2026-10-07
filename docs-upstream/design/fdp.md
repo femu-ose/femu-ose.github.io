@@ -3,12 +3,12 @@ title: "FDP: Flexible Data Placement"
 description: "This chapter describes how FEMU implements NVMe Flexible Data Placement (FDP): how the subsystem builds reclaim groups, reclaim units and reclaim unit..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/hw/femu/docs/design/fdp.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/design/fdp.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/hw/femu/docs/design/fdp.md) at FEMU `256724ad8` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/design/fdp.md) at FEMU `328c2749b` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -247,7 +247,9 @@ because its last unit filled with no free unit to follow it.
   puts its victim back, whatever the policy, unless the victim is empty or
   an erase would give back at least 1/8 of its pages. Those pages are the
   invalid ones plus, for a unit that RUH Update retired part written, the
-  ones it never wrote.
+  ones it never wrote. Cost-benefit skips units that fail this check and
+  takes the best-scoring unit that passes, so an old unit with little to
+  free does not stall the pass.
 - Foreground: before a placed write and before each of its pages, while
   free units are at or below `(1 - gc_thres_pcent_high / 100) * units` (at
   least one unless `gc_thres_pcent_high` is 100), it
@@ -263,7 +265,7 @@ not apply under FDP and only `greedy` is accepted with it.
 | `gc_strategy` | Policy |
 | --- | --- |
 | 0 (default) | greedy: the unit with the fewest valid pages |
-| 1 | cost-benefit: an empty unit first, otherwise the largest `(1 - u) * age / u`, with `u` the valid pages over the pages written (over the unit's pages until a page is invalidated) and `age` the time since a page in the unit was last invalidated, computed at selection time; a unit never invalidated counts as maximally old |
+| 1 | cost-benefit: an empty unit first, otherwise the largest `(1 - u) * age / u`, with `u` the valid pages over all the unit's pages (pages a part-written unit never wrote count as freed) and `age` the time since a page in the unit was last invalidated, computed at selection time; a unit retired with no page invalidated is aged from its retirement |
 | 2 | random among the victims |
 | 4 | per handle: the unit with the fewest valid pages among the per-handle queues of Persistently Isolated handles, falling back to greedy |
 
@@ -440,7 +442,7 @@ last:
 
 | Check | What it covers |
 | --- | --- |
-| qtest cases in `hw/femu/tests/qtest/femu-test.c` | `fdp-events`, `fdp-features`, `fdp-report-length`, `fdp-ruh-usage`, `fdp-write-zeroes`, `fdp-write-zeroes-placed`, `fdp-ruh-update`, `fdp-ruh-update-full`, `fdp-background-gc`, `wide-lba-fdp`, `io-fuzz-fdp`, `copy-fdp`, `log-contents-fdp`, `ns-mgmt-unavailable-fdp`, `fdp-csd-knobs`, `fdp-csd-runs`, `fdp-gc-strategy-refused` |
+| qtest cases in `hw/femu/tests/qtest/femu-test.c` | `fdp-events`, `fdp-features`, `fdp-report-length`, `fdp-ruh-usage`, `fdp-write-zeroes`, `fdp-write-zeroes-placed`, `fdp-ruh-update`, `fdp-ruh-update-full`, `fdp-background-gc`, `fdp-cb-unwritten-age`, `fdp-cb-utilization`, `fdp-cb-background`, `wide-lba-fdp`, `io-fuzz-fdp`, `copy-fdp`, `log-contents-fdp`, `ns-mgmt-unavailable-fdp`, `fdp-csd-knobs`, `fdp-csd-runs`, `fdp-gc-strategy-refused` |
 | Exact traces and victim-order digests (qtest-only `x-ftl-trace`) | `ftl-trace-fdp` and `ftl-trace-fdp-reread` (greedy), `ftl-trace-fdp-random` (`gc_strategy=2`), `ftl-trace-fdp-noisy` and `ftl-trace-fdp-noisy-ii` (`gc_strategy=4` on two handles, the second one Initially Isolated in `-ii`), `ftl-trace-fdp-trim-erase-all` (`fdp_trim_erase_all=1` while both kinds of heap hold victims; afterwards the mapping holds exactly the pages written since) |
 | Documentation examples | each tagged FDP example starts under qtest and moves one block |
 | `hw/femu/scripts/fdp-test-nvme-admin.sh` | in-guest nvme-cli checks against the `run-blackbox-fdp.sh` configuration; manual |

@@ -3,12 +3,12 @@ title: "BlackBox SSD (BBSSD)"
 description: "BlackBox mode (femu_mode=1) emulates a conventional NVMe SSD: the device runs its own flash translation layer (FTL), garbage collection (GC) and NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/hw/femu/docs/modes/blackbox.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/modes/blackbox.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/hw/femu/docs/modes/blackbox.md) at FEMU `256724ad8` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/modes/blackbox.md) at FEMU `328c2749b` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

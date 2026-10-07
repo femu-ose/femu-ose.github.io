@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/256724ad8f5dcb6a377f3482cb3a40bca050c250/hw/femu/docs/CHANGELOG.md) at FEMU `256724ad8` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/CHANGELOG.md) at FEMU `328c2749b` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -156,6 +156,7 @@ was not doing anything.
 | `cell_pages` above 5 | Indexed past the page-type multiplier table. | d589ce2b8 |
 | `nand_cell_type` with `pgs_per_blk` above 512 | Read past the page-type latency tables. | d589ce2b8 |
 | `gc_strategy` outside {0,1,2,4} | Other values silently fell back to greedy or never collected at all. | d589ce2b8 |
+| `gc_policy` other than greedy with `femu_mode=5` | KV reclaims by taking the emptiest line off the shared victim queue; another policy reorders that queue (fifo by a close order KV never records), so KV took a line that was not the emptiest. | |
 | `zns_flash_type` 0, 6 or above, or MLC/PLC without explicit latencies | 0 gives a zero-length write cache and an endless flush loop; 6+ indexes past the timing tables; MLC and PLC have no built-in figures, so every NAND operation cost nothing. | b234d27c8 |
 | `femu_mode` above 5 | No mode registers command handlers for it (6 was a SmartSSD placeholder), so the controller came up with none. | c3b8e88ef |
 | `multipoller_enabled` other than 0 or 1 | Values above 1 started several pollers that each swept every queue, so two pollers could run and complete the same command. | de5fcd972 |
@@ -271,6 +272,9 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - An FDP handle whose last unit filled with nothing free reports no room in RUH Status. It used to report the room of its retired unit, which GC could free and give to another handle ([4e7a06666](https://github.com/MoatLab/FEMU/commit/4e7a06666)).
 - The `random` and `d-choice` GC policies and FDP's random reclaim strategy draw victims from a generator seeded by the new `gc_seed` property instead of the wall clock and `rand()`, so the same configuration and workload give the same victims and WAF on every run. `fifo` finds its victim at the top of a queue ordered by close order instead of scanning every line, with the same victims as before ([04ba1c0aa](https://github.com/MoatLab/FEMU/commit/04ba1c0aa)).
 - FDP background GC counts the pages a unit never wrote as reclaimable. A unit that RUH Update retired holding a few valid pages had none invalid, so each background pass took it from the top of the victim queue, refused it and stopped; units behind it were collected only under the foreground watermark ([beb9878ac](https://github.com/MoatLab/FEMU/commit/beb9878ac)).
+- FDP cost-benefit GC ages a unit retired with no page invalidated from its retirement. It used to count from time zero, so a part-written unit left by RUH Update outscored every other victim; with few pages to free, background GC refused it on every pass and collected nothing. ([a9e0e1af6](https://github.com/MoatLab/FEMU/commit/a9e0e1af6))
+- FDP cost-benefit GC measures a unit's utilization against all its pages at every invalidation, as it already did at retirement. The first overwrite in a part-written unit used to measure it against the pages written only, so a unit holding 3 valid pages of 16 scored as 3 of 4 full and lost to units that cost more to collect. ([529d70960](https://github.com/MoatLab/FEMU/commit/529d70960))
+- FDP background cost-benefit GC takes the best-scoring unit with enough to free. A unit with one invalid page and an old invalidation could outscore every other victim; the pass refused it and collected nothing until the others aged past it or the foreground watermark was reached ([fe29da90b](https://github.com/MoatLab/FEMU/commit/fe29da90b)).
 
 #### Spec conformance and host compatibility
 
