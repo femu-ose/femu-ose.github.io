@@ -3,12 +3,12 @@ title: "Measuring"
 description: "How to read FEMU's counters, measure latency and throughput from the guest, and get numbers that repeat from run to run. Commands in sh blocks run inside..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/guides/measuring.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/guides/measuring.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/guides/measuring.md`](https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/guides/measuring.md) at FEMU `328c2749b` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/guides/measuring.md`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/guides/measuring.md) at FEMU `18503485f` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -137,7 +137,11 @@ scripts/qmp/qom-get /machine/peripheral/cxlssd.media-full
   counters (`media-reads`, `media-writes`, `media-time-ns`) or the `der-*`
   counters, so measure those as differences between two reads.
 - `media-full` must stay 0. A non-zero value means some NAND programs found
-  no free page and were not timed, and the run is not valid.
+  no free page and were not timed, and the run is not valid. The
+  over-provisioning rule at realize keeps it at 0.
+- `gc-stalls` and `gc-stall-ns` show how often and how long writes waited
+  for forced garbage collection. Take differences, as for the media
+  counters.
 - Accesses served through a direct mapping (`der=memslot` or `cylon`) never
   reach QEMU and are not counted as hits.
 

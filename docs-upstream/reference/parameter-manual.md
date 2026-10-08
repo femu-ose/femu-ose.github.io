@@ -3,12 +3,12 @@ title: "Parameter manual"
 description: "This manual explains how to configure an emulated device: the ways a parameter reaches FEMU, then every group of parameters by component, with what each one..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/reference/parameter-manual.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/reference/parameter-manual.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/reference/parameter-manual.md) at FEMU `328c2749b` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/reference/parameter-manual.md) at FEMU `18503485f` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -556,7 +556,7 @@ Design: [CXL SSD](../design/cxl-ssd.md).
 | `prefetch-degree`, `prefetch-stride` | pages | up to the media page count | pages inserted after a miss, and their distance; changeable at run time |
 | `ftl` | bool | | `off` charges no media time and cannot be linked to an NVMe controller |
 | `channels`, `luns-per-channel` | count | 1 to 4096, 1 to 128 | NAND channels and LUNs (one plane each) |
-| `pages-per-block`, `blocks-per-plane` | count | 1 to 65536; blocks 2 to 65536, or 0 to size it | NAND blocks; 0 leaves spare room for GC |
+| `pages-per-block`, `blocks-per-plane` | count | 1 to 65536; blocks 2 to 65536, or 0 to size it | NAND blocks; 0 leaves spare room for GC; an explicit value must leave two more spare lines than `gc-threshold-high` keeps free |
 | `read-ns`, `program-ns`, `erase-ns`, `channel-ns` | ns | at most one second | NAND times |
 | `gc-threshold`, `gc-threshold-high` | percent | 1 to 100, high >= low | GC watermarks |
 | `der` | name | `off`, `memslot`, `cylon` | direct mapping of cached pages into the guest |

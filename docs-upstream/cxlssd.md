@@ -3,12 +3,12 @@ title: "CXL SSD design"
 description: "The opt-in femu-cxl-ssd device subclasses QEMU's CXL Type-3 device. It takes an ordinary volatile memory backend, preserving standard decoder translation,..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/cxlssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/cxlssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/cxlssd.md`](https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/cxlssd.md) at FEMU `328c2749b` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/cxlssd.md`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/cxlssd.md) at FEMU `18503485f` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -78,7 +78,7 @@ its contents come from the backend and are not cleared: they read as zero only
 when the backend is zero-filled, as a fresh `memory-backend-ram` is. Writes to
 resident pages become dirty. Dirty eviction or `flush-cache=true` issues a
 real FTL write; without a cache, each write goes straight to the FTL. The guest
-access waits out the returned media completion cost with the BQL released: it
+access waits out the returned media completion cost with the locks released: it
 sleeps until 100 us before the deadline and spins on the realtime clock only
 for that tail. This is volatile memory, not a persistence contract for guest
 CPU cache flush instructions.
@@ -94,7 +94,7 @@ properties (see "Geometry and timing compatibility"); the defaults are four
 channels, four LUNs per channel and 256 pages per block, and
 `blocks-per-plane=0` sizes the planes to 5/4 of the media plus four more
 blocks each, which leaves GC room. Current bbssd request processing supplies
-background and forced GC. NAND type-specific and advanced NVMe experiment
+background and forced GC. See "Full NAND" for the over-provisioning rule. NAND type-specific and advanced NVMe experiment
 properties are not exposed through this device.
 
 FIFO removes the oldest entry; LIFO removes the newest. CLOCK rotates entries
@@ -107,11 +107,12 @@ library can be built independently of QEMU.
 ## Thread ownership
 
 CXL MMIO arrives on vCPU threads under the BQL; qtest and management operations
-also hold it. The BQL protects payload copies, cache membership, counters and
-DER mappings. A per-device operation gate is shared by accesses and taken
+also hold it. Cylon fault exits arrive on vCPU threads without it. The CXL
+lock protects payload copies, cache membership, counters and DER mappings;
+see "Locking" below. A per-device operation gate is shared by accesses and taken
 alone by cache flushes, CCA commands, linked-NVMe drops and way changes; those
 wait for the accesses in progress, and new accesses wait for them. Gate
-waiters release the BQL using a condition variable. Invalidation never waits: configuration writes, component writes and
+waiters release the locks using a condition variable. Invalidation never waits: configuration writes, component writes and
 CCI commands run inside another owner's re-entrancy guard, and blocking there
 would refuse unrelated accesses from other vCPUs. It revokes DER mappings at
 once and bumps the read-only `invalidations` generation; an access in flight
@@ -126,8 +127,9 @@ A waiter re-routes and re-translates after entering the gate and completes at
 the current DPA, or with random data when media became disabled, as the parent
 Type-3 device would; only an address that no longer decodes fails.
 
-The requesting thread drops the BQL both while handing work to the FTL worker
-and during the remaining media delay, while keeping its share of the gate.
+The requesting thread drops the locks both while handing work to the FTL
+worker and during the remaining media delay, while keeping its share of the
+gate.
 An access holds the pages it touches, in ascending order, until it completes:
 accesses to one page stay ordered, a second miss to a page waits for the first
 fill instead of repeating it, and misses to different pages wait for the
@@ -142,9 +144,9 @@ page mapped by the read, where KVM exchanges and retries, and none were lost
 either way (`der=cylon` needs a host kernel whose emulated exchange does not
 use the slot's backing; see "Host kernel"). Eviction leaves a held page
 resident, and the access that needed the room goes uncached; a dirty victim
-is held while its write-back drops the BQL. The worker mutex protects the
+is held while its write-back drops the locks. The worker mutex protects the
 queue of stack-owned requests and their completions, and is released before
-reacquiring the BQL. Each request carries its own condition variable on the
+reacquiring the locks. Each request carries its own condition variable on the
 caller's stack: enqueue wakes the worker on a condition variable no request
 waits on, and the worker wakes only the waiter whose request it finished, so
 a waiter never wakes for another request. The worker alone modifies FTL/NAND state and takes
@@ -154,7 +156,7 @@ own media time. Cache iterators, entries and payload stay stable because
 flush waits for the gate, teardown defers freeing them to the last holder,
 and invalidation touches only DER mappings. The FEMU-owned fixed-window overlay disables its own I/O recursion guard.
 It dispatches FEMU media directly, so no parent window guard remains engaged
-across a BQL wait. The component-register overlay revokes and then enters the
+across a wait. The component-register overlay revokes and then enters the
 parent register callback without waiting. Plain Type-3 callbacks retain their normal guard.
 Read-only QOM counters may show an operation in progress.
 The worker is joined before its state is destroyed. Stop requires that no
@@ -165,6 +167,82 @@ The worker receives only page numbers, operation types and timestamps. It
 never reads or writes guest memory. Payload copies remain on the vCPU thread.
 Any future worker-side guest-memory operation must use `femu_dma_rw()`; the
 existing NVMe poller DMA rules are unchanged.
+
+### Locking
+
+The CXL lock (`femu_cxl_lock()` in `cxlssd.c`) is one mutex for every
+`femu-cxl-ssd`. It protects what the BQL protected before: the operation
+gate and the page holds, the cache, the protection and overflow tables,
+every counter, the DER and Cylon bookkeeping, the adapter's window list and
+list of live devices, and the per-vCPU Cylon fault records. It is recursive
+within a thread, because QOM setters call each other.
+
+The lock order is BQL, CXL lock, a medium's FTL worker mutex, a caching API
+mutex. A thread that holds the CXL lock never waits for the BQL, never
+pauses vCPUs and never runs work on a vCPU. Every BQL-side entry point takes
+the CXL lock after the BQL: MMIO on the window, component, configuration and
+CCI writes, reset, realize and unplug, QOM properties (counters included),
+LSA control commands, the linked-NVMe bottom half and attach/detach, the
+caching API thread, the Cylon memory listener and install bottom half, the
+vCPU destroy hook and the system reset handler. The QOM type table does
+not change after startup (no modules), so QOM casts need no lock.
+
+Where the code released the BQL before (the FTL handoff, the media delay,
+the gate, page and fill waits, the caching API delays and yields), it now
+releases the CXL lock completely and the BQL if the thread holds it, and
+takes them back in lock order. A condition wait releases the CXL lock
+atomically; a thread that also holds the BQL lets it go first. So each hold
+of the CXL lock covers the same code as a hold of the BQL did.
+
+KVM calls the Cylon fault exit outside the BQL, and FEMU serves it under the
+CXL lock alone. Misses of different vCPUs then never wait for the BQL, and a
+miss holds the CXL lock twice: before and after its media read. A fill's
+modelled delay and the pagemap check of the frame it maps run in that
+unlocked media wait; the check holds its own reference to the pagemap
+descriptor, so unplug cannot close it under the read. Some steps still need
+the BQL:
+
+- A route through a switch, an interleaved or decoding host bridge, or to a
+  device that is not a live `femu-cxl-ssd`. The fast route reads no decoder
+  and no bus: a window with one passthrough host bridge routes to that
+  bridge's root port, which never changes, and the device is the live
+  `femu-cxl-ssd` below it.
+- The first map after an invalidation, which scans the QOM tree for the
+  windows of the device. The exit checks this before each fill attempt
+  and again after the fill's wait for the gate, before it counts or charges
+  anything.
+- A `der=memslot` device, whose mappings change the memory map.
+
+Such an exit stops before it decides anything and FEMU serves it again under
+the BQL, as before (`der-fault-bql`). Three steps that needed the BQL before
+now run without it:
+
+- A Cylon failure deletes the slot at once: the slot is outside QEMU's
+  memory map, its ID is only reserved under the KVM slots mutex, and the
+  kernel serializes slot changes. The TLB flush ioctl is served before the
+  kernel takes the vCPU mutex.
+- Teardown that unplug left to the last access out of the gate goes to a
+  bottom half when that access has no BQL. The gate stays open: accesses in
+  flight see the device closing and leave, and the bottom half takes the
+  gate alone. No vCPU waits for the main loop, which may be pausing vCPUs.
+- The last reference to a device finalizes it. A fault exit drops a
+  reference to a closing device in a bottom half; until unplug sets closing
+  (under the CXL lock), the parent holds a reference.
+
+Component register writes (the HDM decoders) and CCI commands hold the CXL
+lock from the invalidation to the end of the write or command, so a fault
+exit never sees them half done. A configuration write runs between two
+invalidations, without the CXL lock across the parent's write, which can
+rebuild the memory map: a fault exit that routes while it changes cannot
+keep its mapping, because the second invalidation revokes it or the moved
+generation stops it. `cxl_dev_media_disabled()` reads a word of mailbox
+register storage that only mailbox MMIO writes, under the BQL alone, and
+that no command sets (see "Caching API"); a fault exit that reads it then is
+a word read racing a word write, as an access between two register writes
+saw before.
+The Cylon install bottom half pauses the vCPUs before it takes the CXL
+lock: a paused vCPU is outside every fault exit, and a vCPU that waits for
+the lock could not pause.
 
 ## Direct Endpoint Remapping
 
@@ -303,7 +381,8 @@ used). Nonzero `KVM_SET_SPTE_FLAG` operations are refused; only the flush
 remains.
 
 The fixed kernel still requires, and does not check: SMM disabled
-(`-machine smm=off`), identical CPUID on every vCPU (one TDP root role), and
+(`-machine smm=off`, which FEMU now checks), identical CPUID on every vCPU
+(one TDP root role), and
 no move or flag change of the dual slot. Tables that were mapped to userspace
 are never freed: about 8 bytes per 4 KiB page of the window per slot.
 
@@ -354,6 +433,170 @@ instruction bytes and the latest GPAs at that RIP when:
   evict each other ends this way; a healthy loop whose page other vCPUs evict
   stays far below the limit.
 
+#### Version 2: no emulation of cold pages
+
+With `cylon-never-emulate=on` and a host kernel that has version 2 of
+`KVM_CAP_CYLON_FAULT_EXIT`, KVM does not emulate an access to a cold page.
+A cold page has a zero leaf. KVM installs nothing and exits to FEMU with the
+access type from the EPT violation: read, write or fetch, and whether the
+guest page walk made the access. FEMU fills the page as a read miss, maps it,
+and the guest repeats the access natively. One path serves every
+instruction: vector, atomic, string, page-crossing (one exit for each page),
+code, and guest page tables on the CXL node. `der-emul-v2` reports that the
+mode is on. `der-fault-reads`, `der-fault-writes`, `der-fault-fetches` and
+`der-fault-page-walks` count the exits by type. FEMU serves the exits
+without the BQL (see "Locking"); `der-fault-bql` counts the exits it had to
+serve under the BQL.
+
+The rules:
+
+- Revocation writes zero, not an MMIO entry. The TLB rule does not change:
+  the full revocation flushes, and the quiet revocation runs only when an
+  atomic exchange finds the accessed bit clear.
+- FEMU checks before the fill whether it can map the page. It cannot map a
+  page in a caching API uncached range, or a page whose set has all ways
+  pinned and that no direct mapping ratio selects. It also cannot map a page
+  whose set has no victim to give: every way is protected (see below) or
+  held by another access. When only other accesses or recent protections of
+  other vCPUs stand in the way, FEMU waits until they end and fills again
+  instead of giving the page to the emulator (at most three tries and 100 ms
+  for one exit). A fill takes its cache way before the media read, which
+  drops the locks, so no other access can take that way meanwhile. FEMU
+  charges and counts nothing for a page it cannot keep. A prefetch holds its
+  page until it is mapped, so it never maps a page another access is still
+  filling, and a fill whose read fails revokes any mapping of its page. A page that a direct
+  mapping ratio selects maps without a cache way. It writes a marker
+  to the leaf, and KVM then emulates the accesses to that page as in
+  version 1, one charged access at a time. `der-fault-emulated` counts these
+  pages. A media read that fails after the fill took its way also sends
+  the page to the emulator, after its read was charged. A full NAND never
+  does: a program that finds no page only loses its timing (see "Full
+  NAND").
+- KVM reports exits, not retired instructions, so FEMU cannot tell one
+  execution of a RIP from the next. It records the latest 64 pages that a
+  vCPU fills at one RIP (oldest released first; `der-fault-unprotected`
+  counts releases), until the vCPU faults at another RIP. A fill evicts
+  these pages freely, as a loop over distinct pages at one RIP needs. When
+  the vCPU faults again on a page it already filled at that RIP, its
+  instruction may need pages that evict each other, so that fill passes
+  over the recorded pages and takes the next victim in policy order. A
+  fill's prefetch does not evict the page it fills. Fills of other vCPUs
+  pass over the recorded pages only for 1 ms after the fill (a refill
+  restarts it), which is usually longer than the vCPU needs to run the
+  instruction again. Emulated accesses pass over nothing: each completes in
+  its exit, as in version 1. A device reset or unplug, a system reset, and
+  the destruction of a vCPU drop the records.
+- An instruction whose pages do not fit in their set (more pages of one set
+  than ways, for example the source and destination of a `rep movsb` page
+  copy in one 1-way set) does not refill for ever: on the refault the fill
+  keeps nothing (`der-fault-conflicts`), and the page goes to KVM's
+  emulator, which completes the instruction with one charged access for
+  each emulated access, as a device that serves each access does. The
+  emulator reaches the instruction's other pages through host memory, so
+  FEMU first marks the resident pages that the instruction faulted on for
+  a write dirty. When the emulator cannot run the instruction (VEX, EVEX,
+  most SSE, code), FEMU maps the page without a cache way, charged as one
+  fill (`der-fault-overflows`), until the vCPU faults at another RIP or 16
+  newer overflow pages of that vCPU replace it.
+- A retry of a fill that mapped nothing runs only for a page that is now
+  resident, so it charges no media time again, or after such a wait, when
+  the first fill kept and charged nothing. The page must still be
+  admissible and decode to the same device. After 1,000 consecutive exits
+  at one RIP that FEMU served with neither a mapping nor a handoff to the
+  emulator, FEMU stops the VM ("retry budget exhausted"). A handoff, and a
+  refault fill that kept the vCPU's own pages, restart both this budget and
+  the 100,000-repeat bound, so the bound is left for refills that the
+  instruction's own fills cause. Exits are not retired instructions: both
+  are retry budgets, not proof that an instruction did not complete.
+- KVM does not write the leaves itself: no fast-fault write restore, no
+  asynchronous page fault, no prefetch (also not the shadow prefetch of a
+  nested guest), and the changed-PTE notifier only zaps. KVM refuses the
+  slot in the SMM address space, fails the faults of a nested guest on the
+  slot, and fails the faults of a second MMU root role (for example a root of
+  another depth). FEMU refuses `der=cylon` unless the machine has
+  `smm=off`.
+- The version is per VM and fixed by the first Cylon device that installs
+  its slot, also when that device has `cylon-emul-exit=off`. A later device
+  with `cylon-never-emulate=on` cannot turn it on, because the pages of the
+  earlier slots hold version 1 state; FEMU warns. Every device reports the
+  VM's state in `der-emul-v2`.
+
+#### Batched revocation
+
+In version 2 the guest repeats every access natively after the fill, so
+the accessed bit is set on nearly every evicted page, and nearly every
+eviction takes the full revocation with its two flushes (see "SPTE encoding,
+dirty tracking and revocation" below). Each flush kicks every running vCPU
+and makes it run a global INVEPT, so with several busy vCPUs the flushes
+serialize them. To share the flushes, an eviction that needs them also
+revokes the mappings of the next pages its cache set evicts, up to
+`cylon-revoke-batch` pages in all (default 32, 1 to 64; 1 is one page for
+each two flushes):
+
+1. FEMU asks the cache policy for the pages it evicts after the victim if
+   no access comes first: FIFO and CLOCK in their order, S3-FIFO its small
+   queue first. LIFO evicts the page it inserts next, so it takes none. It
+   takes only pages that the eviction itself could take now: not pages that
+   an access holds, that another vCPU protected within the protection window
+   (1 ms), that the faulting vCPU protects when it refaults at one RIP, or
+   that a ratio keeps mapped. Of the rest it takes the first pages whose
+   entry is mapped with the accessed bit set (one with the bit clear still
+   revokes later without a flush).
+2. It write-protects every page, flushes once, samples each dirty bit while
+   it swaps each entry for zero, and flushes once more. The rule for the
+   dirty bit is the same as for one page: it is read only after a flush that
+   leaves no writable translation.
+3. The other pages stay in the cache, so its capacity and order do not
+   change. Their dirty state is kept in the cache entry, and their eviction
+   charges the write-back as before, needing no flush. An access before
+   that eviction exits as for a cold page and maps the page again as a hit,
+   with no media time. Such an access counts as a cache hit and, under
+   CLOCK and S3-FIFO, updates the reference state that a direct hit does
+   not update. Its fault also protects the page for the vCPU's
+   instruction, so a later fill may pass over it, under FIFO too.
+
+The batch relies on the flush covering the whole VM. KVM's flush of one
+GFN falls back to a flush of the whole VM on VMX; only on a host that runs
+on Hyper-V does it flush the one GFN, and there FEMU revokes one page at a
+time. Version 1 and memslot mode revoke one page at a time.
+`der-revoke-flushes` counts the flushes of full revocations,
+`der-revoked-ahead` the pages revoked before their own eviction, and
+`der-ahead-remaps` those mapped again before it. With random reads over a
+footprint much larger than the cache, and next victims that are mapped and
+not protected, FIFO evictions take about 2 / `cylon-revoke-batch` flushes
+each.
+
+Limits of version 2:
+
+- Pages that must stay unmapped are still served by KVM emulation: pages
+  in a caching API uncached range, pages in a set whose ways are all pinned,
+  and misses with no victim. An instruction that the emulator cannot run
+  (VEX, EVEX, most SSE with a memory operand, code) stops the VM on such a
+  page, with the report above. This applies to those pages only.
+  `der-fault-emulated` counts the pages given to the emulator, and
+  `der-emul-failures` counts the stops.
+- KVM fails the faults of a second MMU root role also while an old root of
+  another role is being torn down. Keep one root role: the same CPUID on
+  every vCPU, and no SMM.
+- The 64-page record can release a page of an instruction with a larger
+  footprint; `der-fault-unprotected` counts these.
+- A conflict costs one extra fill: the first time, a page of the
+  instruction evicts another, and only the refault shows the conflict.
+- An overflow page (`der-fault-overflows`) is a model deviation: it is
+  mapped without a cache way, so writes through it are not charged and
+  accesses of other vCPUs to it are not counted until the vCPU faults at
+  another RIP. A vCPU that then stays idle keeps it mapped. Cache disable,
+  invalidation and linked NVMe writes unmap it.
+- Emulated instructions reach their other pages through host memory, as in
+  version 1: reads and writes there are not charged. FEMU marks pages that
+  took a write fault dirty before a conflict handoff; other cases (for
+  example a page written only by the emulator) stay unmodeled.
+- Protection from other vCPUs is time-bound, not tied to retirement. If a
+  vCPU does not run its instruction again within 1 ms of the fill (for
+  example, the host preempts its thread), another vCPU's fill to the same
+  set can evict the page, and the instruction faults again. Contention for
+  one set can then repeat; it slows the vCPUs but does not stop the VM.
+
 ### SPTE encoding, dirty tracking and revocation
 
 The formats come from CylonLinux `arch/x86/kvm/mmu/spte.h`, `spte.c`, `mmu.c`
@@ -367,8 +610,8 @@ EPT MMIO has W/X without R (binary 110), the guest page address and split
 memslot-generation fields (bits 3..10 and 52..62). The prototype's `0x586`
 contains generation 0xb0; it is not a timeless MMIO mask. For a populated leaf, the implementation saves the exact kernel-created
 MMIO entry, including runtime generation and host reserved-address mitigation
-bits. It restores that entry on revocation; the kernel refreshes a stale MMIO
-generation itself. Ratio application admits empty leaves by CAS and restores
+bits. Version 1 restores that entry on revocation, and the kernel refreshes a
+stale MMIO generation itself; version 2 writes zero instead. Ratio application admits empty leaves by CAS and restores
 them to zero. Unit tests check the fixed encodings, the full generation
 range, noncontiguous huge-page arithmetic and boundary/overflow rejection.
 
@@ -397,15 +640,17 @@ translations.
 
 An entry whose accessed bit is still clear at revocation has not been used by
 a page walk since it was installed, so no TLB holds a translation from it and
-its dirty bit is clear too: it is swapped for the saved MMIO SPTE without a
-flush, and counted in `der-quiet-revocations`. If the CPU sets the bit first,
-the exchange fails and the full revocation runs. The miss that installs an
-entry completes in QEMU, so an entry is used only if the guest returns to the
-page before it is evicted.
+its dirty bit is clear too: it is swapped for the cold value (the saved MMIO
+SPTE in version 1, zero in version 2) without a flush, and counted in `der-quiet-revocations`. If the CPU sets the bit first,
+the exchange fails and the full revocation runs. In version 1 the miss that
+installs an entry completes in QEMU, so an entry is used only if the guest
+returns to the page before it is evicted. In version 2 the guest repeats the
+access through the new entry, so the bit is nearly always set.
 
 Otherwise revocation first clears both EPT W and MMU-writable atomically and flushes writable TLB
-entries. It then samples the hardware dirty bit while compare-and-swapping the saved
-MMIO SPTE and flushes again. Exchanges retry hardware dirty-bit changes and
+entries. It then samples the hardware dirty bit while compare-and-swapping the
+cold value (the saved MMIO SPTE in version 1, zero in version 2) and flushes
+again. Exchanges retry hardware dirty-bit changes and
 leave concurrent KVM revocations intact. A concurrent kernel replacement makes the page
 conservatively dirty. Thus clean direct reads need no program, while writes
 and uncertain transitions do. This requires EPT A/D; hosts without it stay
@@ -417,10 +662,12 @@ reset retains volatile payload and cache/FTL contents but revokes mappings.
 Cylon deletes its slot on every invalidation, sampling tracked dirty state
 first; later eligible accesses reinstall it and cached pages map again lazily
 on their next access. Evicting a cache page revokes only that page's entry
-with the protocol above (two single-GFN flushes) and keeps the slot. The flush
-ioctl covers one GFN, so revocations cannot share a flush; a whole-slot clear
-omits each page's final flush because the slot deletion that follows flushes
-every translation. Cylon itself rewrites the evicted entry without any flush.
+with the protocol above (two flushes) and keeps the slot; version 2 shares
+the flushes with the next victims (see "Batched revocation"). The flush ioctl
+names one GFN, but on VMX KVM flushes the whole VM for it. A whole-slot
+clear omits each page's final flush because the slot deletion that follows
+flushes every translation. The unmodified Cylon prototype rewrote the evicted
+entry without any flush.
 Failure and teardown also delete the slot and release its mapped SPT VMAs. The FTL worker is joined
 before its state is destroyed. Payload backing belongs to the host memory
 backend. Direct hits do not enter QEMU or read pagemap.
@@ -506,15 +753,16 @@ single producer, single consumer; the library serializes its threads and
 ### Execution and locking
 
 A doorbell sets a flag under the CCA mutex and signals the `femu-cxl-cca`
-thread; it never waits, like any invalidation. Nothing takes the BQL while
-holding that mutex. The thread takes the BQL, drains the request ring and
-executes commands one at a time in submission order. It releases the BQL
-between commands and after every chunk, and after 64 commands it gives the
-BQL up and wakes itself again, so a guest that keeps the ring full cannot
-hold it. Each command runs in chunks of at most 256 pages of work and 4096
+thread; it never waits, like any invalidation. Nothing takes the BQL or the
+CXL lock while holding that mutex. The thread takes the BQL and the CXL
+lock, drains the request ring and executes commands one at a time in
+submission order. It releases them between commands and after every chunk,
+and after 64 commands it gives them up and wakes itself again, so a guest
+that keeps the ring full cannot hold them. Each command runs in chunks of at most 256 pages of work and 4096
 lookups, and each chunk holds the operation gate and then waits out its
-accumulated media time with the BQL released, as a guest access does. A gate
-waiter woken as a chunk ends can still lose the BQL to the thread, so before
+accumulated media time with the locks released, as a guest access does. A
+gate waiter woken as a chunk ends can still lose the locks to the thread, so
+before
 each chunk the thread lets one waiting access take the gate first. Guest
 accesses thus run between chunks, a long invalidation never keeps a vCPU in
 an MMIO exit, and the main loop is never blocked. INVALIDATE and
@@ -527,7 +775,7 @@ pages in an INVALIDATE or CACHE_DISABLE range, the candidate snapshot) run
 in one gate hold without media time; they are bounded by the cache size,
 as a flush is. Cache membership still changes only under the gate.
 
-Device reset reformats the rings and zeroes every slot under the BQL, so
+Device reset reformats the rings and zeroes every slot under the locks, so
 entries posted against stale indices run as NOPs, bumps EPOCH, clears READY
 and asks the
 thread to unpin everything and end every uncached range under the gate; READY returns when
@@ -657,7 +905,8 @@ The model state follows these rules:
 
 The NVMe FTL thread runs each request on the medium's FTL holding the worker
 mutex, which the medium's worker holds for each of its own, so the two
-clients serialize without another thread. It never takes the BQL, because
+clients serialize without another thread. It never takes the BQL or the CXL
+lock, because
 `nvme_pause_pollers()` waits for it under the BQL. For each command in rule 1
 it appends the page ranges and a sequence number under that mutex and
 schedules a main-loop bottom half. Like any invalidation, the bottom half
@@ -671,7 +920,8 @@ over 64 pages clears every direct mapping at once rather than revoking page by
 page, because Cylon revocation flushes the VM twice per page; with a direct
 ratio set it revokes page by page, since a clear would drop the ratio too.
 
-Lock order is BQL, gate, worker mutex. A long gate holder (a flush, a way
+Lock order is BQL, CXL lock (the gate is a condition under it), worker
+mutex. A long gate holder (a flush, a way
 change, a caching-API chunk) delays linked write completions for as long as
 it holds the gate; reads never wait. Between the NVMe program and the bottom
 half, a CXL eviction of the same dirty page can program it once more, and a
@@ -884,19 +1134,55 @@ The following realize-time properties feed the existing bbssd FTL:
 eight per page, with one plane per LUN. Axis limits follow the FTL's PPA
 fields; aggregate sectors must fit its signed integer totals. Explicit NAND
 capacity must cover media capacity. Thresholds must lie in 1..100, with the
-high threshold at least the low threshold. Geometry without spare space can
-run out of writable pages; automatic geometry reserves extra space.
+high threshold at least the low threshold. With the FTL on, the NAND must
+also leave enough spare lines for garbage collection (see "Full NAND").
+Automatic geometry meets that rule.
 
 `cylon-first-touch-program=on` charges a NAND program instead of a read on
 first access to an unmapped page. `cylon-free-writeback=on` suppresses NAND
 programming on dirty cache eviction/flush. Both default off and exist to
 reproduce Cylon paper experiments; enabling them changes the media model.
 The default continues to program dirty eviction and reads unmapped pages
-without a NAND operation. Media waits run outside the BQL and
+without a NAND operation. Media waits run outside the BQL and the CXL lock and
 retain the device operation gate. They sleep until 100 us before the deadline
 and spin on the realtime clock only for that tail, which absorbs sleep timer
 slack without holding a host CPU for long waits such as a cache flush. The virtual clock cannot measure this
 host wait; qtests validate modeled timing and BQL release independently.
+
+## Full NAND
+
+A line is one block index across all channels and LUNs. Forced collection
+keeps `floor((1 - gc-threshold-high / 100) * blocks-per-plane)` lines free.
+Realize refuses a geometry whose spare lines (lines beyond the media size)
+are fewer than that reserve plus two. The error gives the smallest
+`blocks-per-plane` that meets the rule within the FTL limits, or says that
+none does. With `ftl=off` the rule does not apply.
+
+The rule removes the full-NAND case. When collection is forced, a closed
+line with an invalid page always exists, and there is room to move its
+valid pages. The guest uses the device as memory, so almost all data stays
+valid. With no spare line, every program after the first fill fails. With
+one spare line the FTL runs out of lines on the way and logs "No free
+lines". With spare lines only in the reserve, each write copies a nearly
+full line.
+
+A write that finds the free lines at the forced threshold waits for
+collection. The FTL frees the victim line in its metadata at once and books
+the copies and erases on the LUNs. The request then ends no earlier than the
+last erase on every LUN, as a real SSD blocks writes during foreground
+collection. Linked NVMe requests wait the same way. `gc-stalls` counts these
+requests, and `gc-stall-ns` adds the time from each request start to the end
+of its collection. The program of the request itself waits for its LUN, so
+the wait on every LUN adds only the difference between LUNs. With GC delay
+off (the FEMU flip command), collection books no NAND time and no request
+waits.
+
+`media-full` counts programs that still find no free page. The rule keeps it
+at 0. If one occurs, its program is not timed and the first one reports an
+error. The failure does not stop an eviction or an insert, because the
+payload is in host memory. A full NAND never sends a cacheable access
+uncached. An access goes uncached only for a caching API uncached range, a
+set whose ways are all pinned, or a victim that another access holds.
 
 ## Direct ratios
 
@@ -963,7 +1249,7 @@ commands 1 and 5.
 | `CXL_SIZE` | `256M` | Media size, an integer with an `M` or `G` suffix |
 | `CACHE_PAGES` | `(size_mb / 20) * 256` | `cache-pages`, a cache of size/20 MiB as in Cylon |
 | `CACHE_WAYS` | 1 | `cache-ways`, direct mapped as Cylon's default `buffer_way=0`; `full` means `cache-pages` |
-| `BLOCKS_PER_PLANE` | 768 for `48G`, 1536 for `96G`, else 0 | `blocks-per-plane`; the presets leave no over-provisioning as in Cylon, and 0 lets FEMU size it |
+| `BLOCKS_PER_PLANE` | 822 for `48G`, 1644 for `96G`, else 0 | `blocks-per-plane`; the presets add 7% over-provisioning to Cylon's NAND size, and 0 lets FEMU size it |
 | `CACHE_POLICY` | `fifo` | `cache-policy` |
 | `DER` | `off` | `der` |
 | `CYLON_KERNEL_ACK` | `off` | `cylon-kernel-ack`; set `on` only on the fixed host kernel |

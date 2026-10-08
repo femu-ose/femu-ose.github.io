@@ -3,12 +3,12 @@ title: "FEMU design"
 description: "This is the design document for FEMU's emulated storage devices. It explains how FEMU is built, one component per chapter, so you can predict what a..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/design/README.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/design/README.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/README.md`](https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/design/README.md) at FEMU `328c2749b` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/README.md`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/design/README.md) at FEMU `18503485f` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -235,12 +235,12 @@ command lifecycle.
 ### One CXL load that misses
 
 ```text
- guest vCPU           vCPU thread in QEMU (BQL)               femu-cxl-ftl worker    memory backend
+ guest vCPU           vCPU thread (BQL, CXL lock)             femu-cxl-ftl worker    memory backend
      |                         |                                      |                    |
      | load from device range  |                                      |                    |
      |------------------------>| femu-cxl-media overlay: decode HDM   |                    |
      |                         | femu_cxl_access: cache lookup, miss  |                    |
-     |                         | drop BQL, queue NAND read ---------->| FTL + NAND model   |
+     |                         | drop locks, queue NAND read -------->| FTL + NAND model   |
      |                         |<------------------- media time ------|                    |
      |                         | evict victim (dirty: write-back cost)|                    |
      |                         | femu_cxl_delay: sleep, then spin     |                    |

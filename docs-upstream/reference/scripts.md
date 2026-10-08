@@ -3,12 +3,12 @@ title: "Scripts and tools"
 description: "Every script and tool shipped under hw/femu/scripts/ and hw/femu/tools/: what it does, its arguments and the environment variables it reads. The top-level..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/reference/scripts.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/reference/scripts.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/scripts.md`](https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/reference/scripts.md) at FEMU `328c2749b` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/scripts.md`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/reference/scripts.md) at FEMU `18503485f` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -87,7 +87,7 @@ its command line. Its settings are environment variables:
 | `CXL_SIZE` | `256M` | media size, a number followed by `M` or `G` |
 | `CACHE_PAGES` | size in MiB / 20 x 256 | `cache-pages` |
 | `CACHE_WAYS` | `1` | `cache-ways`; `full` means `CACHE_PAGES` |
-| `BLOCKS_PER_PLANE` | 768 for 48G, 1536 for 96G, else 0 | `blocks-per-plane` |
+| `BLOCKS_PER_PLANE` | 822 for 48G, 1644 for 96G, else 0 | `blocks-per-plane` |
 | `CACHE_POLICY` | `fifo` | `cache-policy` |
 | `DER` | `off` | `der` |
 | `CYLON_KERNEL_ACK` | `off` | `cylon-kernel-ack` |
@@ -107,7 +107,8 @@ its command line. Its settings are environment variables:
 These defaults follow Cylon's launch script and differ from the device's
 own defaults: one cache way instead of 16, a cache of size / 20 (3072 pages
 for 256 MiB) instead of 1024 pages, 8x8 channels and LUNs instead of 4x4,
-fixed `blocks-per-plane` for the 48G and 96G sizes, and `lsa-control` on
+fixed `blocks-per-plane` for the 48G and 96G sizes (7% more NAND than
+Cylon's, which has no spare blocks), and `lsa-control` on
 instead of off.
 
 ## Configuration files
@@ -218,7 +219,7 @@ guest builds `libcca.a`, the `ccactl` command and the `cca-test` self-test.
 runs the self-test as root, logging to `cca-guest-YYYYMMDD-HHMMSS.log` by
 default.
 See [the caching API guide](../features/cxl-cca.md) and the
-[tool README](https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/tools/cca/README.md).
+[tool README](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/tools/cca/README.md).
 
 ## Legacy scripts
 

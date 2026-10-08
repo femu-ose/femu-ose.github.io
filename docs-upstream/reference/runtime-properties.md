@@ -3,12 +3,12 @@ title: "Runtime properties and counters"
 description: "QOM properties that a running device exposes. Read and set them through QMP at /machine/peripheral/<id>, where <id> is the id= given on -device:"
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/reference/runtime-properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/reference/runtime-properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/runtime-properties.md`](https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/reference/runtime-properties.md) at FEMU `328c2749b` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/runtime-properties.md`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/reference/runtime-properties.md) at FEMU `18503485f` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -89,7 +89,9 @@ or in the HMP monitor with `qom-get` and `qom-set`. Event counters are cleared b
 | `media-time-ns` | `uint64` | Read-only: total modelled media time in ns returned by FTL requests, including contention |
 | `media-reads` | `uint64` | Read-only: page reads the FTL performed for cache fills, uncached reads and PIN fills, not counting reads that cylon-first-touch-program turned into programs; stays 0 with ftl=off |
 | `media-writes` | `uint64` | Read-only: user page programs counted by the FTL, garbage collection copies excluded, refreshed at each media request of this device, so writes from a linked NVMe controller appear after the next one |
-| `media-full` | `uint64` | Read-only: accesses whose NAND program found no free page; that program is not timed and the access completes uncached, though a fill read already issued is charged; stats-reset keeps it, and a measurement is valid only while it is 0 |
+| `media-full` | `uint64` | Read-only: NAND programs that found no free page after garbage collection; the program is not timed but does not stop the eviction or insert, and the first one reports an error; the over-provisioning rule keeps it at 0, stats-reset keeps it, and a measurement is valid only while it is 0 |
+| `gc-stalls` | `uint64` | Read-only: media requests, linked NVMe ones included, that waited for timed forced garbage collection to free a line; refreshed with media-writes; stats-reset keeps it |
+| `gc-stall-ns` | `uint64` | Read-only: total ns from the start of those requests to the end of the collection they waited for, on every LUN; stats-reset keeps it |
 
 ### Direct mapping counters
 
@@ -104,6 +106,19 @@ or in the HMP monitor with `qom-get` and `qom-set`. Event counters are cleared b
 | `der-replacements` | `uint64` | Read-only: memslot aliases displaced by a hotter page |
 | `der-fallbacks` | `uint64` | Read-only: refused direct mapping attempts and device disablements |
 | `der-emul-exit` | `bool` | Read-only: whether the host kernel returns Cylon accesses it cannot emulate to FEMU (KVM_CAP_CYLON_FAULT_EXIT) |
+| `der-emul-v2` | `bool` | Read-only: whether version 2 of the Cylon fault exit is on for the VM (cylon-never-emulate) |
+| `der-fault-reads` | `uint64` | Read-only: version 2 exits for a data read of a cold page; stats-reset keeps it |
+| `der-fault-writes` | `uint64` | Read-only: version 2 exits for a data write to a cold page; stats-reset keeps it |
+| `der-fault-fetches` | `uint64` | Read-only: version 2 exits for an instruction fetch from a cold page; stats-reset keeps it |
+| `der-fault-page-walks` | `uint64` | Read-only: version 2 exits for a guest page walk that read a cold page-table page; stats-reset keeps it |
+| `der-fault-emulated` | `uint64` | Read-only: pages handed back to KVM's emulator because FEMU could not map them (uncached range, pinned set, a fill that kept no way or whose media read failed); stats-reset keeps it |
+| `der-fault-unprotected` | `uint64` | Read-only: version 2 protections released early because the instruction already held 64 pages; stats-reset keeps it |
+| `der-fault-conflicts` | `uint64` | Read-only: version 2 fills refused because pages that the same instruction filled hold every way of the set; the page goes to KVM's emulator; stats-reset keeps it |
+| `der-fault-overflows` | `uint64` | Read-only: pages mapped without a cache way because the emulator cannot run an instruction whose pages do not fit in their set; stats-reset keeps it |
+| `der-revoke-flushes` | `uint64` | Read-only: TLB flushes that Cylon full revocations attempted (two, or one when KVM revoked every page first or the slot is deleted next), shared by every page a revocation takes; flushes after a KVM revocation found outside a full revocation are not counted; stats-reset keeps it |
+| `der-revoked-ahead` | `uint64` | Read-only: version 2 pages whose mapping a revocation took before their own eviction; they stay cached; stats-reset keeps it |
+| `der-ahead-remaps` | `uint64` | Read-only: of der-revoked-ahead, pages accessed and mapped again before their eviction; stats-reset keeps it |
+| `der-fault-bql` | `uint64` | Read-only: Cylon fault exits that FEMU served under the BQL instead of the CXL lock alone (the first exit after an invalidation, a route through a switch or to another device); stats-reset keeps it |
 | `der-emul-fills` | `uint64` | Read-only: exits for an access KVM could not decode that FEMU served by a fill and a mapping, repeats and cache hits included; not instructions or unique pages; stats-reset keeps it |
 | `der-emul-fetch-fills` | `uint64` | Read-only: the der-emul-fills exits for code the guest executed from an unmapped page; stats-reset keeps it |
 | `der-emul-failures` | `uint64` | Read-only: such exits FEMU could not serve (unmappable page or no progress); each one stops the VM; stats-reset keeps it |

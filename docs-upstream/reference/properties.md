@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/328c2749b0d7f73192c61c5726d55539cad5acd7/hw/femu/docs/reference/properties.md) at FEMU `328c2749b` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/reference/properties.md) at FEMU `18503485f` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -272,7 +272,7 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 
 ## `femu-cxl-ssd`: CXL Type-3 SSD
 
-`-device femu-cxl-ssd` has 25 properties of its own, 10 inherited from `cxl-type3` and 56 QOM properties listed in [runtime-properties.md](runtime-properties.md).
+`-device femu-cxl-ssd` has 27 properties of its own, 10 inherited from `cxl-type3` and 71 QOM properties listed in [runtime-properties.md](runtime-properties.md).
 
 ### Cache
 
@@ -289,7 +289,7 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 | `channels` | `uint32` | `4` | Number of NAND channels, 1 to 4096 |
 | `luns-per-channel` | `uint32` | `4` | NAND LUNs per channel, 1 to 128, with one plane per LUN |
 | `pages-per-block` | `uint32` | `256` | 4 KiB pages per NAND block, 1 to 65536 |
-| `blocks-per-plane` | `uint32` | `0` | NAND blocks per plane, 2 to 65536 and enough to cover the media; 0 sizes it to 5/4 of the media plus 4 blocks per plane |
+| `blocks-per-plane` | `uint32` | `0` | NAND blocks per plane, 2 to 65536; with the FTL on, the spare lines beyond the media must exceed the free lines gc-threshold-high keeps by two; 0 sizes it to 5/4 of the media plus 4 blocks per plane, or more if that rule needs it |
 | `gc-threshold` | `uint32` | `75` | Percent of lines in use at which background garbage collection starts, 1 to 100 |
 | `gc-threshold-high` | `uint32` | `95` | Percent of lines in use at which garbage collection is forced, from gc-threshold to 100 |
 | `read-ns` | `uint64` | `40000` | NAND page read time in ns, at most one second |
@@ -307,6 +307,8 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 | `der-replace-rate` | `uint32` | `64` | With der=memslot and no free alias (1024 shared by all devices, fewer if KVM has fewer free slots), the most aliases per second a repeatedly missing page may displace; 0 disables replacement |
 | `cylon-kernel-ack` | `bool` | `off` | Must be on with der=cylon to state that the host runs a Cylon kernel with the dual-slot fixes; the device does not check it |
 | `cylon-emul-exit` | `bool` | `on` | With der=cylon, ask the host kernel to return accesses it cannot decode on unmapped pages to FEMU, which maps the page; off keeps stock KVM behaviour (a guest #UD or an internal error) only if no other device of the VM turned the VM-wide capability on |
+| `cylon-never-emulate` | `bool` | `off` | With der=cylon and cylon-emul-exit on, ask the host kernel for version 2 of the Cylon fault exit: an access to a cold page exits with its type and FEMU maps the page, so KVM emulates only pages FEMU cannot map; per VM, set by the first Cylon device that installs its slot |
+| `cylon-revoke-batch` | `uint32` | `32` | With cylon-never-emulate on, the most pages one full revocation takes, 1 to 64: an eviction that must flush the VM's TLBs also revokes the mappings of the pages the policy evicts next, which stay cached; 1 revokes one page per two flushes |
 | `concurrent-misses` | `OnOffAuto` | `auto` | Let misses to different pages wait for the media together; auto does so only while direct mapping is active |
 
 ### Caching API, control channel and logs
@@ -346,7 +348,7 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 These exist only when QEMU runs under qtest (`-accel qtest`) and serve FEMU's own tests. They are not part of the user interface.
 
 - `femu`: `x-ftl-check`, `x-ftl-trace`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-query-delay-ms`, `x-stream-test`
-- `femu-cxl-ssd`: `test-change-dpa`, `test-media-disabled`, `test-slot-reservation`
+- `femu-cxl-ssd`: `test-change-dpa`, `test-fault`, `test-fault-decode`, `test-fault-fill`, `test-fill`, `test-fill-race`, `test-map`, `test-media-disabled`, `test-owner`, `test-prefetch-race`, `test-prefetch-race-end`, `test-protect`, `test-protect-window`, `test-revoke-ahead`, `test-revoke-ahead-keep`, `test-rip`, `test-slot-reservation`, `test-storm`, `test-storm-ns`, `test-storm-served`, `test-storm-stops`, `test-storm-wait`, `test-unprotect`
 
 ## Environment variables
 
