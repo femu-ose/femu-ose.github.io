@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/reference/properties.md) at FEMU `18503485f` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/reference/properties.md) at FEMU `88d775252` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,7 +28,7 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 148 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 154 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
@@ -152,10 +152,15 @@ Devices:
 | `ecc_retention_sec` | `int32` | `0` | bbssd, CSD, KV: data age in seconds that adds one ECC tier, with ecc_step_ns; 0 counts wear only; refused with FDP |
 | `pe_cycles_rated` | `uint32` | `0` | bbssd, CSD, KV: rated program/erase cycles used for SMART Percentage Used; 0 takes the rating of nand_cell_type, or reports none |
 | `nand_bad_blocks` | `uint32` | `0` | bbssd, CSD, KV: blocks marked bad at start, capped at the block count, which lowers SMART Available Spare |
+| `blk_pe_limit` | `uint32` | `0` | bbssd, CSD: mean program/erase cycles a block survives before it wears out; 0 (default) turns wear-out off. A worn-out block stays in service and sets the SMART reliability warning |
+| `blk_pe_spread` | `uint32` | `0` | bbssd, CSD: how far each block's limit varies from blk_pe_limit, in percent, 0 to 90 |
+| `blk_pe_seed` | `uint64` | `0` | bbssd, CSD: seed of the per-block erase limits; one seed gives the same limits on every run |
+| `spare_lines` | `uint32` | `0` | bbssd, CSD: lines held back, needs blk_pe_limit; their blocks replace worn-out blocks of the same plane, and SMART Available Spare is the spare blocks the emptiest plane has left, in percent |
 | `err_read_unc_ppm` | `uint32` | `0` | bbssd, CSD: reads per million that fail as Unrecovered Read Error, injected at a fixed period; 0 disables |
 | `err_write_fail_ppm` | `uint32` | `0` | bbssd, CSD and ZNS: writes per million that fail, injected at a fixed period (a ZNS zone then goes read-only); 0 disables |
 | `read_reclaim_limit` | `int32` | `0` | bbssd, CSD: when a host read finds its block has taken this many reads since its erase, that line is queued and rewritten on a following write, one line at a time; 0 disables, refused with FDP |
 | `retention_limit_sec` | `int32` | `0` | bbssd, CSD: when a host read hits a line filled at least this many seconds earlier, the line is queued and rewritten on a following write; 0 disables, refused with FDP |
+| `age_scale` | `int32` | `1` | bbssd, CSD: data ages this many times faster than wall time, for retention_limit_sec and ecc_retention_sec only; 1 (default) or more. I/O timing and garbage collection order do not change |
 
 ### Garbage collection, mapping and caches
 
@@ -166,6 +171,7 @@ Devices:
 | `gc_policy` | `str` | unset | bbssd, CSD without FDP: line victim policy, one of greedy, random, cost-benefit, fifo or d-choice; unset is greedy |
 | `gc_seed` | `uint64` | `0` | bbssd, CSD: seed for the victims the random and d-choice gc_policy and the FDP random gc_strategy pick; the same seed and workload pick the same victims, so vary it to vary runs |
 | `gc_strategy` | `int32` | `0` | bbssd with FDP: reclaim unit victim strategy, 0 greedy, 1 cost-benefit, 2 random or 4 per-handle |
+| `wl_spread` | `int32` | `0` | bbssd, CSD: static wear levelling starts when the erases of lines in service differ by more than this and stops at half of it; it moves the least worn full line into the most worn free line and copies at most a quarter of the host pages; 0 (default) turns it off |
 | `mapping` | `str` | unset | bbssd, CSD: logical-to-physical mapping scheme, one of page, dftl, hybrid or fast; unset is page, and FDP supports only page |
 | `mapping_cache_mb` | `uint32` | `0` | bbssd, CSD with mapping=dftl: size of the cached mapping table in MiB; 0 means 4 |
 | `read_cache_mb` | `uint32` | `0` | bbssd, CSD: size of the DRAM read cache in MiB; 0 disables it |

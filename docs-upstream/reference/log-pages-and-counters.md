@@ -3,12 +3,12 @@ title: "Log pages and counters"
 description: "How to read FEMU's own counters from the guest. Device properties are in properties.md, and the counters of femu-cxl-ssd are QOM properties listed in..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/reference/log-pages-and-counters.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/reference/log-pages-and-counters.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `18503485f` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `88d775252` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -39,8 +39,13 @@ own media counters, little-endian at these offsets (`FemuStatsLog` in
 | 88 | 8 | Log-block switch merges (`mapping=hybrid` only) |
 | 96 | 8 | Log-block full merges |
 | 104 | 8 | Erases charged to log-block merges |
+| 112 | 8 | Blocks in service past their erase limit (`blk_pe_limit`) |
+| 120 | 8 | Worn-out blocks taken out of service |
+| 128 | 8 | Lines taken out of service |
+| 136 | 8 | Lines moved by static wear levelling (`wl_spread`) |
+| 144 | 8 | Pages those moves copied (also counted at offset 16) |
 
-Bytes 4-7 and 112-511 are reserved and read as zero. The counters are summed
+Bytes 4-7 and 152-511 are reserved and read as zero. The counters are summed
 over the controller's bbssd, CSD and KV namespaces (the block read count is the
 largest of them); other modes leave them zero. The write amplification factor
 stays zero until the host has written a page.

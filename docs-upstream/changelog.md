@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/CHANGELOG.md) at FEMU `18503485f` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/CHANGELOG.md) at FEMU `88d775252` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -120,13 +120,16 @@ listed one by one.
 - Optional modelled TRIM time (`trim_lat_ns`) and explicit over-provisioning (`op_pcent`) ([1027eb240](https://github.com/MoatLab/FEMU/commit/1027eb240), [6a4559ee4](https://github.com/MoatLab/FEMU/commit/6a4559ee4)).
 - DRAM write buffer (`buffer_size`, `buffer_thres_pcent`) with Flush, FUA and volatile write cache support ([6a8daec7a](https://github.com/MoatLab/FEMU/commit/6a8daec7a), [d4d03f127](https://github.com/MoatLab/FEMU/commit/d4d03f127), [0ee6d211b](https://github.com/MoatLab/FEMU/commit/0ee6d211b)).
 - Hot/cold separation of overwritten pages (`hot_cold_sep`) ([4ded2e928](https://github.com/MoatLab/FEMU/commit/4ded2e928)).
+- Opt-in static wear levelling (`wl_spread`): the least worn full line moves into the most worn free line, without a write pointer of its own ([2e1ef35ba](https://github.com/MoatLab/FEMU/commit/2e1ef35ba)).
 - Read reclaim (`read_reclaim_limit`) and retention refresh (`retention_limit_sec`) ([7f9b4f6af](https://github.com/MoatLab/FEMU/commit/7f9b4f6af), [4e09c4797](https://github.com/MoatLab/FEMU/commit/4e09c4797), [e7f182b87](https://github.com/MoatLab/FEMU/commit/e7f182b87)).
 - Data age feeds the ECC read model (`ecc_retention_sec`) ([f9433e9ab](https://github.com/MoatLab/FEMU/commit/f9433e9ab), [13f2b85de](https://github.com/MoatLab/FEMU/commit/13f2b85de)).
+- `age_scale` ages data faster than wall time for retention refresh and the ECC retention tier, so a retention study runs in minutes ([9988153d3](https://github.com/MoatLab/FEMU/commit/9988153d3)).
 - More than one plane per LUN (`pls_per_lun`) in bbssd, FDP and KV, with a line's planes erased in one operation ([0f554fb7d](https://github.com/MoatLab/FEMU/commit/0f554fb7d), [3699e980d](https://github.com/MoatLab/FEMU/commit/3699e980d), [9c8228d28](https://github.com/MoatLab/FEMU/commit/9c8228d28), [7276af2d8](https://github.com/MoatLab/FEMU/commit/7276af2d8)).
 - Channel bus phases (`cmd_addr_lat`, `pg_xfer_lat`, `status_lat`, `ch_xfer_lat`) are added to the timing when set ([c274ba7d9](https://github.com/MoatLab/FEMU/commit/c274ba7d9)).
 - A read can suspend an in-flight program or erase (`pe_suspend`, `tsusp_ns`) ([9ec423985](https://github.com/MoatLab/FEMU/commit/9ec423985), [6a5c498a8](https://github.com/MoatLab/FEMU/commit/6a5c498a8)).
 - Opt-in multi-plane program and read (`mp_program`, `mp_read`, with `pls_per_lun > 1`): host programs or reads of the same page on several planes of a LUN take one array time, plus `tplpbsy` or `tplrbsy` between planes. Placement and page counts do not change. The defaults leave the timing unchanged, FDP is not affected, and a negative busy time is refused.
 - Optional debug logging to study whether deleted data remains on the device ([18ba6557c](https://github.com/MoatLab/FEMU/commit/18ba6557c), [45e61ae41](https://github.com/MoatLab/FEMU/commit/45e61ae41)).
+- Opt-in block erase limits (`blk_pe_limit`, `blk_pe_spread`, `blk_pe_seed`): a block past its limit stays in service, is counted in log page C0h and sets SMART critical warning bit 2 ([12f1c582c](https://github.com/MoatLab/FEMU/commit/12f1c582c)). The block's line leaves service while enough lines remain ([af99ecb21](https://github.com/MoatLab/FEMU/commit/af99ecb21)). `spare_lines` holds lines back whose blocks replace worn-out ones, and SMART Available Spare follows what is left ([ee6afccd4](https://github.com/MoatLab/FEMU/commit/ee6afccd4)). Crossing into either warning raises a SMART asynchronous event when the host enabled it ([c9b3d3ad8](https://github.com/MoatLab/FEMU/commit/c9b3d3ad8)). SMART Percentage Used then counts against the blocks' limits, and `query-femu` reports retired and spare lines ([b6af86af1](https://github.com/MoatLab/FEMU/commit/b6af86af1)).
 
 #### Timing and fault models
 
@@ -315,6 +318,7 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - The controller reports NVMe 2.1 instead of 1.4, with what that requires: CAP.CRMS and the CRTO register, BPCAP 01b, Identify CNS 1Fh, CNS 00h refused for a Key Value namespace (Invalid I/O Command Set), CSI-specific log pages refused for an unknown command set, and CNS 07h refused for a set CC.CSS does not enable. Open-Channel stays at 1.4 ([409db7bb3](https://github.com/MoatLab/FEMU/commit/409db7bb3)).
 - CAP.AMS no longer claims weighted round robin, which nothing arbitrated by, and enabling with another CC.AMS fails ([409db7bb3](https://github.com/MoatLab/FEMU/commit/409db7bb3)).
 - A controller in a subsystem reports its endurance group (CTRATT bit 4, ENDGIDMAX, each namespace's ENDGID, the Key Value Identify structure included) whether or not FDP is on, as log 09h already did ([409db7bb3](https://github.com/MoatLab/FEMU/commit/409db7bb3)).
+- The spare critical warning in the SMART and Endurance Group logs is set when the available spare falls below the threshold, not when it equals it ([4faaff90a](https://github.com/MoatLab/FEMU/commit/4faaff90a)).
 
 ### Documentation and tooling
 

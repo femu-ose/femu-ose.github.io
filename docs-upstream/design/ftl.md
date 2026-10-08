@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/design/ftl.md) at FEMU `18503485f` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/design/ftl.md) at FEMU `88d775252` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -739,7 +739,9 @@ Every erase increments the block's `erase_cnt` and the FTL-wide
 
 where `rated_pe_cycles` is `pe_cycles_rated`, or the rating of
 `nand_cell_type` (SLC 100000, MLC 3000, TLC 1000, QLC 300), or 0, in which
-case the field reads 0. `nand_bad_blocks` marks a number of blocks as
+case the field reads 0. With `blk_pe_limit`, the denominator is the sum of
+every block's own erase limit at start, spare lines included, so the figure
+only grows. `nand_bad_blocks` marks a number of blocks as
 factory bad for SMART Available Spare only: `100 - bad * 100 / tt_blks`.
 Placement ignores them. With several namespaces the controller reports the
 most worn namespace and the lowest spare.
@@ -907,7 +909,7 @@ ratio is the hit rate. Telemetry log 07h captures the same 512 bytes.
 | Field | Source |
 | --- | --- |
 | Percentage Used | `ssd_percentage_used()`, most worn namespace |
-| Available Spare | `ssd_available_spare()`, lowest namespace; 20 or below sets the spare critical warning |
+| Available Spare | `ssd_available_spare()`, lowest namespace; below 20 sets the spare critical warning |
 | Media and Data Integrity Errors | injected read and write faults (and ZNS write faults) |
 | Data units, host commands | the pollers' host I/O counters, not the FTL |
 | Endurance Group Media Units Written | (NAND + GC write pages) x page size, in units of 10^9 bytes rounded up; needs a `femu-subsys` |
@@ -965,9 +967,14 @@ does inside the FTL and what it interacts with.
 | --- | --- | --- |
 | `pe_cycles_rated` | Percentage Used denominator | overrides the `nand_cell_type` rating |
 | `nand_bad_blocks` | Available Spare | placement ignores it |
+| wear events | the FTL thread sets a pending SMART warning bit when the spare crosses below 20 or the first block is overworn; the controller's event bottom half raises it if Asynchronous Event Configuration enables it | once each; a controller reset drops a pending bit |
+| `spare_lines` | per-plane pool of replacement blocks: a worn-out block swaps its whole state with a spare block of its plane, so addresses do not change; Available Spare follows the emptiest plane | needs `blk_pe_limit`; the namespace must fit without the spare lines |
+| `blk_pe_limit`, `blk_pe_spread`, `blk_pe_seed` | per-block erase limit; after a line erase that takes a block to it, the line retires while usable lines stay at or above the namespace's lines + forced collection lines + 2 and an open line and a free line remain; otherwise the block stays in service (overworn) and sets SMART critical warning bit 2 | refused with the settings the parameter manual lists |
 | `ecc_step_ns`, `ecc_retention_sec` | read time grows with erase count and line age | `ecc_retention_sec` refused with FDP |
 | `err_read_unc_ppm`, `err_write_fail_ppm` | fixed-period command failures | counted in SMART media errors |
 | `read_reclaim_limit` | read count that queues a line for rewrite | needs host writes to act; refused with FDP |
+| `wl_spread` | static wear levelling (`do_wear_level()`): at a fresh data line, swap it for the most worn free line and move the least worn full line into it | no write pointer of its own; credit of one per host page programmed, four lines per move; the earlier attempts are described in the function comment |
+| `age_scale` | multiplies data age (`ssd_data_age_ns()`) for retention refresh and the ECC age tier | not for cost-benefit collection, whose order one factor on every age does not change |
 | `retention_limit_sec` | line age that queues a line for rewrite | same |
 
 ### NAND timing the FTL charges

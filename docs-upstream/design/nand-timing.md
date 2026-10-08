@@ -3,12 +3,12 @@ title: "NAND media and timing model"
 description: "This chapter describes the component that decides how long a flash operation takes in FEMU. It covers the geometry the model works on, the time it charges..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/design/nand-timing.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/design/nand-timing.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nand-timing.md`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/design/nand-timing.md) at FEMU `18503485f` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nand-timing.md`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/design/nand-timing.md) at FEMU `88d775252` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -857,9 +857,12 @@ Give each poller and the FTL thread its own host core while measuring;
   `oc12-transfer-cost`, and the exact per-command times of `oc12-trace-on` and
   `oc12-trace-off`), the warning for the timing properties that have no
   effect (`ignored-props`), the 0xEF flips on a linked `femu-cxl-ssd`
-  (`cxl-nvme-flip`), and the two example configurations on this page
-  (`doc-examples`).
-- **Not covered by automated tests**: BBSSD and ZNS timing inside QEMU, the
+  (`cxl-nvme-flip`), the two example configurations on this page
+  (`doc-examples`), and program/erase suspend on a BBSSD, CSD, KV and ZNS
+  device (`pe-suspend-<mode>-on` and `pe-suspend-<mode>-off`): a read that
+  arrives during a program completes before the program only when suspend
+  is on.
+- **Not covered by automated tests**: other BBSSD and ZNS timing inside QEMU, the
   host link, `fw_cpu_ns`, the 0xEF flips on a plain BBSSD controller, and
   end-to-end guest latency against a reference device. The built-in MLC table is a profile of real
   parts; the other tables are from published papers, as cited in the
@@ -923,18 +926,18 @@ make -C hw/femu/tests check
 
 | File | What it holds |
 | --- | --- |
-| [`hw/femu/nand/nand-media.h`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/nand/nand-media.h) | Media layer types and API: `NandLoc`, `NandMediaTiming`, `NandMediaPolicy`, `NandTimelineOps`, `nand_media_op()`, `nand_media_multiplane()`, `nand_media_copyback()` |
-| [`hw/femu/nand/nand-media.c`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/nand/nand-media.c) | Array time, gates, bus booking (`bus_now()`, `bus_later()`), suspend, ECC, multi-plane, copyback |
-| [`hw/femu/nand/nand.h`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/nand/nand.h), [`nand.c`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/nand/nand.c) | Cell-type timing tables, page pairing tables, rated P/E cycles |
-| [`hw/femu/bbssd/ftl-media.c`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/bbssd/ftl-media.c) | BBSSD adapter: `bb_decode_loc()`, `bb_nand_media_init()`, `ssd_advance_status()`, `ssd_advance_status_multiplane()`, `bb_nand_media_refresh_timing()` |
-| [`hw/femu/bbssd/ftl-geom.c`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/bbssd/ftl-geom.c) | Geometry checks and parameter copy (`bb_check_geometry()`, `ssd_init_params()`) |
-| [`hw/femu/bbssd/ftl-datapath.c`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/bbssd/ftl-datapath.c) | Host read and write: per-page operations and max latency |
-| [`hw/femu/bbssd/ftl-line-gc.c`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/bbssd/ftl-line-gc.c) | Write pointer order, GC reads, programs and multi-plane erase |
-| [`hw/femu/bbssd/bb.c`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/bbssd/bb.c) | 0xEF handler (`bb_flip()`, `bb_flip_apply()`) |
-| [`hw/femu/zns/zftl.c`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/zns/zftl.c) | ZNS adapter, write cache flush, zone reset erase |
-| [`hw/femu/zns/zns.c`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/zns/zns.c), [`zns.h`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/zns/zns.h) | ZNS timing values and property overrides (`zns_init_params()`) |
-| [`hw/femu/ocssd/oc-timing.c`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/ocssd/oc-timing.c) | OCSSD `flash_type` times, geometry check, 0xEE |
-| [`hw/femu/ocssd/oc12.c`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/ocssd/oc12.c), [`oc20.c`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/ocssd/oc20.c) | OCSSD per-command timing (`oc12_advance_status()`, `oc20_advance_status()`) |
-| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/femu.c) | FTL thread: `expire_time += latency`; timing properties |
-| [`hw/femu/nvme-io.c`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/nvme-io.c) | `stime` stamp, host link and firmware CPU models, priority queue and completion |
-| [`hw/femu/tests/unit/test-nand-media.c`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/tests/unit/test-nand-media.c) | Media layer unit tests |
+| [`hw/femu/nand/nand-media.h`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/nand/nand-media.h) | Media layer types and API: `NandLoc`, `NandMediaTiming`, `NandMediaPolicy`, `NandTimelineOps`, `nand_media_op()`, `nand_media_multiplane()`, `nand_media_copyback()` |
+| [`hw/femu/nand/nand-media.c`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/nand/nand-media.c) | Array time, gates, bus booking (`bus_now()`, `bus_later()`), suspend, ECC, multi-plane, copyback |
+| [`hw/femu/nand/nand.h`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/nand/nand.h), [`nand.c`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/nand/nand.c) | Cell-type timing tables, page pairing tables, rated P/E cycles |
+| [`hw/femu/bbssd/ftl-media.c`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/bbssd/ftl-media.c) | BBSSD adapter: `bb_decode_loc()`, `bb_nand_media_init()`, `ssd_advance_status()`, `ssd_advance_status_multiplane()`, `bb_nand_media_refresh_timing()` |
+| [`hw/femu/bbssd/ftl-geom.c`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/bbssd/ftl-geom.c) | Geometry checks and parameter copy (`bb_check_geometry()`, `ssd_init_params()`) |
+| [`hw/femu/bbssd/ftl-datapath.c`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/bbssd/ftl-datapath.c) | Host read and write: per-page operations and max latency |
+| [`hw/femu/bbssd/ftl-line-gc.c`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/bbssd/ftl-line-gc.c) | Write pointer order, GC reads, programs and multi-plane erase |
+| [`hw/femu/bbssd/bb.c`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/bbssd/bb.c) | 0xEF handler (`bb_flip()`, `bb_flip_apply()`) |
+| [`hw/femu/zns/zftl.c`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/zns/zftl.c) | ZNS adapter, write cache flush, zone reset erase |
+| [`hw/femu/zns/zns.c`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/zns/zns.c), [`zns.h`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/zns/zns.h) | ZNS timing values and property overrides (`zns_init_params()`) |
+| [`hw/femu/ocssd/oc-timing.c`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/ocssd/oc-timing.c) | OCSSD `flash_type` times, geometry check, 0xEE |
+| [`hw/femu/ocssd/oc12.c`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/ocssd/oc12.c), [`oc20.c`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/ocssd/oc20.c) | OCSSD per-command timing (`oc12_advance_status()`, `oc20_advance_status()`) |
+| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/femu.c) | FTL thread: `expire_time += latency`; timing properties |
+| [`hw/femu/nvme-io.c`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/nvme-io.c) | `stime` stamp, host link and firmware CPU models, priority queue and completion |
+| [`hw/femu/tests/unit/test-nand-media.c`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/tests/unit/test-nand-media.c) | Media layer unit tests |

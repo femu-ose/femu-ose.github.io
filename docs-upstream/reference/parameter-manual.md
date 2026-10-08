@@ -3,12 +3,12 @@ title: "Parameter manual"
 description: "This manual explains how to configure an emulated device: the ways a parameter reaches FEMU, then every group of parameters by component, with what each one..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/reference/parameter-manual.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/reference/parameter-manual.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/reference/parameter-manual.md) at FEMU `18503485f` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/reference/parameter-manual.md) at FEMU `88d775252` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -407,10 +407,16 @@ Applies to bbssd, CSD and KV unless noted. Reference:
 | `ecc_retention_sec` | seconds | 0 counts wear only; refused with FDP | data age that adds one tier |
 | `pe_cycles_rated` | P/E cycles | 0 takes the rating of `nand_cell_type` | denominator of SMART Percentage Used |
 | `nand_bad_blocks` | blocks | capped at the block count | blocks bad from the start; lowers SMART Available Spare |
+| `blk_pe_limit` | P/E cycles | 0 disables; bbssd and CSD, one namespace, page or dftl mapping, one plane per LUN, no buffer, Streams, hot/cold separation, FDP or `nand_bad_blocks` | erases a block survives; its line then retires while enough lines remain, else the block stays in service and sets SMART critical warning bit 2 |
+| `blk_pe_spread` | percent | 0 to 90 | each block's limit varies by up to this much from `blk_pe_limit` |
+| `blk_pe_seed` | | any | seed of the per-block limits; one seed gives the same limits on every run |
+| `spare_lines` | lines | below `blks_per_pl`; needs `blk_pe_limit` | lines held back; their blocks replace worn-out blocks of the same plane; they hold no data, so the namespace must fit without them |
 | `err_read_unc_ppm` | per million | 0 disables; bbssd and CSD | reads that fail as Unrecovered Read Error, at a fixed period |
 | `err_write_fail_ppm` | per million | 0 disables; bbssd, CSD and ZNS | writes that fail; a ZNS zone then becomes read only |
 | `read_reclaim_limit` | reads | 0 disables; bbssd and CSD; refused with FDP | a block read this often since its erase gets its line rewritten on a following write |
 | `retention_limit_sec` | seconds | 0 disables; bbssd and CSD; refused with FDP | a read that hits a line filled at least this long ago queues the line, which is rewritten on a following write |
+| `wl_spread` | erases | 0 disables; the settings `blk_pe_limit` refuses are refused too | static wear levelling: when the erases of lines in service differ by more than this, the least worn full line moves into the most worn free line, at most a quarter of the host pages; it stops at half the gap |
+| `age_scale` | factor | 1 (default) or more | data ages this many times faster than wall time for `retention_limit_sec` and `ecc_retention_sec`; I/O timing and collection order do not change |
 
 Interactions: faults come at a fixed period, so a run repeats exactly.
 Read reclaim and retention refresh act only when the host reads and then

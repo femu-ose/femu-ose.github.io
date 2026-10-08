@@ -3,12 +3,12 @@ title: "BlackBox SSD (BBSSD)"
 description: "BlackBox mode (femu_mode=1) emulates a conventional NVMe SSD: the device runs its own flash translation layer (FTL), garbage collection (GC) and NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/modes/blackbox.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/modes/blackbox.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/18503485f5c3e7a782e89d669429f41a1bc53482/hw/femu/docs/modes/blackbox.md) at FEMU `18503485f` (2026-10-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/modes/blackbox.md) at FEMU `88d775252` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -182,6 +182,34 @@ All of these are off by default.
   slower.
 - `pe_cycles_rated` and `nand_bad_blocks` feed SMART Percentage Used and
   Available Spare.
+- `wl_spread` turns on static wear levelling. When the lines in service
+  differ by more than that many erases, the least worn full line moves into
+  the most worn free line, so cold data rests on worn blocks and young blocks
+  rejoin the rotation. It runs only when the data write pointer has just
+  taken an empty line, which it exchanges for the worn one, so it adds no
+  write pointer, and it copies at most a quarter of what the host writes.
+- `age_scale` makes data age faster than wall time for `retention_limit_sec`
+  and `ecc_retention_sec`, so a study of months of retention runs in
+  minutes. I/O timing and collection order stay as they are.
+- `blk_pe_limit` gives each block an erase limit (`blk_pe_spread` varies it
+  per block, from `blk_pe_seed`). When a line's erase takes a block to its
+  limit, the line leaves service if enough lines remain: the namespace's
+  lines, the free lines forced collection keeps, an open line to write into
+  and one free line. Otherwise the block stays in service and sets the SMART
+  reliability warning (critical warning bit 2). Writes never fail because of
+  wear.
+- `spare_lines` holds lines back as spare blocks. A worn-out block is first
+  replaced by a spare of its plane, when every plane with a worn-out block in
+  the line has one. SMART Available Spare is then the spare blocks the
+  emptiest plane has left; without spare lines, it is the lines retirement can
+  still take.
+- When the spare falls below its threshold, or the first block stays in
+  service past its limit, the controller raises a SMART asynchronous event
+  (information 02h or 00h) if the host enabled bit 0 or bit 2 of
+  Asynchronous Event Configuration. Each is raised once.
+- With `blk_pe_limit`, SMART Percentage Used counts erases against the sum
+  of the blocks' limits. `query-femu` shows retired and spare lines with
+  their own states.
 - `err_read_unc_ppm` and `err_write_fail_ppm` fail a fixed share of reads or
   writes. The failures come at a fixed period, so a run repeats exactly.
 - `read_reclaim_limit` and `retention_limit_sec` rewrite lines that were read
