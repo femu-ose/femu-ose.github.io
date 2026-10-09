@@ -3,12 +3,12 @@ title: "QMP query-femu"
 description: "query-femu is a QMP command that reports the FTL state of a FEMU NVMe controller to the host. It needs no guest tools. The schema is in qapi/femu.json, and..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/reference/query-femu.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/reference/query-femu.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/reference/query-femu.md) at FEMU `88d775252` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/reference/query-femu.md) at FEMU `175914c14` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

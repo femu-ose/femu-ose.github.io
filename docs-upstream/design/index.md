@@ -3,12 +3,12 @@ title: "FEMU design"
 description: "This is the design document for FEMU's emulated storage devices. It explains how FEMU is built, one component per chapter, so you can predict what a..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/design/README.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/design/README.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/README.md`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/design/README.md) at FEMU `88d775252` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/README.md`](https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/design/README.md) at FEMU `175914c14` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

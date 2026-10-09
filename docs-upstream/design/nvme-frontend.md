@@ -3,12 +3,12 @@ title: "NVMe frontend"
 description: "The NVMe frontend is the part of -device femu that a guest driver talks to: the PCI function, the controller registers, the admin and I/O queues, the poller..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/design/nvme-frontend.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/design/nvme-frontend.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/design/nvme-frontend.md) at FEMU `88d775252` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/design/nvme-frontend.md) at FEMU `175914c14` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -403,7 +403,7 @@ Things to note:
 | OCSSD, KV, CSD compute units | while the command executes on the poller | mode properties |
 | FTL thread (BBSSD, ZNS, CSD NAND time) | before `to_poller[i]` | FTL and NAND properties |
 | host link | in `nvme_process_cq_cpl()`; a per-direction next-free time | `pcie_bandwidth_mbps`, `pcie_prop_delay_ns` |
-| firmware CPU | in `nvme_process_cq_cpl()`; one next-free time for the controller | `fw_cpu_ns` |
+| firmware CPU | in `nvme_process_cq_cpl()`; one next-free time per firmware core (`nvme_fw_cost()` picks the time per opcode) | `fw_cpu_ns`, `fw_read_ns`, `fw_write_ns`, `fw_other_ns`, `fw_cores` |
 
 The heap `pq[i]` is a binary heap (`hw/femu/lib/pqueue.c`) keyed on
 `expire_time`. Each sweep pops every request that is due and stops at the

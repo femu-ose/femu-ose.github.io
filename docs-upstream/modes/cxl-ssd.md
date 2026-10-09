@@ -3,12 +3,12 @@ title: "CXL SSD"
 description: "femu-cxl-ssd is a CXL Type-3 memory device whose capacity is backed by emulated NAND flash. The guest sees ordinary CXL memory: it creates a region, then..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/modes/cxl-ssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/modes/cxl-ssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/cxl-ssd.md`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/modes/cxl-ssd.md) at FEMU `88d775252` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/cxl-ssd.md`](https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/modes/cxl-ssd.md) at FEMU `175914c14` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -548,7 +548,7 @@ The ones you need most:
 | `cache-entries`, `cache-evictions`, `prefetch-inserts` | Cache occupancy and churn |
 | `media-reads`, `media-writes`, `media-time-ns` | NAND page reads, page programs and total modelled media time |
 | `media-full` | NAND programs that found no free page after garbage collection. The program is not timed, and it does not stop an eviction or an insert. The over-provisioning rule keeps it at 0. A measurement is valid only while it is 0 |
-| `gc-stalls`, `gc-stall-ns` | Media requests that waited for forced garbage collection, and the total time from their start to the end of that collection on every LUN |
+| `gc-stalls`, `gc-stall-ns`, `gc-stall-max-ns` | Media requests that waited for forced garbage collection, the total time from their start to the end of that collection on every LUN, and the longest single wait. A wait over one second warns once: add over-provisioning (about 7%) with `blocks-per-plane` |
 | `der-active`, `der-mapped`, `der-fallbacks` | Whether direct mapping is on, how many pages are mapped now, and refused mappings |
 
 `qom-set ... stats-reset true` copies the counters to the `last-*` properties

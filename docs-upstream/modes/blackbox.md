@@ -3,12 +3,12 @@ title: "BlackBox SSD (BBSSD)"
 description: "BlackBox mode (femu_mode=1) emulates a conventional NVMe SSD: the device runs its own flash translation layer (FTL), garbage collection (GC) and NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/modes/blackbox.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/modes/blackbox.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/modes/blackbox.md) at FEMU `88d775252` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/modes/blackbox.md) at FEMU `175914c14` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -182,6 +182,9 @@ All of these are off by default.
   slower.
 - `pe_cycles_rated` and `nand_bad_blocks` feed SMART Percentage Used and
   Available Spare.
+- Log page C0h counts plane reads, programs and erases. With
+  `energy_read_nj`, `energy_prog_nj` and `energy_erase_nj` set from a part's
+  datasheet, it also reports their energy in uJ.
 - `wl_spread` turns on static wear levelling. When the lines in service
   differ by more than that many erases, the least worn full line moves into
   the most worn free line, so cold data rests on worn blocks and young blocks

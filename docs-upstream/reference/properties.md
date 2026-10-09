@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/reference/properties.md) at FEMU `88d775252` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/reference/properties.md) at FEMU `175914c14` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,7 +28,7 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 154 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 161 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
@@ -156,6 +156,9 @@ Devices:
 | `blk_pe_spread` | `uint32` | `0` | bbssd, CSD: how far each block's limit varies from blk_pe_limit, in percent, 0 to 90 |
 | `blk_pe_seed` | `uint64` | `0` | bbssd, CSD: seed of the per-block erase limits; one seed gives the same limits on every run |
 | `spare_lines` | `uint32` | `0` | bbssd, CSD: lines held back, needs blk_pe_limit; their blocks replace worn-out blocks of the same plane, and SMART Available Spare is the spare blocks the emptiest plane has left, in percent |
+| `energy_read_nj` | `uint32` | `0` | bbssd, CSD, KV: energy of one plane read in nJ, for the energy total in log page C0h; 0 (default) gives no figure |
+| `energy_prog_nj` | `uint32` | `0` | bbssd, CSD, KV: energy of one plane program in nJ, for the energy total in log page C0h; 0 (default) gives no figure |
+| `energy_erase_nj` | `uint32` | `0` | bbssd, CSD, KV: energy of one plane erase in nJ, for the energy total in log page C0h; 0 (default) gives no figure |
 | `err_read_unc_ppm` | `uint32` | `0` | bbssd, CSD: reads per million that fail as Unrecovered Read Error, injected at a fixed period; 0 disables |
 | `err_write_fail_ppm` | `uint32` | `0` | bbssd, CSD and ZNS: writes per million that fail, injected at a fixed period (a ZNS zone then goes read-only); 0 disables |
 | `read_reclaim_limit` | `int32` | `0` | bbssd, CSD: when a host read finds its block has taken this many reads since its erase, that line is queued and rewritten on a following write, one line at a time; 0 disables, refused with FDP |
@@ -189,6 +192,10 @@ Devices:
 | `pcie_bandwidth_mbps` | `uint32` | `0` | Host link bandwidth in MB/s (10^6 bytes); each Read or Write is charged its transfer time on a per-direction link queue; 0 disables the bandwidth charge |
 | `pcie_prop_delay_ns` | `uint32` | `0` | Host link propagation delay in ns added to each Read or Write after its link transfer; 0 disables it |
 | `fw_cpu_ns` | `uint64` | `0` | Controller firmware time in ns charged to each Read, Write and Zone Append, serialized on one modelled core; 0 disables it |
+| `fw_read_ns` | `uint64` | `0` | Controller firmware time in ns for each Read; 0 (default) takes fw_cpu_ns |
+| `fw_write_ns` | `uint64` | `0` | Controller firmware time in ns for each Write and Zone Append; 0 (default) takes fw_cpu_ns |
+| `fw_other_ns` | `uint64` | `0` | Controller firmware time in ns for each I/O command other than Read, Write and Zone Append; 0 (default) charges none |
+| `fw_cores` | `uint32` | `1` | Controller firmware cores, 1 (default) to 64; each command takes the core that is free soonest |
 
 ### ZNS
 
@@ -278,7 +285,7 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 
 ## `femu-cxl-ssd`: CXL Type-3 SSD
 
-`-device femu-cxl-ssd` has 27 properties of its own, 10 inherited from `cxl-type3` and 71 QOM properties listed in [runtime-properties.md](runtime-properties.md).
+`-device femu-cxl-ssd` has 28 properties of its own, 10 inherited from `cxl-type3` and 78 QOM properties listed in [runtime-properties.md](runtime-properties.md).
 
 ### Cache
 
@@ -313,7 +320,8 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 | `der-replace-rate` | `uint32` | `64` | With der=memslot and no free alias (1024 shared by all devices, fewer if KVM has fewer free slots), the most aliases per second a repeatedly missing page may displace; 0 disables replacement |
 | `cylon-kernel-ack` | `bool` | `off` | Must be on with der=cylon to state that the host runs a Cylon kernel with the dual-slot fixes; the device does not check it |
 | `cylon-emul-exit` | `bool` | `on` | With der=cylon, ask the host kernel to return accesses it cannot decode on unmapped pages to FEMU, which maps the page; off keeps stock KVM behaviour (a guest #UD or an internal error) only if no other device of the VM turned the VM-wide capability on |
-| `cylon-never-emulate` | `bool` | `off` | With der=cylon and cylon-emul-exit on, ask the host kernel for version 2 of the Cylon fault exit: an access to a cold page exits with its type and FEMU maps the page, so KVM emulates only pages FEMU cannot map; per VM, set by the first Cylon device that installs its slot |
+| `cylon-never-emulate` | `OnOffAuto` | `auto` | With der=cylon and cylon-emul-exit on, version 2 of the Cylon fault exit: an access to a cold page exits with its type and FEMU maps the page, so KVM emulates only pages FEMU cannot map; auto (the default) uses it when the host kernel offers it and otherwise warns once and uses version 1, on also warns when it cannot, off keeps version 1; per VM, set by the first Cylon device that installs its slot |
+| `cylon-fault-stop` | `uint32` | `100000` | With der=cylon, stop the VM after this many consecutive fault exits of one vCPU at one RIP on pages already filled for that RIP; a watchdog that counts exits, not instructions, so a healthy loop over more pages than the cache holds can reach it; 0 only warns; default 100000 |
 | `cylon-revoke-batch` | `uint32` | `32` | With cylon-never-emulate on, the most pages one full revocation takes, 1 to 64: an eviction that must flush the VM's TLBs also revokes the mappings of the pages the policy evicts next, which stay cached; 1 revokes one page per two flushes |
 | `concurrent-misses` | `OnOffAuto` | `auto` | Let misses to different pages wait for the media together; auto does so only while direct mapping is active |
 
@@ -354,7 +362,7 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 These exist only when QEMU runs under qtest (`-accel qtest`) and serve FEMU's own tests. They are not part of the user interface.
 
 - `femu`: `x-ftl-check`, `x-ftl-trace`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-query-delay-ms`, `x-stream-test`
-- `femu-cxl-ssd`: `test-change-dpa`, `test-fault`, `test-fault-decode`, `test-fault-fill`, `test-fill`, `test-fill-race`, `test-map`, `test-media-disabled`, `test-owner`, `test-prefetch-race`, `test-prefetch-race-end`, `test-protect`, `test-protect-window`, `test-revoke-ahead`, `test-revoke-ahead-keep`, `test-rip`, `test-slot-reservation`, `test-storm`, `test-storm-ns`, `test-storm-served`, `test-storm-stops`, `test-storm-wait`, `test-unprotect`
+- `femu-cxl-ssd`: `test-change-dpa`, `test-fault`, `test-fault-decode`, `test-fault-delivery`, `test-fault-fill`, `test-fault-repeats`, `test-fault-version`, `test-fault-walk`, `test-fill`, `test-fill-race`, `test-ftl-delay`, `test-ftl-hold`, `test-ftl-holding`, `test-guarded-write`, `test-lock-mutex`, `test-map`, `test-media-disabled`, `test-owner`, `test-posted-done`, `test-prefetch-race`, `test-prefetch-race-end`, `test-protect`, `test-protect-window`, `test-revoke-ahead`, `test-revoke-ahead-keep`, `test-rip`, `test-slot-reservation`, `test-storm`, `test-storm-ns`, `test-storm-served`, `test-storm-stops`, `test-storm-wait`, `test-unprotect`
 
 ## Environment variables
 

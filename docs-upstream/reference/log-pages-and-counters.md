@@ -3,12 +3,12 @@ title: "Log pages and counters"
 description: "How to read FEMU's own counters from the guest. Device properties are in properties.md, and the counters of femu-cxl-ssd are QOM properties listed in..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/reference/log-pages-and-counters.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/reference/log-pages-and-counters.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `88d775252` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `175914c14` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -44,8 +44,17 @@ own media counters, little-endian at these offsets (`FemuStatsLog` in
 | 128 | 8 | Lines taken out of service |
 | 136 | 8 | Lines moved by static wear levelling (`wl_spread`) |
 | 144 | 8 | Pages those moves copied (also counted at offset 16) |
+| 152 | 8 | NAND pages host writes covered only in part (a device reads such a page to program it again; FEMU does not charge that read) |
+| 160 | 8 | Plane reads charged to NAND (a multi-plane command counts each plane) |
+| 168 | 8 | Plane programs |
+| 176 | 8 | Plane erases |
+| 184 | 8 | Energy in uJ: the three counts above times `energy_read_nj`, `energy_prog_nj` and `energy_erase_nj` |
+| 192 | 8 | Host writes that waited for forced garbage collection to make room |
+| 200 | 8 | Forced collection passes run inside those writes |
+| 208 | 8 | Host writes that emptied a full write buffer to make room |
+| 216 | 8 | Completions held because the host's completion queue was full (summed over pollers) |
 
-Bytes 4-7 and 152-511 are reserved and read as zero. The counters are summed
+Bytes 4-7 and 224-511 are reserved and read as zero. The counters are summed
 over the controller's bbssd, CSD and KV namespaces (the block read count is the
 largest of them); other modes leave them zero. The write amplification factor
 stays zero until the host has written a page.

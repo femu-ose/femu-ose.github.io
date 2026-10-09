@@ -3,12 +3,12 @@ title: "CXL SSD design"
 description: "The opt-in femu-cxl-ssd device subclasses QEMU's CXL Type-3 device. It takes an ordinary volatile memory backend, preserving standard decoder translation,..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/cxlssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/cxlssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/cxlssd.md`](https://github.com/MoatLab/FEMU/blob/88d775252d3611d8299ad7d3aa7868b6ec813a30/hw/femu/docs/cxlssd.md) at FEMU `88d775252` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/cxlssd.md`](https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/cxlssd.md) at FEMU `175914c14` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -147,7 +147,7 @@ resident, and the access that needed the room goes uncached; a dirty victim
 is held while its write-back drops the locks. The worker mutex protects the
 queue of stack-owned requests and their completions, and is released before
 reacquiring the locks. Each request carries its own condition variable on the
-caller's stack: enqueue wakes the worker on a condition variable no request
+caller's stack: enqueue wakes the worker on an event that no request
 waits on, and the worker wakes only the waiter whose request it finished, so
 a waiter never wakes for another request. The worker alone modifies FTL/NAND state and takes
 requests in arrival order; the NAND model overlaps them where they reach
@@ -160,47 +160,96 @@ across a wait. The component-register overlay revokes and then enters the
 parent register callback without waiting. Plain Type-3 callbacks retain their normal guard.
 Read-only QOM counters may show an operation in progress.
 The worker is joined before its state is destroyed. Stop requires that no
-request is outstanding, because it cannot reach the waiters' condition
-variables; the gate guarantees this, and stop asserts the queue is empty.
+waited request is outstanding, because it cannot reach the waiters'
+condition variables; the gate guarantees this. A posted request (see "Device DMA into the window" below)
+has no waiter, and the worker runs and frees it before it exits.
 
 The worker receives only page numbers, operation types and timestamps. It
-never reads or writes guest memory. Payload copies remain on the vCPU thread.
+never reads or writes guest memory. Payload copies stay on the thread that
+makes the access, under the CXL lock.
 Any future worker-side guest-memory operation must use `femu_dma_rw()`; the
 existing NVMe poller DMA rules are unchanged.
 
 ### Locking
 
-The CXL lock (`femu_cxl_lock()` in `cxlssd.c`) is one mutex for every
-`femu-cxl-ssd`. It protects what the BQL protected before: the operation
-gate and the page holds, the cache, the protection and overflow tables,
-every counter, the DER and Cylon bookkeeping, the adapter's window list and
-list of live devices, and the per-vCPU Cylon fault records. It is recursive
-within a thread, because QOM setters call each other.
+This section gives the locking rules for all paths: vCPU MMIO, Cylon fault
+exits, device DMA into the window and waits for garbage collection.
 
-The lock order is BQL, CXL lock, a medium's FTL worker mutex, a caching API
-mutex. A thread that holds the CXL lock never waits for the BQL, never
-pauses vCPUs and never runs work on a vCPU. Every BQL-side entry point takes
-the CXL lock after the BQL: MMIO on the window, component, configuration and
-CCI writes, reset, realize and unplug, QOM properties (counters included),
-LSA control commands, the linked-NVMe bottom half and attach/detach, the
-caching API thread, the Cylon memory listener and install bottom half, the
-vCPU destroy hook and the system reset handler. The QOM type table does
-not change after startup (no modules), so QOM casts need no lock.
+#### Lock order
 
-Where the code released the BQL before (the FTL handoff, the media delay,
-the gate, page and fill waits, the caching API delays and yields), it now
-releases the CXL lock completely and the BQL if the thread holds it, and
-takes them back in lock order. A condition wait releases the CXL lock
-atomically; a thread that also holds the BQL lets it go first. So each hold
-of the CXL lock covers the same code as a hold of the BQL did.
+The CXL lock (`femu_cxl_lock()` in `cxlssd.c`) is one lock for every
+`femu-cxl-ssd`. It protects the operation gate and the page holds, the
+cache, the protection and overflow tables, the device's QOM counters, the
+DER and Cylon bookkeeping, the adapter's window list and list of live
+devices, and the per-vCPU Cylon fault records. It is recursive within a
+thread, because QOM setters call each other. The FTL's own counts, the
+worker's queues and their counts use the FTL mutex, `post_lock` or atomic
+accesses, as the sections below say.
 
-KVM calls the Cylon fault exit outside the BQL, and FEMU serves it under the
-CXL lock alone. Misses of different vCPUs then never wait for the BQL, and a
-miss holds the CXL lock twice: before and after its media read. A fill's
-modelled delay and the pagemap check of the frame it maps run in that
-unlocked media wait; the check holds its own reference to the pagemap
-descriptor, so unplug cannot close it under the read. Some steps still need
-the BQL:
+The lock order is:
+
+1. The BQL.
+2. The CXL lock.
+3. A medium's FTL mutex (`lock`), which the FTL worker holds for each whole
+   request, garbage collection included.
+4. A medium's queue of device DMA operations (`post_lock`), or a caching API
+   mutex.
+
+The rules:
+
+- A thread that holds the CXL lock never waits for the BQL, never pauses
+  vCPUs and never runs work on a vCPU.
+- Every BQL-side entry point takes the CXL lock after the BQL: MMIO on the
+  window, component, configuration and CCI writes, reset, realize and
+  unplug, QOM properties (counters included), LSA control commands, the
+  linked-NVMe bottom half and attach/detach, the caching API thread, the
+  Cylon memory listener and install bottom half, the vCPU destroy hook and
+  the system reset handler. The QOM type table does not change after
+  startup (no modules), so QOM casts need no lock.
+- A wait (the FTL handoff, the media delay, the gate, page and fill waits,
+  the caching API delays and yields) releases the CXL lock completely and
+  the BQL if the thread holds it. It takes them back in lock order. A
+  condition wait releases the lock it sleeps on atomically. So each hold of
+  the CXL lock covers the same code that a hold of the BQL covered before
+  the lock existed.
+- No thread sleeps a modelled delay while it holds the CXL lock or the BQL.
+  This includes the time that a write waits for garbage collection.
+
+#### When the CXL lock is a mutex
+
+The CXL lock is a mutex only after version 2 of the Cylon fault exit is on
+(`cylon-never-emulate` auto or on, on a host kernel that has it). Version 2 exits
+are the only callers that take the lock without the BQL. Until then every
+holder also holds the BQL, which already serializes the holders. So a hold
+only counts its depth in a thread-local variable and reads a flag that does
+not change, and a condition wait sleeps on the BQL, as before the lock
+existed. Version 1 MMIO misses then take no mutex and write no shared
+cache line for the lock. Without this rule, each version 1 miss took the
+mutex about three times inside its BQL holds, and version 1 measured 2.7%
+slower at 8 vCPUs on the R0 pilot.
+
+FEMU makes the lock a mutex once, under the BQL, before it enables version 2
+in KVM; it never goes back. A thread that holds the lock at that time takes
+the mutex. A thread that sleeps on the BQL in a gate, page or fill wait
+wakes on a broadcast and sleeps on the mutex from then on. Version 1 exits
+for undecodable instructions take the BQL, as before. The `test-storm`
+qtest hook makes the lock a mutex for its mode 0 (exits without the BQL);
+its mode 2 calls the exit service without the BQL, as version 1 does, and
+the `test-lock-mutex` hook makes the lock a mutex during such a storm. The
+test cannot make sure that a thread sleeps on the BQL at the moment of the
+switch, so it does not prove the broadcast; on glibc a condition wakeup
+reaches a sleeper whatever mutex it sleeps with.
+
+#### Fault exits without the BQL
+
+KVM calls the Cylon fault exit outside the BQL. With version 2, FEMU serves
+it under the CXL lock alone. Misses of different vCPUs then never wait for
+the BQL, and a miss holds the CXL lock twice: before and after its media
+read. A fill's modelled delay and the pagemap check of the frame it maps run
+in that unlocked media wait. The check holds its own reference to the
+pagemap descriptor, so unplug cannot close it under the read.
+
+Some steps still need the BQL:
 
 - A route through a switch, an interleaved or decoding host bridge, or to a
   device that is not a live `femu-cxl-ssd`. The fast route reads no decoder
@@ -213,36 +262,189 @@ the BQL:
   anything.
 - A `der=memslot` device, whose mappings change the memory map.
 
-Such an exit stops before it decides anything and FEMU serves it again under
-the BQL, as before (`der-fault-bql`). Three steps that needed the BQL before
-now run without it:
+Such an exit stops before it decides anything, and FEMU serves it again
+under the BQL (`der-fault-bql`). Three steps that needed the BQL before
+version 2 now run without it:
 
-- A Cylon failure deletes the slot at once: the slot is outside QEMU's
+- A Cylon failure deletes the slot at once. The slot is outside QEMU's
   memory map, its ID is only reserved under the KVM slots mutex, and the
-  kernel serializes slot changes. The TLB flush ioctl is served before the
-  kernel takes the vCPU mutex.
+  kernel serializes slot changes. The kernel serves the TLB flush ioctl
+  before it takes the vCPU mutex.
 - Teardown that unplug left to the last access out of the gate goes to a
   bottom half when that access has no BQL. The gate stays open: accesses in
   flight see the device closing and leave, and the bottom half takes the
   gate alone. No vCPU waits for the main loop, which may be pausing vCPUs.
 - The last reference to a device finalizes it. A fault exit drops a
-  reference to a closing device in a bottom half; until unplug sets closing
+  reference to a closing device in a bottom half. Until unplug sets closing
   (under the CXL lock), the parent holds a reference.
+
+The Cylon install bottom half pauses the vCPUs before it takes the CXL
+lock. A paused vCPU is outside every fault exit, and a vCPU that waits for
+the lock could not pause.
+
+#### Register writes
 
 Component register writes (the HDM decoders) and CCI commands hold the CXL
 lock from the invalidation to the end of the write or command, so a fault
 exit never sees them half done. A configuration write runs between two
 invalidations, without the CXL lock across the parent's write, which can
-rebuild the memory map: a fault exit that routes while it changes cannot
-keep its mapping, because the second invalidation revokes it or the moved
-generation stops it. `cxl_dev_media_disabled()` reads a word of mailbox
-register storage that only mailbox MMIO writes, under the BQL alone, and
-that no command sets (see "Caching API"); a fault exit that reads it then is
-a word read racing a word write, as an access between two register writes
-saw before.
-The Cylon install bottom half pauses the vCPUs before it takes the CXL
-lock: a paused vCPU is outside every fault exit, and a vCPU that waits for
-the lock could not pause.
+rebuild the memory map. A fault exit that routes while it changes cannot
+keep its mapping: the second invalidation revokes it, or the changed
+generation stops it. `cxl_dev_media_disabled()` reads the memory device
+status, which sanitize sets to "disabled" while its background operation
+runs. Only threads that hold the BQL write the status, and every write and
+this read are atomic, so a fault exit without the BQL reads it without a
+data race. (Earlier, the check read the first word of the mailbox registers
+instead, so media was never disabled.)
+
+While media is disabled, MMIO reads return random data and writes are
+dropped, as in `cxl-type3`, and FEMU maps nothing. A `der-ratio` write
+other than 0 is refused. A flush or a way change keeps the ratio set but
+maps none of it; the first access after the sanitize maps a `der=memslot`
+ratio again, and a `der=cylon` ratio maps page by page as the guest
+touches it, or all at once at the next flush. A Cylon fault exit that needs a
+mapping during a sanitize (an instruction KVM cannot emulate, or code on
+the window) stops the VM, as for any page that must stay unmapped (see
+"Instructions KVM cannot emulate"); `cylon-fault-stop` does not change
+this. The normal Linux path sends Sanitize only when no HDM decoder of the
+device is committed (`cxl_mem_sanitize()` in `drivers/cxl/core/mbox.c`), so
+no window then reaches the device; raw mailbox commands and other guests
+are not bound by that.
+
+#### Device DMA into the window
+
+Another device can reach the window from inside its own re-entrancy guard.
+QEMU's NVMe controller, for example, copies data, queue entries and
+completions from guarded bottom halves. A guest whose page cache is on the
+CXL node points those copies at CXL pages. The guard is a flag on that
+device, not on the thread, and that device's MMIO needs the BQL. If the
+access released the BQL there, a vCPU could take the BQL and write the
+device's doorbell. QEMU refuses that write as re-entrant ("Blocked
+re-entrant IO"), so the command is never seen and the guest driver times
+out. QEMU reports this only once per run, so later refusals are silent.
+
+QEMU therefore counts, per thread, the guards that memory dispatch, guarded
+bottom halves and NIC packet delivery engage (`qemu_in_guarded_io()`). The
+rule for an access made inside a guard: it must not release the BQL, and it
+must not wait for anything that another thread can hold for long. It can
+take the CXL lock: the holder of the CXL lock never waits for the BQL and
+releases it before every wait, so the access waits only for a short hold,
+and it keeps the BQL meanwhile. No other thread can then run the device's
+MMIO while its guard is engaged. Such an access:
+
+- Takes the BQL and the CXL lock in lock order and keeps both to its end.
+- Copies the payload at once, and a write marks the linked NVMe blocks.
+- Treats a cached page as a hit, and a write marks it dirty. It inserts and
+  evicts nothing, and the cache hit and miss counters do not change.
+- Queues one media operation for an uncached page: a program for a write
+  and a read otherwise (a program when `cylon-first-touch-program` finds the
+  page unwritten). It queues one per run of consecutive accesses to the page
+  within one guarded section, that is one MMIO handler or one bottom half.
+  A 4 KiB DMA copy arrives as 512 accesses of 8 bytes and so costs one
+  operation.
+- Also queues a program for a write to a cached page whose write-back is in
+  progress. The write-back already took its snapshot, and then cleans or
+  drops the entry.
+- Queues under the medium's `post_lock`, which a thread holds only to add or
+  take an operation, not under the FTL mutex. The FTL worker holds the FTL
+  mutex for a whole request, and a write at the forced threshold runs its
+  whole collection in it, so a guarded access that queued under that mutex
+  would hold the BQL and the CXL lock for that collection.
+- Never takes the gate, never holds a page, takes no direct mapping and
+  writes no I/O log record. A fill from a fault exit is refused there;
+  fault exits never run inside a guard.
+
+Nobody waits for a queued operation, but its time occupies the NAND
+timelines, so later accesses meet it as contention. The worker runs a queued
+operation when no waited request is queued (see "Waits for garbage
+collection") and adds its time to `dma-media-time-ns`. After each one it publishes the FTL program and
+collection counts. A main-loop bottom half then takes the CXL lock, raises
+`media-writes`, `gc-stalls` and `gc-stall-ns` to them, and counts a program
+that NAND refused in `media-full`. It reads what the worker published and
+does not take the FTL mutex. `dma-accesses` and `dma-media-ops` count under
+the CXL lock.
+
+Device DMA has no latency of its own in the model, as it has none for guest
+RAM, and its time is not in `media-time-ns`. A medium that served such an
+access is treated as written when a linked NVMe controller attaches, as for
+any earlier CXL access. Switching `fast-load` off first waits until the
+worker has run every queued operation; that wait releases both locks.
+Device DMA that arrives during the wait can still add NAND work after it.
+The worker runs any queued operation before it stops, and a teardown
+inside a device's re-entrancy guard leaves that wait to a bottom half.
+Debug builds (`FEMU_FTL_ASSERT`) also abort when teardown stops the worker
+inside a guard.
+
+A vCPU access, a fault exit, a qtest access and a QOM command run outside
+any guard and keep the full model. Inline mailbox commands and the
+invalidations of configuration and component writes run inside this
+device's own guard and never wait. Debug builds (`FEMU_FTL_ASSERT`) abort
+when a wait starts inside a guard, so the qtests check every path they
+reach. Under `der=memslot` a mapped page is guest RAM, so a DMA to it never
+reaches FEMU and is not counted. Under `der=cylon` every DMA into the window
+reaches FEMU, mapped page or not, because the mappings exist only in KVM.
+
+The regression test `cxl-dma-doorbell` lets a vCPU ring the doorbell as
+soon as an NVMe copy reaches a CXL page whose miss would wait 1 s. A vCPU
+that the host does not run for that whole second would miss the window, so
+under extreme host load the test can pass on a broken build; it cannot fail
+on a correct one.
+
+A device that runs in an IOThread is outside this guarantee: memory dispatch
+takes the BQL for each MMIO fragment and releases it between fragments while
+that device's guard stays engaged, whatever FEMU does.
+
+#### Waits for garbage collection
+
+A write that finds the free lines at the forced threshold waits for
+collection (see "Full NAND"). The FTL worker runs the collection inside the
+request, under the FTL mutex only. The access that waits for the request
+holds no lock: it released the CXL lock and the BQL before it queued the
+request. The request returns its media time, which includes the wait for
+the collection, and the access sleeps that time without locks: in the media
+delay, or, for a one-page fill, inside its media read. No modelled delay is
+slept under the CXL lock or the BQL, and a vCPU access or fault exit never
+waits for a collection while it holds either. A version 2 fill counts its
+stall like a version 1 access, and the realize rule for spare lines applies
+to both versions.
+
+The FTL mutex itself can be held for a whole collection, and two paths
+take it while they hold the CXL lock and the BQL. A collection holds the
+mutex only for its computation: it books the copies and erases on the LUN
+timelines and returns, and the request that waits for them sleeps that
+time after the mutex is released (`cxl_ftl_request()` in `cxlssd.c`). So
+these paths block for the computation of a collection, not for its
+modelled stall. That computation took about 2 ms for one 64 MiB line (8
+channels, 8 LUNs, 256-page blocks) in an optimized build. Each can block
+for a collection that the worker or a linked NVMe request runs at that
+time:
+
+- The linked-NVMe bottom half, to take the ranges that NVMe writes
+  replaced.
+- Teardown, to stop the worker. A teardown that would start inside a
+  device's re-entrancy guard (a guest unplug) goes to a bottom half.
+  Teardown also joins the worker, which first runs every device DMA
+  operation still queued, so it waits for the computation of that whole
+  backlog, collections included, with the BQL and the CXL lock held.
+
+The qtest hooks `test-ftl-hold` and `test-ftl-delay` sleep in real time
+under the FTL mutex; only tests set them. The warning for a long stall
+(see "Full NAND") is reported from the main loop, not under the FTL mutex.
+
+The `fast-load` switch-off releases both locks before it takes the FTL
+mutex to read the NAND horizon.
+
+The worker holds the FTL mutex while it has work. Waited requests need the
+mutex to be queued, so they cannot keep the worker busy, but device DMA
+queues without it. So the worker runs waited requests before device DMA
+operations, and before each device DMA operation it offers the mutex to
+the threads that wait for it: a caller whose request is done and must take
+the mutex back, and a thread that wants to queue or run a request. It
+releases the mutex and spins at most 1 ms while such a thread is left, so a
+thread that the host does not run cannot stop the worker. This is a
+bounded chance to get in, not a strict turn: a thread that the host does
+not run in that window waits for the next device DMA operation or for the
+worker to go idle.
 
 ## Direct Endpoint Remapping
 
@@ -429,14 +631,35 @@ instruction bytes and the latest GPAs at that RIP when:
   page it already filled for that RIP. The set of filled pages is cleared only
   when the RIP changes (and on reset or vCPU replacement), so cycling through
   pages does not clear it. FEMU warns, at most once a second, from 1,000
-  such exits and stops the VM at 100,000. A load that spans two pages which
-  evict each other ends this way; a healthy loop whose page other vCPUs evict
-  stays far below the limit.
+  such exits and stops the VM at `cylon-fault-stop` (default 100,000; 0
+  only warns). A load that spans two pages which evict each other ends this
+  way; a healthy loop whose page other vCPUs evict stays far below the
+  limit.
+
+`cylon-fault-stop` is a watchdog: it counts exits, not retired
+instructions, so it can stop a healthy VM. The known case is a loop at one
+RIP of an instruction that exits on each page (version 1: one that KVM
+cannot decode) over a working set larger than the cache but at most 4,096
+pages, the size of the set of filled pages that FEMU keeps for one RIP.
+Each page is evicted before the loop comes back to it and is still in the
+set, so every exit after the first round counts as a repeat. A smaller
+working set stays mapped and does not exit; a larger one drops its pages
+from the set before they come back. With the default cache sizes this is
+rare. If a VM stops with "retry budget exhausted" and the GPAs in the
+report cycle over many pages, raise `cylon-fault-stop` or set it to 0.
 
 #### Version 2: no emulation of cold pages
 
-With `cylon-never-emulate=on` and a host kernel that has version 2 of
-`KVM_CAP_CYLON_FAULT_EXIT`, KVM does not emulate an access to a cold page.
+With a host kernel that has version 2 of `KVM_CAP_CYLON_FAULT_EXIT`, KVM
+does not emulate an access to a cold page. `cylon-never-emulate=auto` (the
+default) turns version 2 on when the kernel reports it. With a kernel that
+reports only version 1, it uses version 1 and warns once, because version 1
+emulates cold pages and fails on instructions KVM cannot emulate (for
+example `cmpxchg16b`, or AVX on an uncached page). With a kernel without
+the capability, FEMU warns as before ("Instructions KVM cannot emulate").
+`=on` also warns when the kernel lacks version 2 and then uses version 1;
+`=off` on the first Cylon device keeps version 1 and does not warn about
+version 2; the per-VM rule below decides for later devices.
 A cold page has a zero leaf. KVM installs nothing and exits to FEMU with the
 access type from the EPT violation: read, write or fetch, and whether the
 guest page walk made the access. FEMU fills the page as a read miss, maps it,
@@ -444,7 +667,9 @@ and the guest repeats the access natively. One path serves every
 instruction: vector, atomic, string, page-crossing (one exit for each page),
 code, and guest page tables on the CXL node. `der-emul-v2` reports that the
 mode is on. `der-fault-reads`, `der-fault-writes`, `der-fault-fetches` and
-`der-fault-page-walks` count the exits by type. FEMU serves the exits
+`der-fault-page-walks` count the exits by type, and `der-fault-deliveries`
+the exits made while the CPU delivered an interrupt or exception (see
+"Event delivery and guest page tables" below). FEMU serves the exits
 without the BQL (see "Locking"); `der-fault-bql` counts the exits it had to
 serve under the BQL.
 
@@ -464,14 +689,16 @@ The rules:
   drops the locks, so no other access can take that way meanwhile. FEMU
   charges and counts nothing for a page it cannot keep. A prefetch holds its
   page until it is mapped, so it never maps a page another access is still
-  filling, and a fill whose read fails revokes any mapping of its page. A page that a direct
-  mapping ratio selects maps without a cache way. It writes a marker
-  to the leaf, and KVM then emulates the accesses to that page as in
-  version 1, one charged access at a time. `der-fault-emulated` counts these
-  pages. A media read that fails after the fill took its way also sends
-  the page to the emulator, after its read was charged. A full NAND never
-  does: a program that finds no page only loses its timing (see "Full
-  NAND").
+  filling, and a fill whose read fails revokes any mapping of its page. A
+  page that a direct mapping ratio selects maps without a cache way. For a
+  data access (not a guest page walk, not an event delivery) to a page that
+  the caching API keeps uncached, FEMU writes a marker to the leaf, and KVM
+  then emulates the accesses to that page as in version 1, one charged
+  access at a time. `der-fault-emulated` counts these pages. No other page
+  ever gets the marker: an admissible page that cannot keep a way maps
+  outside the cache (below), and a media read that fails stops the VM with
+  the reason. A full NAND never fails a read: a program that finds no page
+  only loses its timing (see "Full NAND").
 - KVM reports exits, not retired instructions, so FEMU cannot tell one
   execution of a RIP from the next. It records the latest 64 pages that a
   vCPU fills at one RIP (oldest released first; `der-fault-unprotected`
@@ -488,26 +715,30 @@ The rules:
   the destruction of a vCPU drop the records.
 - An instruction whose pages do not fit in their set (more pages of one set
   than ways, for example the source and destination of a `rep movsb` page
-  copy in one 1-way set) does not refill for ever: on the refault the fill
-  keeps nothing (`der-fault-conflicts`), and the page goes to KVM's
-  emulator, which completes the instruction with one charged access for
-  each emulated access, as a device that serves each access does. The
-  emulator reaches the instruction's other pages through host memory, so
-  FEMU first marks the resident pages that the instruction faulted on for
-  a write dirty. When the emulator cannot run the instruction (VEX, EVEX,
-  most SSE, code), FEMU maps the page without a cache way, charged as one
-  fill (`der-fault-overflows`), until the vCPU faults at another RIP or 16
-  newer overflow pages of that vCPU replace it.
+  copy in one 1-way set, or a data page and the guest page-table page that
+  maps it) does not refill for ever: on the refault the fill keeps nothing
+  (`der-fault-conflicts`), and FEMU maps the page without a cache way,
+  charged as one fill (`der-fault-overflows`), until the vCPU faults at
+  another RIP or 64 newer overflow pages of that vCPU replace it; the leaf
+  then goes back to zero. The same holds for a fill that kept nothing
+  because a victim stayed held after the waits. Earlier candidates gave
+  such a page to KVM's emulator; the marker then stayed in the leaf as an
+  MMIO SPTE, and an interrupt delivered through it ended the VM (see
+  below).
 - A retry of a fill that mapped nothing runs only for a page that is now
   resident, so it charges no media time again, or after such a wait, when
   the first fill kept and charged nothing. The page must still be
   admissible and decode to the same device. After 1,000 consecutive exits
   at one RIP that FEMU served with neither a mapping nor a handoff to the
-  emulator, FEMU stops the VM ("retry budget exhausted"). A handoff, and a
+  emulator, FEMU stops the VM ("retry budget exhausted"). A handoff, an
+  overflow mapping that releases no older overflow page of the RIP, and a
   refault fill that kept the vCPU's own pages, restart both this budget and
-  the 100,000-repeat bound, so the bound is left for refills that the
-  instruction's own fills cause. Exits are not retired instructions: both
-  are retry budgets, not proof that an instruction did not complete.
+  the `cylon-fault-stop` bound, so the bound is left for refills that the
+  instruction's own fills cause. An instruction that needs more than 64
+  overflow pages releases its own pages in a cycle; FEMU stops the VM after
+  `cylon-fault-stop` such releases at one RIP. Exits are not retired
+  instructions: these are retry budgets, not proof that an instruction did
+  not complete.
 - KVM does not write the leaves itself: no fast-fault write restore, no
   asynchronous page fault, no prefetch (also not the shadow prefetch of a
   nested guest), and the changed-PTE notifier only zaps. KVM refuses the
@@ -516,10 +747,63 @@ The rules:
   another depth). FEMU refuses `der=cylon` unless the machine has
   `smm=off`.
 - The version is per VM and fixed by the first Cylon device that installs
-  its slot, also when that device has `cylon-emul-exit=off`. A later device
-  with `cylon-never-emulate=on` cannot turn it on, because the pages of the
-  earlier slots hold version 1 state; FEMU warns. Every device reports the
-  VM's state in `der-emul-v2`.
+  its slot, also when that device has `cylon-emul-exit=off` or
+  `cylon-never-emulate=off`. A later device with `cylon-never-emulate=on`
+  cannot turn it on, because the pages of the earlier slots hold version 1
+  state; FEMU warns. A later device with `auto` takes the VM's version
+  without a warning. Every device reports the VM's state in `der-emul-v2`.
+
+#### Event delivery and guest page tables
+
+When the guest onlines the CXL memory in a normal zone, its kernel puts
+page tables, kernel stacks and descriptor tables there. A guest kernel with
+memory auto-online (the default of common distributions) does so without
+being asked. The CPU then touches cold pages while it delivers an
+interrupt or exception: it walks the guest page tables, reads the IDT, GDT
+and TSS, and pushes the frame on the stack. KVM refuses an EPT
+misconfiguration (an MMIO SPTE) during event delivery: the VM ends with
+"KVM internal error. Suberror: 3" (`KVM_INTERNAL_ERROR_DELIVERY_EV`). An
+EPT violation (a zero leaf) is allowed. The rule for version 2:
+
+- A dual-mode leaf is never an MMIO-class SPTE, except for a page that the
+  caching API keeps uncached after a data access to it. FEMU refuses any
+  other marker (`der-fault-marker-refused`, which must stay 0) and stops
+  the VM instead. FEMU records the marked pages; when `CACHE_ENABLE` or an
+  unpin makes one admissible again, it sets its leaf back to zero.
+- A guest page walk (`der-fault-page-walks`) or an event delivery
+  (`der-fault-deliveries`) is served only by a mapping, as a data access
+  is: fill and map, or map outside the cache on a conflict. On an uncached
+  page it maps the page outside the cache for the instruction
+  (`der-fault-forced`), charged as one read; this is a model deviation of
+  the caching API.
+- A host kernel with Cylon kernel candidate 3 exits with
+  `KVM_CYLON_FAULT_DELIVERY` instead of ending the VM when a delivery meets
+  the marker of an uncached page, and when an EPT violation by a delivery
+  or a guest page walk meets it. A misconfiguration outside delivery does
+  not report a page walk, so a walk that meets the MMIO SPTE of an uncached
+  page is still emulated: the emulator walks the page tables in host
+  memory, uncharged. An older version 2 kernel ends the VM when a delivery
+  meets such a page; with no uncached range there is no marker.
+
+Version 1 cannot follow this rule: every cold page is an MMIO SPTE, so the
+first interrupt that the CPU delivers through a cold page table, stack or
+descriptor table ends the VM. Use version 1 only with the CXL memory
+online as movable memory, which the guest kernel never uses for those:
+
+1. Disable auto-online in the guest: boot with `memhp_default_state=offline`
+   and remove any udev rule that onlines hot-added memory.
+2. Online the memory as movable: `daxctl online-memory --movable <device>`,
+   or write `online_movable` to each
+   `/sys/devices/system/memory/memoryN/state` of the CXL node.
+
+FEMU warns once when a `der=cylon` device installs its slot without
+version 2; the configurations below never install one and get no warning.
+
+The same applies wherever the CXL memory is served without a direct
+mapping, because KVM then serves every access to it as MMIO: `der=off`,
+the cold pages of `der=memslot`, and `der=cylon` with `cache-pages=0` and
+no direct ratio, whose slot is never installed. Online the memory as
+movable in these configurations too.
 
 #### Batched revocation
 
@@ -568,13 +852,13 @@ each.
 
 Limits of version 2:
 
-- Pages that must stay unmapped are still served by KVM emulation: pages
-  in a caching API uncached range, pages in a set whose ways are all pinned,
-  and misses with no victim. An instruction that the emulator cannot run
-  (VEX, EVEX, most SSE with a memory operand, code) stops the VM on such a
-  page, with the report above. This applies to those pages only.
-  `der-fault-emulated` counts the pages given to the emulator, and
-  `der-emul-failures` counts the stops.
+- Data accesses to pages that the caching API keeps uncached (an uncached
+  range, or a set whose ways are all pinned) are still served by KVM
+  emulation. An instruction that the emulator cannot run (VEX, EVEX, most
+  SSE with a memory operand, code) stops the VM on such a page, with the
+  report above. This applies to those pages only. `der-fault-emulated`
+  counts the pages given to the emulator, and `der-emul-failures` counts
+  the stops. A walk or a delivery maps the page instead (above).
 - KVM fails the faults of a second MMU root role also while an old root of
   another role is being torn down. Keep one root role: the same CPUID on
   every vCPU, and no SMM.
@@ -585,12 +869,15 @@ Limits of version 2:
 - An overflow page (`der-fault-overflows`) is a model deviation: it is
   mapped without a cache way, so writes through it are not charged and
   accesses of other vCPUs to it are not counted until the vCPU faults at
-  another RIP. A vCPU that then stays idle keeps it mapped. Cache disable,
+  another RIP. Version 2 uses it for every conflict, where earlier
+  candidates emulated with one charged access each, so a workload with
+  many conflicts charges fewer accesses than before. A vCPU that then stays idle keeps it mapped. Cache disable,
   invalidation and linked NVMe writes unmap it.
-- Emulated instructions reach their other pages through host memory, as in
-  version 1: reads and writes there are not charged. FEMU marks pages that
-  took a write fault dirty before a conflict handoff; other cases (for
-  example a page written only by the emulator) stay unmodeled.
+- Emulated instructions (uncached pages only) reach their other pages
+  through host memory, as in version 1: reads and writes there are not
+  charged. FEMU marks pages that took a write fault dirty before a
+  handoff; other cases (for example a page written only by the emulator)
+  stay unmodeled.
 - Protection from other vCPUs is time-bound, not tied to retirement. If a
   vCPU does not run its instruction again within 1 ms of the fill (for
   example, the host preempts its thread), another vCPU's fill to the same
@@ -839,9 +1126,9 @@ device that turns it red. A standalone test runs the guest library against
 the device's ring consumer and fuzzes every guest-writable index under a
 sanitizer. Guest enumeration of BAR5 under `pxb-cxl`, `resource5` mapping
 and the latency effects of pinning need a guest run (`run-guest-tests.sh`).
-In this QEMU, `cxl_dev_media_disabled()` reads a mailbox register that
-sanitize never sets, so the qtest reaches the `-ENODEV` path through a
-qtest-only property.
+Sanitize disables the media only while its background operation runs, so
+the qtest reaches the `-ENODEV` path through a qtest-only property that
+keeps it disabled.
 
 ## NVMe front end
 
@@ -1170,12 +1457,27 @@ A write that finds the free lines at the forced threshold waits for
 collection. The FTL frees the victim line in its metadata at once and books
 the copies and erases on the LUNs. The request then ends no earlier than the
 last erase on every LUN, as a real SSD blocks writes during foreground
-collection. Linked NVMe requests wait the same way. `gc-stalls` counts these
+collection. Linked NVMe requests wait the same way, and operations that
+device DMA queued count the same way, though nobody waits for them (see
+"Locking"). No lock is held during the wait. `gc-stalls` counts these
 requests, and `gc-stall-ns` adds the time from each request start to the end
-of its collection. The program of the request itself waits for its LUN, so
-the wait on every LUN adds only the difference between LUNs. With GC delay
-off (the FEMU flip command), collection books no NAND time and no request
-waits.
+of its collection. `gc-stall-max-ns` is the longest single wait. The
+program of the request itself waits for its LUN, so the wait on every LUN
+adds only the difference between LUNs. With GC delay off (the FEMU flip
+command), collection books no NAND time and no request waits.
+
+The minimum that realize accepts keeps NAND from filling, not stalls short.
+Near it, nearly every line that collection takes is still full of valid
+pages, so each collection copies a line and erases it on every LUN, and
+writes wait hundreds of milliseconds to seconds. FEMU warns once per device
+when a request is charged more than one second of collection (device DMA
+operations and `fast-load` accesses are charged without waiting). With
+less than about 7% over-provisioning (lines beyond the media), the warning
+names the current `blocks-per-plane` and the value for 7%; otherwise it
+says that the NAND timing or queued NAND work sets the stall. Use at least 7% for measurements, as the `run-cxlssd.sh`
+presets do (822 blocks per plane at 48 GiB and 1644 at 96 GiB, with 8
+channels, 8 LUNs and 256-page blocks), and report `gc-stalls` and
+`gc-stall-max-ns` with the results.
 
 `media-full` counts programs that still find no free page. The rule keeps it
 at 0. If one occurs, its program is not timed and the first one reports an
