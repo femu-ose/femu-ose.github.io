@@ -3,12 +3,12 @@ title: "CXL SSD (femu-cxl-ssd)"
 description: "The device comes from Cylon (FAST '26); the user guide has its citation."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/design/cxl-ssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/design/cxl-ssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/cxl-ssd.md`](https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/design/cxl-ssd.md) at FEMU `175914c14` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/cxl-ssd.md`](https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/design/cxl-ssd.md) at FEMU `379493b90` (2026-10-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -825,10 +825,11 @@ case and the realize messages.
 | --- | --- | --- |
 | vCPU, MMIO exit | MMIO overlay callback, the whole access path, Get LSA | BQL, CXL lock, gate, page holds; drops both locks to wait for the worker and for the media delay |
 | vCPU, Cylon fault exit | The fault service and its fill | CXL lock, gate, page holds; drops it to wait; takes the BQL first only when a step needs it (`der-fault-bql`) |
-| `femu-cxl-ftl` | `cxl_worker()`: every FTL request of the medium | `s->lock` only; never the BQL or the CXL lock, never guest memory |
+| `femu-cxl-ftl` | `cxl_worker()`: every FTL request of the medium, device DMA work queued before the last `fast-load=false` first | `s->lock`, then `post_lock` briefly; never the BQL or the CXL lock, never guest memory |
 | `femu-cxl-cca` | Caching API commands | BQL, CXL lock, gate per chunk, `cca->lock` for the doorbell flag |
 | QEMU main loop | QMP `qom-set` (flush, way change, control commands), queued LSA commands, NVMe drop BH, Cylon install BH, teardown and reference BHs left by fault exits | BQL, CXL lock; the gate, except the Cylon install BH, which pauses all vCPUs before it takes the CXL lock |
-| NVMe FTL thread (linked controller) | NVMe I/O on the shared FTL (`femu_cxl_nvme_ftl()`) | `s->lock`; never the BQL or the CXL lock |
+| QEMU main loop, device DMA | Copies of other devices into the window, guarded or not (block layer completions), except qtest commands; identified by the thread that realized the device, so an IOThread's or another non-vCPU thread's copy, which also holds the BQL, keeps the full model | BQL, CXL lock, `post_lock`; never the gate or `s->lock`, never waits (`femu_cxl_access_nowait()`) |
+| NVMe FTL thread (linked controller) | NVMe I/O on the shared FTL (`femu_cxl_nvme_ftl()`), after the device DMA work before the last `fast-load=false` is booked | `s->lock`, waits on `posted_cond` under `post_lock` with `s->lock` dropped; never the BQL or the CXL lock |
 | NVMe pollers (linked controller) | Hold a completion until its cache drop is published | Read `nvme_done` only |
 
 Latency model (`femu_cxl_media()`, `femu_cxl_delay()` in `cxlssd.c`):
@@ -867,7 +868,7 @@ the binary. This table explains how they interact.
 | Cylon media switches (same table) | `cylon-first-touch-program`, `cylon-free-writeback` | Change the media model to match published Cylon experiments; off for normal use |
 | [Direct mapping](../reference/properties.md#direct-mapping-der) | `der`, `der-replace-rate`, `cylon-kernel-ack`, `concurrent-misses` | `der=memslot` is refused under TCG. `der=cylon` without `cylon-kernel-ack=on` is refused. `der-replace-rate` matters only for `memslot`. `concurrent-misses=auto` follows whether DER is available |
 | [Caching API, control channel and logs](../reference/properties.md#caching-api-control-channel-and-logs) | `cca`, `lsa-control`, `log-dir`, `tracefs-dir`, `log-limit` | `cca=off` registers no BAR5. `lsa-control=on` refuses an `lsa` backend. `log-limit=0` opens no I/O log and takes no statistics appends. `tracefs-dir` unset makes commands 91 and 81 no-ops on the host |
-| [Actions and control](../reference/runtime-properties.md#actions-and-control) | `der-ratio`, `control-command`, `control-argument`, `control-status`, `flush-cache`, `stats-reset`, `fast-load`, `fast-load-drain-ns` | Run time only, except `fast-load`, which `-device` also accepts. `der-ratio` needs a direct mode and no uncached ranges; `memslot` refuses a ratio that needs more aliases than are free. `fast-load=false` holds the gate alone while it waits for the NAND timelines, with the BQL and the CXL lock dropped and `lock` released |
+| [Actions and control](../reference/runtime-properties.md#actions-and-control) | `der-ratio`, `control-command`, `control-argument`, `control-status`, `flush-cache`, `stats-reset`, `fast-load`, `fast-load-drain-ns`, `fast-load-switch-ns`, `nand-idle-ns` | Run time only, except `fast-load`, which `-device` also accepts. `der-ratio` needs a direct mode and no uncached ranges; `memslot` refuses a ratio that needs more aliases than are free. `fast-load=false` holds the gate alone while it sets the `post_barrier` and waits at most 100 ms for the worker to book the device DMA work before it and then tries `lock` to read the NAND horizon, with the BQL and the CXL lock dropped; it never waits for `lock` or for the horizon. `nand-idle-ns` only tries `lock` |
 
 `run-cxlssd.sh` uses defaults that follow Cylon's launch script and differ
 from the device's (a cache of 1/20 of the media, direct mapped, 8 by 8

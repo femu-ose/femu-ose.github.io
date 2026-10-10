@@ -3,12 +3,12 @@ title: "Log pages and counters"
 description: "How to read FEMU's own counters from the guest. Device properties are in properties.md, and the counters of femu-cxl-ssd are QOM properties listed in..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/reference/log-pages-and-counters.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/reference/log-pages-and-counters.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `175914c14` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `379493b90` (2026-10-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -53,8 +53,11 @@ own media counters, little-endian at these offsets (`FemuStatsLog` in
 | 200 | 8 | Forced collection passes run inside those writes |
 | 208 | 8 | Host writes that emptied a full write buffer to make room |
 | 216 | 8 | Completions held because the host's completion queue was full (summed over pollers) |
+| 224 | 8 | Pages paced collection copied (`gc_pace`; also counted at offset 16) |
+| 232 | 8 | Lines paced collection finished, freed or retired |
+| 240 | 8 | Paced lines the forced pass or the budget finished in one pass |
 
-Bytes 4-7 and 224-511 are reserved and read as zero. The counters are summed
+Bytes 4-7 and 248-511 are reserved and read as zero. The counters are summed
 over the controller's bbssd, CSD and KV namespaces (the block read count is the
 largest of them); other modes leave them zero. The write amplification factor
 stays zero until the host has written a page.
@@ -86,7 +89,7 @@ of these happens:
 
 | Event | Raised when | Log page it names |
 | --- | --- | --- |
-| SMART temperature warning | the host has enabled it with Async Event Configuration and set a temperature threshold at or below the reported value (`temperature`, in Kelvin, default 323, which is 50 C) | SMART / Health (02h) |
+| SMART temperature warning | the host has enabled it with Async Event Configuration and the reported temperature (`temperature`, in Kelvin, default 323, which is 50 C) is at or above the over threshold (default 343 K, the warning temperature WCTEMP) or at or below the under threshold (default 0); with the thermal model on, also when the modelled temperature crosses one | SMART / Health (02h) |
 | Error | the host writes a doorbell that does not exist, or a value past the end of its queue | Error Information (01h) |
 | Namespace Attribute Changed | with `ns_mgmt=on`, a namespace is attached, detached, deleted or formatted, and the host enabled the notice | Changed Namespace List (04h) |
 | Zone Descriptor Changed | an injected write fault (`err_write_fail_ppm`) made a ZNS zone read only, and the host enabled Zone Descriptor Changed notices (bit 27) | Changed Zone List (BFh) |
@@ -101,6 +104,37 @@ checks the temperature path from inside the guest:
 gcc -O2 -o aer-probe femu-scripts/aer-probe.c   # inside the guest
 sudo ./aer-probe /dev/nvme0
 ```
+
+## Thermal model
+
+With `thermal_tau_ms` set, the composite temperature in the SMART log
+follows the NAND work instead of staying at `temperature`. Every constant
+comes from the user; FEMU has no built-in figures.
+
+```text
+  power (mW)  = idle_mw + NAND energy since the last step / the step
+                (plane reads, programs, erases x energy_*_nj; bbssd, CSD, KV)
+  target (K)  = temperature + power x thermal_r / 1000     (thermal_r: mK per mW)
+  every thermal_step_ms of virtual time:
+    T = target + (T - target) x exp(-step / thermal_tau_ms)
+    SMART temperature = T rounded to a Kelvin
+    T reaches the over threshold, or falls to the under threshold:
+      SMART critical warning bit 1, Persistent Event log entry,
+      and one SMART temperature event if the host enabled it
+```
+
+- The clock is QEMU's virtual clock, so a paused VM does not cool. NAND work
+  that FEMU does while the VM is paused counts in the first step after it.
+- The model does not throttle I/O, and the SMART time-over-threshold fields
+  stay 0.
+- One event is raised each time the condition starts while the host has
+  temperature events enabled, including when it enables them during an
+  excursion. A SMART read without RAE discards queued SMART events, so an
+  excursion that ends and starts again before the host reads the log is not
+  reported twice.
+- Refused with namespace management, shared namespaces, `cxl_ssd` and
+  `-icount`. `thermal_tau_ms` needs `thermal_r`; `thermal_step_ms` is 1 to
+  60000.
 
 ## Persistent Event log retention
 

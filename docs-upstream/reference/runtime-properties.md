@@ -3,12 +3,12 @@ title: "Runtime properties and counters"
 description: "QOM properties that a running device exposes. Read and set them through QMP at /machine/peripheral/<id>, where <id> is the id= given on -device:"
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/reference/runtime-properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/reference/runtime-properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/runtime-properties.md`](https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/reference/runtime-properties.md) at FEMU `175914c14` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/runtime-properties.md`](https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/reference/runtime-properties.md) at FEMU `379493b90` (2026-10-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -51,8 +51,10 @@ or in the HMP monitor with `qom-get` and `qom-set`. Event counters are cleared b
 | `control-status` | `uint64` | Read-only result of the last control command: 0 success, 1 error, 2 a Get LSA command still queued |
 | `flush-cache` | `bool` | Write-only: true revokes direct mappings, writes dirty pages back, drops unpinned pages and waits for the modelled media time |
 | `stats-reset` | `bool` | Write-only: true copies the counters to the last-* properties, then clears the event counters |
-| `fast-load` | `bool` | Accesses skip only their wait for the modelled media time; the FTL, cache and counters still run. For warmup and loading, not for measurement. Setting false waits for the queued NAND work first; default off, changeable with qom-set |
-| `fast-load-drain-ns` | `uint64` | Read-only: ns the last fast-load switch to false waited for queued NAND work |
+| `fast-load` | `bool` | Accesses skip only their wait for the modelled media time; the FTL, cache and counters still run. For warmup and loading, not for measurement. Setting false does not wait for the queued NAND work (see nand-idle-ns); default off, changeable with qom-set |
+| `fast-load-drain-ns` | `uint64` | Read-only: the NAND backlog, in ns from when fast-load last went to false, including device DMA work queued before the switch; the switch does not wait for it. At least 1 until that work is booked |
+| `fast-load-switch-ns` | `uint64` | Read-only: ns the last setting of fast-load to false took inside the device, for checking that the switch does not wait for the backlog; 0 before the first |
+| `nand-idle-ns` | `uint64` | Read-only: ns until the NAND timelines and queued NAND work are idle, 0 when idle; poll it after fast-load=false before measuring. Never blocks |
 
 ### Cache counters
 

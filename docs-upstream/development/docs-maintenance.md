@@ -3,12 +3,12 @@ title: "Keeping the documentation correct"
 description: "Four checks keep the documentation in step with the code. CI runs all of them, and so does"
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/development/docs-maintenance.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/development/docs-maintenance.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/development/docs-maintenance.md`](https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/development/docs-maintenance.md) at FEMU `175914c14` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/development/docs-maintenance.md`](https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/development/docs-maintenance.md) at FEMU `379493b90` (2026-10-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -26,6 +26,7 @@ make -C hw/femu/tests check-docs QEMU=$PWD/build/qemu-system-x86_64 \
 | Property reference | `hw/femu/scripts/gen-property-docs.py --check` | a property has no description, or `reference/properties.md` or `reference/runtime-properties.md` differs from the binary |
 | Mode table | `hw/femu/scripts/gen-mode-table.py --check` | a mode table differs from `modes.py`, or `modes.py` disagrees with the tree |
 | Links | `hw/femu/scripts/check-doc-links.py` | a relative link or heading anchor does not exist |
+| CHANGELOG commits | `hw/femu/scripts/check-changelog-hashes.py` | a commit that the CHANGELOG names is not in the history of HEAD, for example a hash from before a rebase |
 | Examples | `hw/femu/scripts/check-doc-examples.py` | a code block is not tagged, or a tagged example does not work |
 
 Only two reference pages are generated: `reference/properties.md` and
@@ -38,7 +39,7 @@ also needs an entry in [CHANGELOG.md](../changelog.md).
 
 ## Per-mode facts: `modes.py`
 
-[`hw/femu/docs/modes.py`](https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/modes.py) holds one entry per mode or feature:
+[`hw/femu/docs/modes.py`](https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/modes.py) holds one entry per mode or feature:
 how to turn it on, a minimal example, the guest kernel and tools it needs,
 host requirements, its launcher and the page that documents it. Change a
 fact there, never in a table, then run

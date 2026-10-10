@@ -3,12 +3,12 @@ title: "BlackBox SSD (BBSSD)"
 description: "BlackBox mode (femu_mode=1) emulates a conventional NVMe SSD: the device runs its own flash translation layer (FTL), garbage collection (GC) and NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/modes/blackbox.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/modes/blackbox.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/modes/blackbox.md) at FEMU `175914c14` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/modes/blackbox.md) at FEMU `379493b90` (2026-10-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -184,13 +184,20 @@ All of these are off by default.
   Available Spare.
 - Log page C0h counts plane reads, programs and erases. With
   `energy_read_nj`, `energy_prog_nj` and `energy_erase_nj` set from a part's
-  datasheet, it also reports their energy in uJ.
+  datasheet, it also reports their energy in uJ. With `thermal_tau_ms`,
+  `thermal_r` and `idle_mw` too, that energy heats a first-order thermal model,
+  and the SMART temperature follows it
+  ([thermal model](../reference/log-pages-and-counters.md#thermal-model)).
 - `wl_spread` turns on static wear levelling. When the lines in service
   differ by more than that many erases, the least worn full line moves into
   the most worn free line, so cold data rests on worn blocks and young blocks
   rejoin the rotation. It runs only when the data write pointer has just
   taken an empty line, which it exchanges for the worn one, so it adds no
   write pointer, and it copies at most a quarter of what the host writes.
+- `gc_pace` collects the victim line a few pages per host page written, in
+  proportion to its valid pages, instead of in one pass. A write then waits
+  for about one copy instead of a whole line. The forced pass stays as the
+  last resort. It is refused where `blk_pe_limit` is.
 - `age_scale` makes data age faster than wall time for `retention_limit_sec`
   and `ecc_retention_sec`, so a study of months of retention runs in
   minutes. I/O timing and collection order stay as they are.

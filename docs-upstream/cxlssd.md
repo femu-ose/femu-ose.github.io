@@ -3,12 +3,12 @@ title: "CXL SSD design"
 description: "The opt-in femu-cxl-ssd device subclasses QEMU's CXL Type-3 device. It takes an ordinary volatile memory backend, preserving standard decoder translation,..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/cxlssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/cxlssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/cxlssd.md`](https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/cxlssd.md) at FEMU `175914c14` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/cxlssd.md`](https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/cxlssd.md) at FEMU `379493b90` (2026-10-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -357,7 +357,7 @@ MMIO while its guard is engaged. Such an access:
 Nobody waits for a queued operation, but its time occupies the NAND
 timelines, so later accesses meet it as contention. The worker runs a queued
 operation when no waited request is queued (see "Waits for garbage
-collection") and adds its time to `dma-media-time-ns`. After each one it publishes the FTL program and
+collection"), or first if it was queued before `fast-load` last went off and adds its time to `dma-media-time-ns`. After each one it publishes the FTL program and
 collection counts. A main-loop bottom half then takes the CXL lock, raises
 `media-writes`, `gc-stalls` and `gc-stall-ns` to them, and counts a program
 that NAND refused in `media-full`. It reads what the worker published and
@@ -367,16 +367,54 @@ the CXL lock.
 Device DMA has no latency of its own in the model, as it has none for guest
 RAM, and its time is not in `media-time-ns`. A medium that served such an
 access is treated as written when a linked NVMe controller attaches, as for
-any earlier CXL access. Switching `fast-load` off first waits until the
-worker has run every queued operation; that wait releases both locks.
-Device DMA that arrives during the wait can still add NAND work after it.
+any earlier CXL access. Switching `fast-load` off moves a barrier to the
+operations queued so far. The worker runs those before any waited request,
+so no access admitted after the switch books its NAND time ahead of them.
+A linked NVMe request takes the FTL mutex without the worker queue, so it
+waits until they are booked; the worker books them without waiting for
+anything, so that wait is bounded. The regression test `cxl-nvme-barrier`
+offers the mutex to an NVMe write between two such operations and checks
+that it books after both.
+Once they are booked, the worker sets `fast-load-drain-ns` to the NAND
+backlog from the switch. The switch waits at most 100 ms for that, with
+both locks released. If the time runs out, it reports the booked backlog,
+at least 1, and the worker updates it later. `nand-idle-ns` stays above 0
+while operations are queued. The regression test `cxl-fast-load-posted`
+checks the order and the late report.
 The worker runs any queued operation before it stops, and a teardown
 inside a device's re-entrancy guard leaves that wait to a bottom half.
 Debug builds (`FEMU_FTL_ASSERT`) also abort when teardown stops the worker
 inside a guard.
 
-A vCPU access, a fault exit, a qtest access and a QOM command run outside
-any guard and keep the full model. Inline mailbox commands and the
+The main loop also copies into the window outside any guard. QEMU's NVMe
+controller maps only the first chunk of a transfer in its guarded bottom
+half. The block layer completion (`dma_blk_cb()`) copies the rest through a
+4 KiB bounce buffer, on the main loop, with no guard engaged. A media wait
+there would stop the main loop for the whole NAND backlog, and with it
+every device the main loop serves, so the guest's boot disk would time out.
+So an access from the main-loop thread takes the same path as a guarded
+one. FEMU records that thread when it realizes the device, and tells it
+apart by identity alone. Every other thread holds the BQL for such a copy
+too, which QEMU takes for MMIO (`prepare_mmio_access()`), and a thread
+without an AioContext of its own, such as the RCU thread, reports the main
+one, so neither the BQL nor the AioContext identifies the main loop.
+vCPUs, IOThreads and such threads keep the full model. The regression
+test `cxl-dma-iothread` reads through a virtio-blk device in an IOThread
+into CXL memory and checks that the copy counts a write miss and no
+`dma-accesses`; `cxl-dma-thread` reads from a plain QEMU thread and checks
+for a read miss and no `dma-accesses`. Where the main loop runs in a
+thread other than the one that started QEMU (`qemu_main`, used on macOS
+for some displays), main-loop copies keep the full model and wait. Outside a guard all such accesses share one
+section, so a run is consecutive accesses in one direction. The first
+access after start begins a run, so it charges its page even at DPA 0
+(regression test `cxl-dma-page0`). The regression
+test `cxl-dma-main-loop` holds the FTL during an NVMe read into CXL memory
+until the monitor has answered ten times, and checks that the FTL still
+held after them.
+
+A vCPU access, a fault exit, a qtest command, an IOThread access and an
+access from any other thread but the main loop keep the full model. A qtest command marks itself (`qtest_command_running()`), so a
+test that times an access still sees its media wait. Inline mailbox commands and the
 invalidations of configuration and component writes run inside this
 device's own guard and never wait. Debug builds (`FEMU_FTL_ASSERT`) abort
 when a wait starts inside a guard, so the qtests check every path they
@@ -431,17 +469,27 @@ The qtest hooks `test-ftl-hold` and `test-ftl-delay` sleep in real time
 under the FTL mutex; only tests set them. The warning for a long stall
 (see "Full NAND") is reported from the main loop, not under the FTL mutex.
 
-The `fast-load` switch-off releases both locks before it takes the FTL
-mutex to read the NAND horizon.
+The `fast-load` switch-off releases both locks and then only tries the FTL
+mutex to read the NAND horizon. It never waits for that mutex, which the
+worker can hold for a whole forced collection, and never sleeps until that
+horizon: it runs on the main loop. `nand-idle-ns` also only tries the FTL
+mutex, under the CXL lock and the BQL. While another thread holds the mutex
+both report the last horizon read, and at least 1. The regression test
+`cxl-fast-load-held` switches fast load off while `test-ftl-hold` keeps
+the worker in a request.
 
 The worker holds the FTL mutex while it has work. Waited requests need the
 mutex to be queued, so they cannot keep the worker busy, but device DMA
 queues without it. So the worker runs waited requests before device DMA
-operations, and before each device DMA operation it offers the mutex to
-the threads that wait for it: a caller whose request is done and must take
-the mutex back, and a thread that wants to queue or run a request. It
-releases the mutex and spins at most 1 ms while such a thread is left, so a
-thread that the host does not run cannot stop the worker. This is a
+operations, except those queued before `fast-load` last went off, which it
+runs first (see "Device DMA into the window"). Before each device DMA
+operation it offers the mutex to the threads that wait for it: a caller
+whose request is done and must take the mutex back, and a thread that
+wants to queue or run a request. While operations before the barrier are
+left, a waited request queued then still runs after them, and a linked
+NVMe request lets go of the mutex again until they are booked. The worker
+releases the mutex and spins at most 1 ms while such a thread is left, so
+a thread that the host does not run cannot stop the worker. This is a
 bounded chance to get in, not a strict turn: a thread that the host does
 not run in that window waits for the next device DMA operation or for the
 worker to go idle.
@@ -814,8 +862,8 @@ dirty tracking and revocation" below). Each flush kicks every running vCPU
 and makes it run a global INVEPT, so with several busy vCPUs the flushes
 serialize them. To share the flushes, an eviction that needs them also
 revokes the mappings of the next pages its cache set evicts, up to
-`cylon-revoke-batch` pages in all (default 32, 1 to 64; 1 is one page for
-each two flushes):
+`cylon-revoke-batch` pages in all (default 64, 1 to 256; 1 is one page
+for each two flushes):
 
 1. FEMU asks the cache policy for the pages it evicts after the victim if
    no access comes first: FIFO and CLOCK in their order, S3-FIFO its small
@@ -849,6 +897,15 @@ time. Version 1 and memslot mode revoke one page at a time.
 footprint much larger than the cache, and next victims that are mapped and
 not protected, FIFO evictions take about 2 / `cylon-revoke-batch` flushes
 each.
+
+The default is 64 from a d760 sweep (Redis-style random reads, version 2,
+the CXL lock without the BQL, two boots each). At 16, 32 and 64 pages, 8
+vCPUs reached 98.5k, 104.2k and 111.7k operations per second, and 16 vCPUs
+98.7k, 101.6k and 104.1k. Flushes per eviction were 0.126, 0.063 and
+0.032. Pages mapped again before their own eviction stayed small: 0.18%
+(32) and 0.33% (64) of the pages revoked ahead with 8 vCPUs, and 0.13% and
+0.28% with 16. The maximum is 256 for larger caches; the batch arrays are
+on the stack of the evicting thread, about 18 KiB at 256.
 
 Limits of version 2:
 

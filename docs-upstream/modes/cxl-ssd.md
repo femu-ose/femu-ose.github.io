@@ -3,12 +3,12 @@ title: "CXL SSD"
 description: "femu-cxl-ssd is a CXL Type-3 memory device whose capacity is backed by emulated NAND flash. The guest sees ordinary CXL memory: it creates a region, then..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/modes/cxl-ssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/modes/cxl-ssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/cxl-ssd.md`](https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/modes/cxl-ssd.md) at FEMU `175914c14` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/cxl-ssd.md`](https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/modes/cxl-ssd.md) at FEMU `379493b90` (2026-10-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -289,15 +289,30 @@ time. Everything else still runs: the FTL request, cache inserts and
 evictions, prefetch, direct mapping and every counter. The NAND timelines
 still advance, so the skipped time builds up as a backlog on the LUNs.
 
-`fast-load=false` is a barrier. It waits for the accesses in progress, then
-waits until the modelled NAND is idle, and only then returns. It does not
-flush the cache. `fast-load-drain-ns` gives the time that this wait took.
+`fast-load=false` waits only for the accesses in progress, and at most
+100 ms for queued device DMA work. It does not wait for the NAND backlog.
+Device DMA work queued before the switch still books its NAND time before
+any later access.
+That wait would stop the QEMU main loop for as long, and a guest disk that
+the main loop serves would time out. The backlog stays on the LUNs, so the
+next accesses wait behind it in their own threads. It does not flush the
+cache. `fast-load-drain-ns` gives the backlog in ns from the switch. If
+queued device DMA work was not booked within the 100 ms, it reads at least
+1 at first, and the device updates it once that work is booked.
+`fast-load-switch-ns` gives how long the last switch took in the device.
 After it returns, accesses pay the full media time again.
+
+Before a measured phase, wait until the NAND is idle. Poll `nand-idle-ns`
+until it reads 0. It gives the ns until the NAND timelines and the queued
+work are idle, and it never blocks. A harness that cannot poll can sleep
+`fast-load-drain-ns` instead, but device DMA that arrives meanwhile can add
+work after it.
 
 ```text
 {"execute": "qom-set", "arguments": {"path": "/machine/peripheral/cxlssd", "property": "fast-load", "value": true}}
 {"execute": "qom-set", "arguments": {"path": "/machine/peripheral/cxlssd", "property": "fast-load", "value": false}}
 {"execute": "qom-get", "arguments": {"path": "/machine/peripheral/cxlssd", "property": "fast-load-drain-ns"}}
+{"execute": "qom-get", "arguments": {"path": "/machine/peripheral/cxlssd", "property": "nand-idle-ns"}}
 ```
 
 The contract is narrow:

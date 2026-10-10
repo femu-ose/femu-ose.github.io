@@ -3,12 +3,12 @@ title: "Timing model"
 description: "FEMU makes an emulated SSD take as long as a real one would. This page explains how it computes that time, how it makes the guest wait for it, which..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/concepts/timing-model.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/concepts/timing-model.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/timing-model.md`](https://github.com/MoatLab/FEMU/blob/175914c1423cb7671b30c93494706f991decb7cc/hw/femu/docs/concepts/timing-model.md) at FEMU `175914c14` (2026-10-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/timing-model.md`](https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/concepts/timing-model.md) at FEMU `379493b90` (2026-10-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -270,9 +270,10 @@ the deadline and spins for the rest. Other properties:
 media time of the write-backs they cause, on the thread that runs them.
 
 `fast-load=true` removes only the wait at the end of an access; the FTL and
-the NAND timelines still advance. Setting it back to false waits until the
-latest LUN and channel busy-until time has passed, so the next access sees
-an idle model. See [Fast load](../modes/cxl-ssd.md#fast-load).
+the NAND timelines still advance. Setting it back to false does not wait
+for that backlog: the next accesses wait behind it. `nand-idle-ns` reads 0
+once the latest LUN and channel busy-until time has passed, so a harness
+polls it before it measures. See [Fast load](../modes/cxl-ssd.md#fast-load).
 
 Properties: [femu-cxl-ssd
 cache](../reference/properties.md#cache), [NAND geometry and
