@@ -35,6 +35,13 @@
 .lede {
   margin-bottom: 0.75rem;
 }
+.quickTitle {
+  font-size: 1.35rem;
+  margin: 1.5rem 0 0.25rem;
+}
+.quickLead {
+  margin-bottom: 0.25rem;
+}
 .uses {
   padding-left: 1.4rem;
   margin-bottom: 1.25rem;
@@ -113,6 +120,12 @@
   padding: 0;
   font-size: 0.8rem;
   color: var(--ifm-color-emphasis-700);
+}
+.updateDate {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--ifm-color-emphasis-700);
+  width: 5.5rem;
 }
 .after { font-size: 0.9rem; }
 @media (max-width: 700px) {

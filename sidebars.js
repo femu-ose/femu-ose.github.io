@@ -11,7 +11,7 @@ const sidebars = {
       type: 'category',
       label: 'Get started',
       collapsed: false,
-      items: ['start', 'host-resources', 'start-first-experiment', 'troubleshooting'],
+      items: ['start', 'compatibility', 'host-resources', 'start-first-experiment', 'troubleshooting'],
     },
     {
       type: 'category',
@@ -52,7 +52,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Community',
-      items: ['community', 'community/first-test', 'community/developer-path', 'community/teaching', 'community/contributing', 'community/ai-policy', 'community/governance', 'community/licensing'],
+      items: ['community', 'community/meetings', 'community/first-test', 'community/developer-path', 'community/teaching', 'community/contributing', 'community/ai-policy', 'community/governance', 'community/licensing'],
     },
   ],
 };

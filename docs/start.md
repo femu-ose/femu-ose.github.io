@@ -5,13 +5,22 @@ slug: /start
 description: "Build FEMU on an x86-64 Linux host with KVM, prepare a guest image, attach a device, and reach your first verified storage experiment."
 ---
 
+import QuickStart from '@site/src/components/QuickStart';
+
 # Get started
 
 FEMU runs on an x86-64 Linux host with KVM. You build it once, make a guest
-image, and boot the guest with an emulated NVMe device attached. Reserve RAM
-for the guest, the DRAM-backed SSD, and its metadata.
+image with one script, and boot a virtual machine that has an emulated NVMe
+SSD attached.
 
-## Choose your first result
+## Run FEMU in five minutes
+
+These four steps take you from nothing to a running emulated SSD. On a 20-core
+host the whole run took 5 minutes, most of it compiling.
+
+<QuickStart />
+
+## Then choose your next result
 
 | Goal | Start with | Check |
 | --- | --- | --- |

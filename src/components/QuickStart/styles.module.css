@@ -1,0 +1,22 @@
+/* The quick start: plain code blocks and one line of requirements. */
+.quick {
+  margin: 0.5rem 0 1.25rem;
+}
+.steps {
+  padding-left: 1.4rem;
+  margin-bottom: 0.5rem;
+}
+.steps li::marker {
+  font-weight: 700;
+  color: var(--ifm-color-primary);
+}
+.stepTitle {
+  margin-bottom: 0.4rem;
+  text-align: left;
+}
+.more {
+  font-size: 0.875rem;
+  color: var(--ifm-color-emphasis-700);
+  text-align: left !important;
+  margin: 0.5rem 0 0;
+}

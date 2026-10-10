@@ -13,6 +13,7 @@ description: "Find FEMU support channels, contribution opportunities, a first mo
 | --- | --- |
 | Ask how to do something | [GitHub Discussions](https://github.com/MoatLab/FEMU/discussions) or [Discord](https://discord.gg/AgPTUJCw7) |
 | Discuss FEMU usage by email | The mailing list, [femu@googlegroups.com](https://groups.google.com/g/femu). Ask to join on the group page; an owner approves requests, and the archive is visible to members |
+| Join a community call or office hour | [Meetings](/docs/community/meetings) |
 | Report something broken | [Issues](https://github.com/MoatLab/FEMU/issues) |
 | Propose a change | [Pull requests](https://github.com/MoatLab/FEMU/pulls) |
 | Report a potential vulnerability privately | [Report a vulnerability](https://github.com/MoatLab/FEMU/security/advisories/new) on GitHub, as the [security policy](https://github.com/MoatLab/FEMU/blob/master/SECURITY.md) describes; never in a public issue |

@@ -2,6 +2,7 @@ import React from 'react';
 import Link from '@docusaurus/Link';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import Layout from '@theme/Layout';
+import QuickStart from '@site/src/components/QuickStart';
 import styles from './index.module.css';
 
 /*
@@ -36,6 +37,15 @@ const USES = [
    [['reproducibility', '/docs/research/reproducibility'], ['cite FEMU', '/docs/research/cite']]],
 ];
 
+/* Newest first; keep to five. Each entry links to a post or a page with the details. */
+const UPDATES = [
+  ['2026-10', 'The FEMU Manual is on the website', '/blog/femu-manual'],
+  ['2026-10', 'FEMU receives an NSF POSE award to build its open-source ecosystem', '/blog/nsf-pose-award'],
+  ['2026-09', 'Cylon and WARP presented at SNIA SDC 2026', '/docs/research/cite'],
+  ['2026-09', 'Guides to FEMU\u2019s implementation, policies and configurations', '/blog/implementation-guides'],
+  ['2026', 'New papers on FEMU: WARP and Cylon (FAST \u201926), CEMU (ASPLOS \u201926)', '/docs/research/cite'],
+];
+
 function Hero() {
   return (
     <header className={styles.hero}>
@@ -45,8 +55,15 @@ function Hero() {
         FEMU is an SSD emulator built on QEMU/KVM. A guest operating system sees
         the emulated SSD as a real PCIe device and drives it with its own NVMe or
         CXL drivers, while FEMU charges NAND, channel and garbage-collection time
-        from a timing model you configure. What you can do with it:
+        from a timing model you configure.
       </p>
+      <h2 className={styles.quickTitle}>Run it in five minutes</h2>
+      <p className={styles.quickLead}>
+        Build FEMU, make a guest image with one script, and boot a virtual
+        machine that has an emulated SSD.
+      </p>
+      <QuickStart compact />
+      <p className={styles.lede}>What you can do with it:</p>
       <ol className={styles.uses}>
         {USES.map(([lead, text, links]) => (
           <li key={lead}>
@@ -109,6 +126,28 @@ function Modes() {
   );
 }
 
+function Updates() {
+  return (
+    <section className={styles.section}>
+      <h2>Updates</h2>
+      <table className={styles.modeTable}>
+        <tbody>
+          {UPDATES.map(([date, text, to]) => (
+            <tr key={text}>
+              <td className={styles.updateDate}>{date}</td>
+              <td><Link to={to}>{text}</Link></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className={styles.after}>
+        <Link to="/blog">All news</Link> ·{' '}
+        <Link to="/docs/community/meetings">Community meetings</Link>
+      </p>
+    </section>
+  );
+}
+
 function Limits() {
   return (
     <section className={`${styles.section} ${styles.last}`}>
@@ -132,6 +171,7 @@ export default function Home() {
         <Hero />
         <Overview />
         <Modes />
+        <Updates />
         <Limits />
       </main>
     </Layout>
