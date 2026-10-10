@@ -3,12 +3,12 @@ title: "Log pages and counters"
 description: "How to read FEMU's own counters from the guest. Device properties are in properties.md, and the counters of femu-cxl-ssd are QOM properties listed in..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/reference/log-pages-and-counters.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/reference/log-pages-and-counters.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `379493b90` (2026-10-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `ce728dcf4` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

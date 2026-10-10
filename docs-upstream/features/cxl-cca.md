@@ -3,12 +3,12 @@ title: "CXL caching API (CCA)"
 description: "The caching API lets software in the guest control the DRAM cache of a femu-cxl-ssd: pin pages so they stay cached, write back and drop ranges, mark ranges..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/features/cxl-cca.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/features/cxl-cca.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/cxl-cca.md`](https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/features/cxl-cca.md) at FEMU `379493b90` (2026-10-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/cxl-cca.md`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/features/cxl-cca.md) at FEMU `ce728dcf4` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -145,6 +145,14 @@ An uncached page is never inserted, prefetched or direct-mapped: every
 read is a NAND read and every write a NAND program. A failed command
 clears the mark from the pages it could not drop, so an uncached page is
 never resident.
+A lock-prefixed read-modify-write on an uncached page depends on the mode:
+- With `der=off`, or with `der=cylon` while no slot is installed, it
+reaches the device as a read and a separate write. So it is not atomic
+between vCPUs (see [thread ownership](../cxlssd.md#thread-ownership)).
+A slot is never installed when every page is uncached from the start.
+- With an installed `der=cylon` slot, a Cylon kernel with commit 768e5d4d0
+or later does the write as an atomic exchange on the payload. FEMU then
+charges the read, but no program for the write.
 
 **CACHE_ENABLE (`enable`)**: Ends the uncached marking; the next access caches the page again.
 
@@ -240,7 +248,7 @@ sudo ./run-guest-tests.sh -d mem0
 case prints `PASS`, `FAIL` or `SKIP`, and the script exits 1 if any failed.
 The `query`, `thrash`, `invalidate` and `disable` cases map the devdax
 device and are skipped without one of at least 2 MiB. The
-[tools README](https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/tools/cca/README.md#guest-tests) lists every case.
+[tools README](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/tools/cca/README.md#guest-tests) lists every case.
 
 The `thrash` and `disable` cases compare access times and expect a factor of 5.
 With `der=off` a cache hit already costs microseconds of emulation, so
@@ -267,5 +275,5 @@ Read with `qom-get` as described in
 ## Related pages
 
 - [CXL SSD](../modes/cxl-ssd.md)
-- [CCA guest tools README](https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/tools/cca/README.md)
+- [CCA guest tools README](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/tools/cca/README.md)
 - [CXL SSD design note](../cxlssd.md#caching-api-cca)

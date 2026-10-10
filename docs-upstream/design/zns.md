@@ -3,12 +3,12 @@ title: "ZNS: the zoned namespace model"
 description: "This chapter describes how FEMU implements the NVMe Zoned Namespace (ZNS) command set: the zone state machine, how zones are laid out on the emulated NAND,..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/design/zns.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/design/zns.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/zns.md`](https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/design/zns.md) at FEMU `379493b90` (2026-10-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/zns.md`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/design/zns.md) at FEMU `ce728dcf4` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -534,7 +534,7 @@ A device with 64 MiB zones of half width on an 8-channel geometry:
 | --- | --- | --- |
 | Zone report (Zone Management Receive) | state, write pointer, capacity and attributes of each zone | `zns_zone_mgmt_recv()` |
 | Changed Zone List (BFh) | zones taken read only by injected write faults | `zns_changed_zone_list()` |
-| SMART / Health (02h) | host data units and commands read and written, counted on the poller for every mode; Media Errors includes the injected ZNS write faults | `nvme-io.c`, `zns_media_errors()` |
+| SMART / Health (02h) | host data units and commands read and written, counted on the poller for every mode; Media Errors includes the injected ZNS write faults; Percentage Used counts the block erases of Zone Reset against `pe_cycles_rated`, or the rating of `zns_flash_type` | `nvme-io.c`, `zns_media_errors()`, `zns_percentage_used()` |
 | Vendor log C0h | not filled for zoned namespaces: ZNS runs no garbage collection, so there is no write amplification to report | [log pages and counters](../reference/log-pages-and-counters.md#vendor-log-page-c0h) |
 | QEMU log | the ZNS geometry, program unit, stripe unit and cache count at realize (`[FEMU] Log:` lines) | `zns_init_params()` |
 

@@ -3,12 +3,12 @@ title: "NVMe frontend"
 description: "The NVMe frontend is the part of -device femu that a guest driver talks to: the PCI function, the controller registers, the admin and I/O queues, the poller..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/design/nvme-frontend.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/design/nvme-frontend.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/design/nvme-frontend.md) at FEMU `379493b90` (2026-10-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/design/nvme-frontend.md) at FEMU `ce728dcf4` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -578,7 +578,7 @@ Namespace Management.
 | Commands Supported and Effects | 05h | per command set (NVM, zoned, KV) |
 | Device Self-test | 06h | tests complete at once |
 | Telemetry Host / Controller | 07h, 08h | 07h: header plus the C0h counters captured by the last Create; 08h: header only |
-| Endurance Group | 09h | with `femu-subsys`; Identify reports the group (CTRATT bit 4, ENDGIDMAX, ENDGID) with it |
+| Endurance Group | 09h | with `femu-subsys`; Identify reports the group (CTRATT bit 4, ENDGIDMAX, ENDGID, and the Endurance Group List, CNS 19h) with it |
 | Persistent Event | 0Dh | kept in `pel_file` if set |
 | LBA Status | 0Eh | |
 | Feature Identifiers Supported and Effects | 12h | built from the check Get and Set Features use; per command set (CSI) when CC.CSS is 110b |
@@ -706,7 +706,8 @@ registers with no guest. Cases that target this chapter include:
 | `caps-*` (22 configurations: every mode, the optional commands on, off and in pairs, Namespace Management, Streams, PI, FDP, mixed namespace modes) | every admin opcode, every I/O opcode on every namespace and every log id per command set is answered exactly when logs 05h and 00h list it; log 12h agrees with Get Features; OACS, ONCS, OCFS, LPA, SANICAP, VWC, FRMW, SGLS, CNS 1Ch and the Copy limits in Identify Namespace agree with the logs and with what the controller does; ONCS and the Format bit match what the configuration asks for; VS, CAP.CRMS, CRTO and BPCAP match the reported version (2.1, or 1.4 for Open-Channel), CAP.AMS is 0, and LPA bit 5 and every command scope are clear |
 | `ns-mgmt-before-identify` | a managed bbssd namespace is addressed correctly before the host reads Identify Controller |
 | `v2-refusals` | CC.AMS other than round robin fails the enable; Identify CNS 00h on a KV namespace fails with Invalid I/O Command Set while CNS 08h answers; logs 00h and 05h refuse an unknown CSI; CNS 07h for KV is refused under CC.CSS 000b while CNS 1Ah is not; CNS 1Fh answers an allocated NSID and refuses 0 and FFFFFFFFh |
-| `endgrp-reported` | with a subsystem and FDP off, CTRATT bit 4, ENDGIDMAX and the ENDGID of a block and a KV namespace (CNS 08h, and CNS 05h for KV) report the one endurance group |
+| `endgrp-reported` | with a subsystem and FDP off, CTRATT bit 4, ENDGIDMAX and the ENDGID of a block and a KV namespace (CNS 08h, and CNS 05h for KV) report the one endurance group; CNS 19h lists group 1 for a start of 0 or 1 and no group for 2 or FFFFh |
+| `endgrp-list-absent` | without a subsystem, CNS 19h fails with Invalid Field |
 | `features-reset`, `features-reset-vwc` | features return to defaults on reset |
 | `admin-fuzz`, `io-fuzz` and its variants | structured fuzzing of admin and I/O commands |
 

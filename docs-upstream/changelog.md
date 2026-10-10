@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/CHANGELOG.md) at FEMU `379493b90` (2026-10-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/CHANGELOG.md) at FEMU `ce728dcf4` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -48,6 +48,7 @@ listed one by one.
 - A `femu-cxl-ssd` with the FTL on no longer goes uncached when its NAND is full. Realize refuses NAND whose spare lines do not exceed the forced garbage collection reserve by two, and names the smallest `blocks-per-plane` that meets the rule; automatic sizing meets it. A write at the forced threshold now waits until the collection erases end on every LUN, counted in the new `gc-stalls` and `gc-stall-ns`; `gc-stall-max-ns` is the longest wait, and a wait over one second warns once per device with the `blocks-per-plane` that gives about 7% over-provisioning. A program that still finds no page loses only its timing and counts in `media-full`; it no longer stops an eviction or an insert. `run-cxlssd.sh` presets for 48G and 96G add 7% over-provisioning (822 and 1644 blocks per plane).
 - A device that copies into `femu-cxl-ssd` memory from its own MMIO handler or bottom half, such as QEMU's NVMe controller when the guest page cache is on the CXL node, no longer loses doorbell writes. The copy used to release the BQL while that device's re-entrancy guard was engaged, so a vCPU's doorbell write was refused ("Blocked re-entrant IO on MemoryRegion: nvme") and the guest timed out. Such copies, and NIC receive copies, now complete without releasing the BQL and queue their media time instead, without waiting for a garbage collection in progress, and the FTL worker still lets waiting accesses in between them; new counters `dma-accesses`, `dma-media-ops` and `dma-media-time-ns`. Devices that run in an IOThread are not covered. `nand-idle-ns` stays above 0 while these operations are queued.
 - The `femu-cxl-ssd` FTL worker wakes only the access whose request it finished, instead of every waiting access. On a `der=cylon` test with 8 and 16 vCPUs doing random reads that all miss a 256-page cache, throughput rose about 40% (65k to 91k and 70k to 98k accesses/s), because waiters no longer wake for other requests.
+- `der=cylon` also accepts slot tables that the host kernel maps as refcounted pages (`mm` in `/proc/self/smaps`), not only as raw PFNs (`pf`). A Cylon kernel that maps them this way can free the tables of a deleted slot once FEMU unmaps them.
 
 #### New modes and data placement
 
@@ -200,6 +201,7 @@ was not doing anything.
 
 #### Behaviour changes (still boots, numbers move)
 
+- A zoned namespace counts the block erases of Zone Reset. SMART Percentage Used (and the Endurance Group log) now reports them against `pe_cycles_rated`, or the rating of `zns_flash_type`; it used to stay 0. Each block passes its erase count to the media layer.
 - A CSD namespace now goes through its FTL, so reads and writes take NAND time
   instead of completing instantly. A pure-CSD device previously timed out on
   its first I/O and the kernel disabled the controller ([50b65ca91](https://github.com/MoatLab/FEMU/commit/50b65ca91)).
@@ -297,6 +299,7 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 
 #### Spec conformance and host compatibility
 
+- Identify CNS 19h (Endurance Group List) lists endurance group 1 on a controller in a subsystem, from a starting identifier of 0 or 1, as `nvme list-endgrp` asks. Without a subsystem it is refused.
 - Commands complete on the completion queue they were bound to, and submission queues that share a completion queue are served ([7a3f1d9fa](https://github.com/MoatLab/FEMU/commit/7a3f1d9fa), [dc4289f91](https://github.com/MoatLab/FEMU/commit/dc4289f91)).
 - Completions are not posted into a full queue and the phase tag is written last ([6f998742f](https://github.com/MoatLab/FEMU/commit/6f998742f), [04ce8b1a7](https://github.com/MoatLab/FEMU/commit/04ce8b1a7)).
 - I/O interrupts are delivered without a KVM route, and pin interrupts work with shadow doorbells ([8ebffbaa4](https://github.com/MoatLab/FEMU/commit/8ebffbaa4), [34621540e](https://github.com/MoatLab/FEMU/commit/34621540e), [4ca1be945](https://github.com/MoatLab/FEMU/commit/4ca1be945)).

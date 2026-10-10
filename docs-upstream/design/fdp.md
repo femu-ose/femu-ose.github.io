@@ -3,12 +3,12 @@ title: "FDP: Flexible Data Placement"
 description: "This chapter describes how FEMU implements NVMe Flexible Data Placement (FDP): how the subsystem builds reclaim groups, reclaim units and reclaim unit..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/design/fdp.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/design/fdp.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/379493b900d2cc4473955b64a6b43fbb37bf4a49/hw/femu/docs/design/fdp.md) at FEMU `379493b90` (2026-10-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/design/fdp.md) at FEMU `ce728dcf4` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -89,6 +89,8 @@ CTRATT bit 19 (FDP), and the effects log lists I/O Management Send and
 Receive. CTRATT bit 4 (Endurance Groups), ENDGIDMAX = 1 and each
 namespace's ENDGID = 1 come with any subsystem, FDP or not, since its one
 endurance group is what log 09h reports.
+The Endurance Group List (Identify CNS 19h) lists group 1 when CDW11 asks
+for identifiers from 0 or 1; without a subsystem, CNS 19h is refused.
 
 The BlackBox side (`bb.c`, `ftl-fdp.c`) adds the following, for a CSD
 namespace as for a bbssd one, since CSD runs the same FTL
