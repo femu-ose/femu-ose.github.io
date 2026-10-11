@@ -3,12 +3,12 @@ title: "Open-Channel SSD (OCSSD)"
 description: "OCSSD mode (femu_mode=0) emulates an Open-Channel SSD, also called a \"white-box\" SSD. The device has no FTL. The host sees the NAND geometry (channels or..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/modes/ocssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ad27d6d45bd5d983ec1a3b002b8af38962db482b/hw/femu/docs/modes/ocssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/ocssd.md`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/modes/ocssd.md) at FEMU `ab5bb9da6` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/ocssd.md`](https://github.com/MoatLab/FEMU/blob/ad27d6d45bd5d983ec1a3b002b8af38962db482b/hw/femu/docs/modes/ocssd.md) at FEMU `ad27d6d45` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -180,6 +180,25 @@ at the chunk's write pointer, so a chunk must be reset before it is written
 again. Open-Channel 1.2 does not check; a rewrite of a written page silently
 replaces its data, which real flash would not allow. A write outside the
 geometry fails in both.
+
+A 2.0 Vector Chunk Reset (opcode 0x90) handles each entry of its LBA list
+on its own. An entry that fails does not stop the entries after it:
+
+- Dword 0 and 1 of the completion have one bit for each entry that failed.
+  The command status is the status of the first failure.
+- With a metadata pointer, each entry gets its chunk descriptor after the
+  command, 32 bytes each, in list order. An address with no chunk leaves its
+  32 bytes as they were.
+- Each chunk that the command resets takes its parallel unit for one erase.
+  Resets on one unit run one after another, and resets on other units
+  overlap.
+
+```
+ LBA list:  [u0 c0] [u1 c0] [no chunk] [u0 c1] [free c]
+ result:      reset   reset   0xC1       reset   0xC1
+ Dword 0/1:   0       0       1          0       1
+ unit 0:    |erase c0|erase c1|      unit 1: |erase c0|
+```
 
 ## Verify
 

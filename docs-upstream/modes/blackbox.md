@@ -3,12 +3,12 @@ title: "BlackBox SSD (BBSSD)"
 description: "BlackBox mode (femu_mode=1) emulates a conventional NVMe SSD: the device runs its own flash translation layer (FTL), garbage collection (GC) and NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/modes/blackbox.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ad27d6d45bd5d983ec1a3b002b8af38962db482b/hw/femu/docs/modes/blackbox.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/modes/blackbox.md) at FEMU `ab5bb9da6` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/ad27d6d45bd5d983ec1a3b002b8af38962db482b/hw/femu/docs/modes/blackbox.md) at FEMU `ad27d6d45` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -198,6 +198,11 @@ All of these are off by default.
   proportion to its valid pages, instead of in one pass. A write then waits
   for about one copy instead of a whole line. The forced pass stays as the
   last resort. It is refused where `blk_pe_limit` is.
+- `gc_copyback` (off by default) moves collected pages on their die, with no
+  data on the channel, and works with FDP too. A copyback skips ECC: on a
+  real SSD its bit errors are not corrected and can add up. FEMU models no
+  bit errors, so only timing changes; pages with extra ECC time and refresh
+  moves stay off-chip ([design](../design/ftl.md#copyback-gc_copyback)).
 - `age_scale` makes data age faster than wall time for `retention_limit_sec`
   and `ecc_retention_sec`, so a study of months of retention runs in
   minutes. I/O timing and collection order stay as they are.

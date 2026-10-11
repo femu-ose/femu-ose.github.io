@@ -3,12 +3,12 @@ title: "Parameter manual"
 description: "This manual explains how to configure an emulated device: the ways a parameter reaches FEMU, then every group of parameters by component, with what each one..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/reference/parameter-manual.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ad27d6d45bd5d983ec1a3b002b8af38962db482b/hw/femu/docs/reference/parameter-manual.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/reference/parameter-manual.md) at FEMU `ab5bb9da6` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/ad27d6d45bd5d983ec1a3b002b8af38962db482b/hw/femu/docs/reference/parameter-manual.md) at FEMU `ad27d6d45` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -420,6 +420,7 @@ Applies to bbssd, CSD and KV unless noted. Reference:
 | `energy_read_nj`, `energy_prog_nj`, `energy_erase_nj` | nJ per plane operation | 0 (default) gives no figure | price the plane reads, programs and erases log page C0h counts; the total is reported in uJ at offset 184 |
 | `wl_spread` | erases | 0 disables; the settings `blk_pe_limit` refuses are refused too | static wear levelling: when the erases of lines in service differ by more than this, the least worn full line moves into the most worn free line, at most a quarter of the host pages; it stops at half the gap |
 | `gc_pace` | on/off | off (default); the settings `blk_pe_limit` refuses are refused too | paced collection: the victim is copied in step with host writes, V0 / (pages per line - V0) copies per host page, instead of in one pass; log page C0h offsets 224, 232 and 240 count it |
+| `gc_copyback` | on/off | off (default); bbssd, CSD and FDP, not KV; refused with `gc_pace`, `pe_suspend`, `cxl_ssd`, `namespace_modes`, `ns_mgmt`, shared namespaces and the hybrid and fast mappings | collection moves a page on its die when the destination shares its channel, LUN and plane; the walk takes victim pages in the order of the destination dies; saves the channel data phases. A copyback skips ECC: on a real SSD its bit errors are not corrected and can add up. FEMU models no bit errors, so only timing changes; pages with extra ECC time and refresh moves stay off-chip for that reason. Log page C0h offset 248 counts it |
 | `age_scale` | factor | 1 (default) or more | data ages this many times faster than wall time for `retention_limit_sec` and `ecc_retention_sec`; I/O timing and collection order do not change |
 
 Interactions: faults come at a fixed period, so a run repeats exactly.

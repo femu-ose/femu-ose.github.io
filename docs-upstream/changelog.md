@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ad27d6d45bd5d983ec1a3b002b8af38962db482b/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/CHANGELOG.md) at FEMU `ab5bb9da6` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/ad27d6d45bd5d983ec1a3b002b8af38962db482b/hw/femu/docs/CHANGELOG.md) at FEMU `ad27d6d45` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -130,6 +130,7 @@ listed one by one.
 - Firmware time per opcode (`fw_read_ns`, `fw_write_ns`, `fw_other_ns`) and on several firmware cores (`fw_cores`) ([8370f6f59](https://github.com/MoatLab/FEMU/commit/8370f6f59)).
 - Log page C0h counts host writes that waited for forced collection or a full write buffer, and completions held for a full completion queue ([5631b3c07](https://github.com/MoatLab/FEMU/commit/5631b3c07)).
 - Opt-in paced collection (`gc_pace`): the victim line is copied a few pages per host page written instead of in one pass, so a write waits for about one copy instead of a whole line ([ff5e4b5ce](https://github.com/MoatLab/FEMU/commit/ff5e4b5ce)).
+- Opt-in copyback for line and FDP collection (`gc_copyback`, off by default). A page moves on its die when the destination shares its channel, LUN and plane, so the move puts no data on the channel. Collection then takes victim pages in the order of the destination dies. A copyback skips ECC, so on a real SSD its bit errors are not corrected and can add up; FEMU models no bit errors, so only timing changes, and pages with extra ECC time and refresh moves stay off-chip for that reason. Log page C0h offset 248 counts the pages moved this way.
 - Opt-in thermal model (`thermal_tau_ms`, `thermal_r`, `idle_mw`, `thermal_step_ms`): the SMART composite temperature follows the NAND energy and idle power through a first-order model, and crossing a threshold raises the SMART temperature warning and event ([eda6b6ffe](https://github.com/MoatLab/FEMU/commit/eda6b6ffe)).
 - Opt-in static wear levelling (`wl_spread`): the least worn full line moves into the most worn free line, without a write pointer of its own ([2e1ef35ba](https://github.com/MoatLab/FEMU/commit/2e1ef35ba)).
 - Read reclaim (`read_reclaim_limit`) and retention refresh (`retention_limit_sec`) ([7f9b4f6af](https://github.com/MoatLab/FEMU/commit/7f9b4f6af), [4e09c4797](https://github.com/MoatLab/FEMU/commit/4e09c4797), [e7f182b87](https://github.com/MoatLab/FEMU/commit/e7f182b87)).
@@ -277,6 +278,7 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 #### Data correctness
 
 - A CXL memory device (`cxl-type3` and `femu-cxl-ssd`) disables its media while a Sanitize command runs, as the CXL specification says. The media check read the first mailbox register instead of the memory device status, so media was never disabled; it now reads the status atomically, so `femu-cxl-ssd` fault exits without the BQL read it without a data race.
+- With more than one poller, a read no longer sees a write, a Copy destination or a Write Zeroes range half done. Each NVMe access to the memory backend now holds the locks of the 4 KiB granules it touches, so a write is atomic as AWUN 0 promises. CXL.mem accesses of a `femu-cxl-ssd` medium do not take these locks.
 - Compare reads the stored data instead of a zeroed buffer ([7589ee012](https://github.com/MoatLab/FEMU/commit/7589ee012)).
 - FDP TRIM honours the requested LBA ranges instead of erasing the whole device ([0cc20e897](https://github.com/MoatLab/FEMU/commit/0cc20e897)).
 - Fixed FDP victim accounting, foreground GC under write pressure, the initial reclaim unit, and the FDP Events log offset ([cee9670a5](https://github.com/MoatLab/FEMU/commit/cee9670a5), [247151a16](https://github.com/MoatLab/FEMU/commit/247151a16), [f9fc94d4f](https://github.com/MoatLab/FEMU/commit/f9fc94d4f), [438e485a1](https://github.com/MoatLab/FEMU/commit/438e485a1)).
@@ -342,6 +344,7 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - Vendor admin command 0xEE outside Open-Channel mode answers Invalid Command Opcode instead of Invalid Field, since log 05h does not list it there.
 - A subsystem with FDP off has no FDP capability, as CTRATT.FDPS already said. The FDP pages 20h to 23h answer Invalid Log Page and Features 1Dh and 1Eh answer Invalid Field; some used to answer FDP Disabled. Where log 05h does not list I/O Management Send and Receive, they answer Invalid Command Opcode instead of their no-operation.
 - Log 00h and the pages of one command set follow CC.CSS: with CC.CSS 000b they serve the NVM set whatever CDW14.CSI names. The Changed Zone List (BFh) answers only for the zoned set. Open-Channel 2.0 Chunk Information (CAh) answers only for NVM. Another set gets Invalid Log Page. BFh with an unknown CSI answers I/O Command Set Not Supported.
+- An Open-Channel 2.0 Vector Chunk Reset handles every entry of its LBA list. An entry that fails no longer stops the entries after it. Dword 0 and 1 of the completion mark the failed entries, and the metadata buffer gets a chunk descriptor for each entry. Each chunk that is reset is charged one erase, also when another entry fails.
 - The controller reports NVMe 2.1 instead of 1.4, with what that requires: CAP.CRMS and the CRTO register, BPCAP 01b, Identify CNS 1Fh, CNS 00h refused for a Key Value namespace (Invalid I/O Command Set), CSI-specific log pages refused for an unknown command set, and CNS 07h refused for a set CC.CSS does not enable. Open-Channel stays at 1.4 ([409db7bb3](https://github.com/MoatLab/FEMU/commit/409db7bb3)).
 - CAP.AMS no longer claims weighted round robin, which nothing arbitrated by, and enabling with another CC.AMS fails ([409db7bb3](https://github.com/MoatLab/FEMU/commit/409db7bb3)).
 - A controller in a subsystem reports its endurance group (CTRATT bit 4, ENDGIDMAX, each namespace's ENDGID, the Key Value Identify structure included) whether or not FDP is on, as log 09h already did ([409db7bb3](https://github.com/MoatLab/FEMU/commit/409db7bb3)).
