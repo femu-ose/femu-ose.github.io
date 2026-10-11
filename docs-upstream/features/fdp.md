@@ -3,12 +3,12 @@ title: "Flexible Data Placement (FDP)"
 description: "Flexible Data Placement lets the host tell the SSD which writes belong together. The device groups its NAND into reclaim units and offers a few reclaim unit..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/features/fdp.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/features/fdp.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/fdp.md`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/features/fdp.md) at FEMU `6c2beaf5d` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/fdp.md`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/features/fdp.md) at FEMU `0030de624` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -157,6 +157,31 @@ sudo nvme write /dev/nvme0n1 -s 0 -c 7 -z 4096 -d data.bin -T 2 -S 1
 A write with no directive, or with an identifier the namespace does not
 have, goes to handle 0. An invalid identifier also logs a host event.
 
+### Enable the Data Placement Directive
+
+The spec asks the host to enable the Data Placement Directive per namespace
+before it writes with directive type 2. FEMU reports the directive in the
+Identify directive and accepts the enable. It also places writes with
+directive type 2 when the host did not enable the directive, because the
+Linux driver does not enable it.
+
+```sh
+# enable (Directive Send, Identify directive, Enable Directive, type 2)
+sudo nvme dir-send /dev/nvme0n1 -n 1 -D 0 -O 1 -T 2 -e 1
+# check: Data Placement is supported, enabled and kept across a reset
+sudo nvme dir-receive /dev/nvme0n1 -n 1 -D 0 -O 1 -H
+```
+
+```
+ Directive Receive, Identify (bytes 0, 32, 64; bit 2 = Data Placement)
+   supported  01h | 04h        enabled  01h, or 05h after the enable
+   kept across a controller reset: 04h
+ Directive Send, enable type 2:  nsid FFFFFFFFh -> Invalid Namespace or Format
+                                 no FDP          -> FDP Disabled
+ any command with directive type 2 -> Invalid Field (it has no operations)
+ enabled: Write, Write Zeroes or Copy naming a type other than 0 or 2 -> Invalid Field
+```
+
 fio places data from its `io_uring_cmd` engine. It reads the placement
 identifier list from the device and cycles through the entries whose
 indexes are listed in `fdp_pli`:
@@ -174,6 +199,14 @@ without it:
 
 ```sh
 sudo nvme get-log /dev/nvme0 --log-id=0xc0 --log-len=512 -b | od -An -t u4 -N 4
+```
+
+The QMP command [`query-femu`](../reference/query-femu.md) reads the same
+state from the host, with no guest tools. It shows the bytes that each
+reclaim unit handle wrote and moved, and the state of each reclaim unit:
+
+```json
+{"execute": "query-femu", "arguments": {"kind": "reclaim-units"}}
 ```
 
 ## Limits and refusals

@@ -3,12 +3,12 @@ title: "Timing model"
 description: "FEMU makes an emulated SSD take as long as a real one would. This page explains how it computes that time, how it makes the guest wait for it, which..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/concepts/timing-model.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/concepts/timing-model.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/timing-model.md`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/concepts/timing-model.md) at FEMU `6c2beaf5d` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/timing-model.md`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/concepts/timing-model.md) at FEMU `0030de624` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -99,9 +99,10 @@ own:
 
 Different LUNs (or ZNS planes) never wait for each other. A command that
 covers several pages issues them all at its start time, and its latency is
-that of the slowest page. Because the BBSSD write pointer moves across
-channels first and then LUNs, consecutive pages of a large write fall on
-different LUNs and are programmed in parallel.
+that of the slowest page. By default the BBSSD write pointer moves across
+channels first and then LUNs, so consecutive pages of a large write fall on
+different LUNs and are programmed in parallel. With `plane_first`, pages in
+a row fill the planes of one LUN first.
 
 Properties: [NAND geometry](../reference/properties.md#nand-geometry-bbssd-csd-kv).
 

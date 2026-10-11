@@ -3,12 +3,12 @@ title: "Parameter manual"
 description: "This manual explains how to configure an emulated device: the ways a parameter reaches FEMU, then every group of parameters by component, with what each one..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/reference/parameter-manual.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/reference/parameter-manual.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/reference/parameter-manual.md) at FEMU `6c2beaf5d` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/reference/parameter-manual.md) at FEMU `0030de624` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -174,7 +174,7 @@ Reference: [queues, pollers and interrupts](properties.md#queues-pollers-and-int
 | `aerl` | count, 0's based | 0 to 255 | outstanding Asynchronous Event Requests the controller holds |
 | `elpe` | count, 0's based | 0 to 255 | Error Information log entries kept |
 | `hiops_inline` | bool | `on`, `off` | NoSSD only: performance option, on by default; set off only when debugging |
-| `intc`, `intc_thresh`, `intc_time` | as named | `intc` 0 or 1 | initial values of the Interrupt Coalescing and Interrupt Vector Configuration features; reported only, interrupts are not coalesced |
+| `intc`, `intc_thresh`, `intc_time` | as named | `intc` 0 or 1 | initial values of the Interrupt Coalescing and Interrupt Vector Configuration features; coalescing runs when `intc_thresh` and `intc_time` are both non-zero |
 
 Interactions:
 

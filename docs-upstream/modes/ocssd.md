@@ -3,12 +3,12 @@ title: "Open-Channel SSD (OCSSD)"
 description: "OCSSD mode (femu_mode=0) emulates an Open-Channel SSD, also called a \"white-box\" SSD. The device has no FTL. The host sees the NAND geometry (channels or..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/modes/ocssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/modes/ocssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/ocssd.md`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/modes/ocssd.md) at FEMU `6c2beaf5d` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/ocssd.md`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/modes/ocssd.md) at FEMU `0030de624` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -100,6 +100,12 @@ Read, program and erase times come from the `flash_type` table: 1 SLC,
 2 MLC (the default), 3 TLC or 4 QLC. Open-Channel 1.2 also charges channel
 transfer time when `oc12_channel_timing=on`, using `ch_xfer_lat` per page or
 the table value when it is 0. Open-Channel 2.0 charges no channel time.
+Open-Channel 2.0 charges the lower page time by default. With
+`oc20_page_types=on` each chip operation takes the time of its page type,
+and a run of sectors splits at each NAND page. A page spans `lsecs_per_pg`
+sectors on each of `lnum_pln` planes, so sector `s` of a chunk is on page
+`s / (lsecs_per_pg x lnum_pln)`. The option needs `lpgs_per_blk` of at most
+512, the size of the page type tables.
 Vendor admin command 0xEE changes these times at run time
 ([NAND timing](../design/nand-timing.md#runtime-switches)). See
 the [timing model](../concepts/timing-model.md#ocssd).

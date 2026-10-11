@@ -3,12 +3,12 @@ title: "FEMU architecture"
 description: "FEMU is QEMU with a set of emulated storage devices under hw/femu/. This page describes those devices as a stack of layers, from what the guest sees down to..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/concepts/architecture.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/concepts/architecture.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/architecture.md`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/concepts/architecture.md) at FEMU `6c2beaf5d` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/architecture.md`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/concepts/architecture.md) at FEMU `0030de624` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -243,9 +243,11 @@ unchanged, and the CXL SSD runs a private instance of it. Its state is
   (`pgs_per_blk`) of `secs_per_pg` sectors of `secsz` bytes. With the defaults
   a page is 4 KiB. A line (superblock) is the same block index on every plane
   of every LUN, so there are `blks_per_pl` lines.
-- **Write pointer.** New pages are allocated from the current line in the
-  order channel, then LUN, then plane, then page, so consecutive pages land on
-  different channels and LUNs and can be programmed in parallel.
+- **Write pointer.** By default new pages are allocated from the current line
+  in the order channel, then LUN, then plane, then page, so consecutive pages
+  land on different channels and LUNs and can be programmed in parallel.
+  `plane_first` puts the plane first, so pages in a row share a LUN and can
+  form one multi-plane program.
 - **Mapping** (`mapping`): `page` (default, a full table in memory), `dftl`
   (a cached mapping table of `mapping_cache_mb` whose misses cost NAND reads),
   `hybrid` and `fast` (log-block schemes). Code: `hw/femu/bbssd/ftl-map*.c`.

@@ -3,12 +3,12 @@ title: "NAND media and timing model"
 description: "This chapter describes the component that decides how long a flash operation takes in FEMU. It covers the geometry the model works on, the time it charges..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/design/nand-timing.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/design/nand-timing.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nand-timing.md`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/design/nand-timing.md) at FEMU `6c2beaf5d` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nand-timing.md`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/design/nand-timing.md) at FEMU `0030de624` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -152,7 +152,8 @@ The timing a workload sees depends on where the FTL puts its pages, because
 the media model only charges what it is asked to.
 
 - **BBSSD, CSD, KV** allocate from a write pointer that moves channel first,
-  then LUN, then plane, then page
+  then LUN, then plane, then page (plane first with `plane_first` on bbssd
+  and CSD)
   (`ssd_advance_write_pointer_common()` in `bbssd/ftl-line-gc.c`). Consecutive
   pages of a large write therefore land on different channels, then different
   LUNs, and are programmed in parallel.
@@ -191,9 +192,9 @@ Each mode configures the layer differently:
 | --- | --- | --- |
 | `array_contend` | `NAND_CONTEND_LUN_ONLY` | `NAND_CONTEND_PLANE_ONLY`; `NAND_CONTEND_LUN_AND_PLANE` with `zns_lun_contention` |
 | `channel_mode` | `NAND_CH_STAGED` when any bus phase is non-zero, else `NAND_CH_OFF` | same rule |
-| `use_flat_timing` | true when `nand_cell_type=0`, false with a cell type | false (per-type table, page type always 0) |
+| `use_flat_timing` | true when `nand_cell_type=0`, false when it is set | false (per-type table; page type 0, or `pg % zns_flash_type` for reads with `zns_page_types`) |
 | `pe_suspend` | `pe_suspend` property | `zns_pe_suspend` property |
-| `ecc_on_read` | true; the adder is still 0 unless `ecc_step_ns` is set | false |
+| `ecc_on_read` | true; the adder is still 0 unless `ecc_step_ns` is set | true; the adder is still 0 unless `zns_ecc_step_ns` is set |
 
 The enum also has `NAND_CH_NOOP`. No mode selects it today.
 
@@ -305,11 +306,12 @@ Reads and erases are not scaled.
 
 ### ZNS and OCSSD
 
-ZNS keeps one read, program and erase time per cell type and always uses page
-type 0. Each `zns_*_lat` property replaces the built-in value for the
+ZNS keeps one read, program and erase time per flash type. It uses page type
+0, except for reads with `zns_page_types` (see [ZNS](../modes/zns.md#nand-timing)). Each `zns_*_lat` property replaces the built-in value for the
 configured `zns_flash_type` only. OCSSD uses the `nand_cell_type` tables
 above, selected by `flash_type`; Open-Channel 1.2 looks up the page type of
-each page, Open-Channel 2.0 always uses page type 0.
+each page. Open-Channel 2.0 uses page type 0. With `oc20_page_types=on` a
+chip operation covers one NAND page and uses its page type.
 
 ## Channel bus
 
@@ -389,9 +391,12 @@ takes exactly one erase time.
 
 `mp_program` and `mp_read` are off by default. They have no effect with one
 plane per LUN, in other modes, or under FDP, whose reads and writes keep
-their single-page timing; each setting warns at realize in those cases. Placement does not change: the write pointer still walks
-channel, LUN, plane, page, so the pages of one block and page on the planes
-of a LUN arrive `nchs * luns_per_ch` pages apart. The datapath holds each
+their single-page timing; each setting warns at realize in those cases.
+By default the write pointer walks channel, LUN, plane, page, so the pages
+of one block and page on the planes of a LUN arrive `nchs * luns_per_ch`
+pages apart. With `plane_first` it walks plane, channel, LUN, page, and
+those pages arrive in a row. `plane_first` follows the same rules and
+warnings as `mp_program`. The datapath holds each
 LUN's pages in a batch and charges the batch through
 `ssd_advance_status_multiplane()` when one of these happens:
 
@@ -480,10 +485,11 @@ with suspend on also leaves the lock-free fast path described in
 ```
 
 `pe_cycles` is the block's erase count, `age_sec` the time since its line was
-filled (`line.close_time`). The constants are `FEMU_ECC_PE_PER_TIER` and
-`FEMU_ECC_MAX_TIERS` in `bbssd/ftl.h`. A multi-plane read pays the largest
+filled (`line.close_time`). The constants are `NAND_ECC_PE_PER_TIER` and
+`NAND_ECC_MAX_TIERS` in `nand/nand-media.h`. A multi-plane read pays the largest
 extra of its planes. Read-retry as a sequence of separate array reads is not
-modelled; this adder stands in for it. ZNS and OCSSD have no ECC time.
+modelled; this adder stands in for it. ZNS has the wear term with
+`zns_ecc_step_ns`, and no retention term. OCSSD has no ECC time.
 
 ## From operations to a completion time
 
@@ -685,7 +691,8 @@ and the LUN rule (`oc12_media_init()`, `oc20_media_init()`):
 
 - Per chip (flat LUN id `ch * num_lun + lun`), an operation ends at
   `max(now, busy) + time`. Times come from the `flash_type` table: 1.2 as a
-  table by page type, 2.0 as flat lower-page times.
+  table by page type, 2.0 as flat lower-page times (by page type with
+  `oc20_page_types`).
 - Open-Channel 1.2 with channel timing uses the staged bus with no command,
   address or status phase: `bus_now()` for a program's data-in and
   `bus_later()` for a read's data-out.
@@ -696,7 +703,7 @@ and the LUN rule (`oc12_media_init()`, `oc20_media_init()`):
   `oc12_channel_timing=on`: `ch_xfer_lat` ns per page, or the table value
   for `flash_type` when it is 0, scaled by the sectors used out of
   `lsecs_per_pg`. Open-Channel 2.0 charges no channel time and uses page
-  type 0.
+  type 0 unless `oc20_page_types` is on.
 - Open-Channel 1.2 charges one chip operation per NAND page of the address
   list. Open-Channel 2.0 groups addresses that differ only in the sector
   field, which spans the whole chunk, so a run of consecutive sectors in one
@@ -768,7 +775,7 @@ properties and states how they interact.
 | [Array times](../reference/properties.md#nand-timing-bbssd-csd-kv) | `pg_rd_lat`, `pg_wr_lat`, `blk_er_lat` | Ignored when `nand_cell_type` is 1 to 4. 0xEF codes 3 and 4 overwrite them. `pg_rd_lat / 16` is also the cost of a write buffer hit. |
 | [Cell type](../reference/properties.md#nand-timing-bbssd-csd-kv) | `nand_cell_type`, `cell_pages`, `pgtype_lat` | `pgtype_lat` applies only with `nand_cell_type=0`. `nand_cell_type` limits `pgs_per_blk` to 512. |
 | [Bus phases](../reference/properties.md#nand-timing-bbssd-csd-kv) | `cmd_addr_lat`, `pg_xfer_lat`, `ch_xfer_lat`, `status_lat` | Any non-zero value turns the bus on. `pg_xfer_lat` takes precedence over `ch_xfer_lat`. |
-| [Multi-plane](../reference/properties.md#nand-timing-bbssd-csd-kv) | `tplebsy`, `mp_program`, `tplpbsy`, `mp_read`, `tplrbsy` (`trcbsy` has no effect) | Only with `pls_per_lun > 1`. `tplebsy` applies to the multi-plane erase of GC; `tplpbsy` only with `mp_program`; `tplrbsy` only with `mp_read`. |
+| [Multi-plane](../reference/properties.md#nand-timing-bbssd-csd-kv) | `tplebsy`, `mp_program`, `tplpbsy`, `mp_read`, `tplrbsy`, `plane_first` (`trcbsy` has no effect) | Only with `pls_per_lun > 1`. `tplebsy` applies to the multi-plane erase of GC; `tplpbsy` only with `mp_program`; `tplrbsy` only with `mp_read`. |
 | [Suspend](../reference/properties.md#nand-timing-bbssd-csd-kv) | `pe_suspend`, `tsusp_ns` | `tsusp_ns` matters only with `pe_suspend`. |
 | [ECC](../reference/properties.md#reliability-and-wear) | `ecc_step_ns`, `ecc_retention_sec` | `ecc_retention_sec` matters only with `ecc_step_ns`. |
 | [Other FTL costs](../reference/properties.md#nand-timing-bbssd-csd-kv) | `trim_lat_ns` | Charged per Dataset Management range by the FTL, not by the media layer. Refused with FDP. |
@@ -930,18 +937,18 @@ make -C hw/femu/tests check
 
 | File | What it holds |
 | --- | --- |
-| [`hw/femu/nand/nand-media.h`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/nand/nand-media.h) | Media layer types and API: `NandLoc`, `NandMediaTiming`, `NandMediaPolicy`, `NandTimelineOps`, `nand_media_op()`, `nand_media_multiplane()`, `nand_media_copyback()` |
-| [`hw/femu/nand/nand-media.c`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/nand/nand-media.c) | Array time, rules, bus booking (`bus_now()`, `bus_later()`), suspend, ECC, multi-plane, copyback |
-| [`hw/femu/nand/nand.h`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/nand/nand.h), [`nand.c`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/nand/nand.c) | Cell-type timing tables, page pairing tables, rated P/E cycles |
-| [`hw/femu/bbssd/ftl-media.c`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/bbssd/ftl-media.c) | BBSSD adapter: `bb_decode_loc()`, `bb_nand_media_init()`, `ssd_advance_status()`, `ssd_advance_status_multiplane()`, `bb_nand_media_refresh_timing()` |
-| [`hw/femu/bbssd/ftl-geom.c`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/bbssd/ftl-geom.c) | Geometry checks and parameter copy (`bb_check_geometry()`, `ssd_init_params()`) |
-| [`hw/femu/bbssd/ftl-datapath.c`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/bbssd/ftl-datapath.c) | Host read and write: per-page operations and max latency |
-| [`hw/femu/bbssd/ftl-line-gc.c`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/bbssd/ftl-line-gc.c) | Write pointer order, GC reads, programs and multi-plane erase |
-| [`hw/femu/bbssd/bb.c`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/bbssd/bb.c) | 0xEF handler (`bb_flip()`, `bb_flip_apply()`) |
-| [`hw/femu/zns/zftl.c`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/zns/zftl.c) | ZNS adapter, write cache flush, zone reset erase |
-| [`hw/femu/zns/zns.c`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/zns/zns.c), [`zns.h`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/zns/zns.h) | ZNS timing values and property overrides (`zns_init_params()`) |
-| [`hw/femu/ocssd/oc-timing.c`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/ocssd/oc-timing.c) | OCSSD `flash_type` times, geometry check, 0xEE |
-| [`hw/femu/ocssd/oc12.c`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/ocssd/oc12.c), [`oc20.c`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/ocssd/oc20.c) | OCSSD per-command timing (`oc12_advance_status()`, `oc20_advance_status()`) |
-| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/femu.c) | FTL thread: `expire_time += latency`; timing properties |
-| [`hw/femu/nvme-io.c`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/nvme-io.c) | `stime` stamp, host link and firmware CPU models, priority queue and completion |
-| [`hw/femu/tests/unit/test-nand-media.c`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/tests/unit/test-nand-media.c) | Media layer unit tests |
+| [`hw/femu/nand/nand-media.h`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/nand/nand-media.h) | Media layer types and API: `NandLoc`, `NandMediaTiming`, `NandMediaPolicy`, `NandTimelineOps`, `nand_media_op()`, `nand_media_multiplane()`, `nand_media_copyback()` |
+| [`hw/femu/nand/nand-media.c`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/nand/nand-media.c) | Array time, rules, bus booking (`bus_now()`, `bus_later()`), suspend, ECC, multi-plane, copyback |
+| [`hw/femu/nand/nand.h`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/nand/nand.h), [`nand.c`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/nand/nand.c) | Cell-type timing tables, page pairing tables, rated P/E cycles |
+| [`hw/femu/bbssd/ftl-media.c`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/bbssd/ftl-media.c) | BBSSD adapter: `bb_decode_loc()`, `bb_nand_media_init()`, `ssd_advance_status()`, `ssd_advance_status_multiplane()`, `bb_nand_media_refresh_timing()` |
+| [`hw/femu/bbssd/ftl-geom.c`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/bbssd/ftl-geom.c) | Geometry checks and parameter copy (`bb_check_geometry()`, `ssd_init_params()`) |
+| [`hw/femu/bbssd/ftl-datapath.c`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/bbssd/ftl-datapath.c) | Host read and write: per-page operations and max latency |
+| [`hw/femu/bbssd/ftl-line-gc.c`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/bbssd/ftl-line-gc.c) | Write pointer order, GC reads, programs and multi-plane erase |
+| [`hw/femu/bbssd/bb.c`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/bbssd/bb.c) | 0xEF handler (`bb_flip()`, `bb_flip_apply()`) |
+| [`hw/femu/zns/zftl.c`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/zns/zftl.c) | ZNS adapter, write cache flush, zone reset erase |
+| [`hw/femu/zns/zns.c`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/zns/zns.c), [`zns.h`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/zns/zns.h) | ZNS timing values and property overrides (`zns_init_params()`) |
+| [`hw/femu/ocssd/oc-timing.c`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/ocssd/oc-timing.c) | OCSSD `flash_type` times, geometry check, 0xEE |
+| [`hw/femu/ocssd/oc12.c`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/ocssd/oc12.c), [`oc20.c`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/ocssd/oc20.c) | OCSSD per-command timing (`oc12_advance_status()`, `oc20_advance_status()`) |
+| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/femu.c) | FTL thread: `expire_time += latency`; timing properties |
+| [`hw/femu/nvme-io.c`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/nvme-io.c) | `stime` stamp, host link and firmware CPU models, priority queue and completion |
+| [`hw/femu/tests/unit/test-nand-media.c`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/tests/unit/test-nand-media.c) | Media layer unit tests |

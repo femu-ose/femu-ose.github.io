@@ -3,12 +3,12 @@ title: "Troubleshooting and FAQ"
 description: "Answers to the questions that come up most often in FEMU's issue tracker. Each one gives a short answer, the fix or workaround, and the issues where it came..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/troubleshooting.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/troubleshooting.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/troubleshooting.md`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/troubleshooting.md) at FEMU `6c2beaf5d` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/troubleshooting.md`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/troubleshooting.md) at FEMU `0030de624` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -260,8 +260,7 @@ It does not model:
   happens at once, and the model only delays the completion;
 - persistence: the device lives in host memory;
 - power, heat or temperature changes (the reported temperature is the
-  `temperature` property);
-- interrupt coalescing (the features are reported but not applied).
+  `temperature` property).
 
 The latency is a lower bound. A completion is posted on the first poller
 pass after it is due, so a poller without a host core adds delay. The

@@ -3,12 +3,12 @@ title: "FEMU design"
 description: "This is the design document for FEMU's emulated storage devices. It explains how FEMU is built, one component per chapter, so you can predict what a..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/design/README.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/design/README.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/README.md`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/design/README.md) at FEMU `6c2beaf5d` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/README.md`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/design/README.md) at FEMU `0030de624` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -74,8 +74,7 @@ models. FEMU models:
 - **Controller firmware internals.** The optional firmware-CPU model is one
   fixed cost per Read, Write and Zone Append on one modelled core.
 - **Power and heat.** The controller reports one power state, and the
-  temperature is the value of the `temperature` property. Interrupt
-  coalescing settings are reported but not applied.
+  temperature is the value of the `temperature` property.
 - **Firmware update and security commands.** Firmware Download and Commit,
   Security Send and Security Receive are refused.
 - **Exact guest-visible latency.** FEMU enforces a lower bound. A completion

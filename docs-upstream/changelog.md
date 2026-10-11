@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/CHANGELOG.md) at FEMU `6c2beaf5d` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/CHANGELOG.md) at FEMU `0030de624` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -94,8 +94,11 @@ listed one by one.
 - SMART reports host data units and command counts, available spare (with an optional `nand_bad_blocks` model), percentage used (from the cell type or `pe_cycles_rated`) and media errors ([f07d117f1](https://github.com/MoatLab/FEMU/commit/f07d117f1), [a20d9ac94](https://github.com/MoatLab/FEMU/commit/a20d9ac94), [a8a28d451](https://github.com/MoatLab/FEMU/commit/a8a28d451), [df8a3492a](https://github.com/MoatLab/FEMU/commit/df8a3492a), [e25ddf7be](https://github.com/MoatLab/FEMU/commit/e25ddf7be)).
 - The Endurance Group log is filled in ([074b63f4f](https://github.com/MoatLab/FEMU/commit/074b63f4f)).
 - Media counters (write amplification, host and relocated pages, write buffer hits, read reclaims, retention refreshes) are reported in vendor log page C0h ([e57448e41](https://github.com/MoatLab/FEMU/commit/e57448e41), [4cb1f9ba7](https://github.com/MoatLab/FEMU/commit/4cb1f9ba7), [e9746f6bf](https://github.com/MoatLab/FEMU/commit/e9746f6bf), [e7f182b87](https://github.com/MoatLab/FEMU/commit/e7f182b87)).
+- Interrupt Coalescing (Feature 08h) now holds I/O completion interrupts until the threshold or the aggregation time is reached. Feature 09h Coalescing Disable, the admin queue and error completions are not held. The default settings leave it off.
+- Opt-in I/O stage times (`io_stages`): the QMP command `query-femu-stages` returns histograms of the submit, FTL, hold, post-delay and total time of each I/O command. post-delay shows how far completions land after the model's time.
 - A QMP command, `query-femu`, reports the geometry, write counters, line counts and per-line state of bbssd namespaces to the host. The FTL thread copies the state between two requests ([reference](reference/query-femu.md)).
 - `query-femu` also reports zoned namespaces: the zone geometry, the zone counts per state and, with kind `zones`, the state, write pointer and capacity of each zone. The main loop copies them under the zone lock, so a zoned namespace needs no enabled controller. Each namespace entry now carries only the members of its mode.
+- `query-femu` also reports FDP namespaces: the reclaim group geometry, unit counts per state, and the host and media bytes of each reclaim unit handle. Kind `reclaim-units` lists the state, handle, valid pages and wear of each unit. The handle byte counters sum to the FDP Statistics log.
 - Opt-in power loss model (`power_loss`) that drops data still held in the volatile write buffer and records the event in SMART and the event log ([46602b0e7](https://github.com/MoatLab/FEMU/commit/46602b0e7), [303c77aef](https://github.com/MoatLab/FEMU/commit/303c77aef), [7679c443d](https://github.com/MoatLab/FEMU/commit/7679c443d)).
 
 #### ZNS
@@ -113,6 +116,7 @@ listed one by one.
 - Optional program/erase suspend for reads (`zns_pe_suspend`, `zns_tsusp_ns`) ([9ec423985](https://github.com/MoatLab/FEMU/commit/9ec423985)).
 - Optional LUN contention (`zns_lun_contention`): the planes of one LUN run their operations one at a time, and a zone reset erases each LUN's planes in one multi-plane operation. Off by default, so the timing does not change.
 - Optional zone reset by fill (`zns_reset_by_fill`): a zone reset erases only the blocks that hold programmed pages, so its time and the SMART wear follow the zone's fill. Off by default, so a reset of a non-empty zone still erases every block.
+- Opt-in ZNS read timing by page type (`zns_page_types`) and ECC read time by block wear (`zns_ecc_step_ns`). The page types keep the mean read latency of the flash type.
 
 #### BlackBox SSD (bbssd) and NAND media
 
@@ -140,6 +144,7 @@ listed one by one.
 - Channel bus phases (`cmd_addr_lat`, `pg_xfer_lat`, `status_lat`, `ch_xfer_lat`) are added to the timing when set ([c274ba7d9](https://github.com/MoatLab/FEMU/commit/c274ba7d9)).
 - A read can suspend an in-flight program or erase (`pe_suspend`, `tsusp_ns`) ([9ec423985](https://github.com/MoatLab/FEMU/commit/9ec423985), [6a5c498a8](https://github.com/MoatLab/FEMU/commit/6a5c498a8)).
 - Opt-in multi-plane program and read (`mp_program`, `mp_read`, with `pls_per_lun > 1`): host programs or reads of the same page on several planes of a LUN take one array time, plus `tplpbsy` or `tplrbsy` between planes. Placement and page counts do not change. The defaults leave the timing unchanged, FDP is not affected, and a negative busy time is refused.
+- Opt-in `plane_first` makes bbssd and CSD write pointers fill the planes of a LUN before the next channel. With `mp_program`, pages in a row then form one multi-plane program.
 - Optional debug logging to study whether deleted data remains on the device ([18ba6557c](https://github.com/MoatLab/FEMU/commit/18ba6557c), [45e61ae41](https://github.com/MoatLab/FEMU/commit/45e61ae41)).
 - Opt-in block erase limits (`blk_pe_limit`, `blk_pe_spread`, `blk_pe_seed`): a block past its limit stays in service, is counted in log page C0h and sets SMART critical warning bit 2 ([12f1c582c](https://github.com/MoatLab/FEMU/commit/12f1c582c)). The block's line leaves service while enough lines remain ([af99ecb21](https://github.com/MoatLab/FEMU/commit/af99ecb21)). `spare_lines` holds lines back whose blocks replace worn-out ones, and SMART Available Spare follows what is left ([ee6afccd4](https://github.com/MoatLab/FEMU/commit/ee6afccd4)). Crossing into either warning raises a SMART asynchronous event when the host enabled it ([c9b3d3ad8](https://github.com/MoatLab/FEMU/commit/c9b3d3ad8)). SMART Percentage Used then counts against the blocks' limits, and `query-femu` reports retired and spare lines ([b6af86af1](https://github.com/MoatLab/FEMU/commit/b6af86af1)).
 
@@ -150,6 +155,7 @@ listed one by one.
 #### Open-Channel SSD
 
 - Opt-in OC 1.2 channel transfer timing (`oc12_channel_timing`) ([d174f9551](https://github.com/MoatLab/FEMU/commit/d174f9551), [5cf3996c0](https://github.com/MoatLab/FEMU/commit/5cf3996c0)).
+- Opt-in OC 2.0 page type timing (`oc20_page_types`): reads and programs take the time of their page type, as on OC 1.2, instead of the lower page time.
 - OC 2.0 gets media timings, chunk resets are charged as erases, an unwritten block reads as the predefined pattern, and a host can reset a chunk it has not filled ([b652c3d87](https://github.com/MoatLab/FEMU/commit/b652c3d87), [9d176f891](https://github.com/MoatLab/FEMU/commit/9d176f891), [00daad11c](https://github.com/MoatLab/FEMU/commit/00daad11c), [90ff859c1](https://github.com/MoatLab/FEMU/commit/90ff859c1)).
 
 #### NoSSD
@@ -288,6 +294,7 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - A ZNS zone whose write cache is evicted before it fills now continues its next flush on the first free plane, not on plane 0. With more zones written at once than write caches, plane 0's block ran past its last page and reads of those blocks finished faster than tR ([8bcaa0623](https://github.com/MoatLab/FEMU/commit/8bcaa0623)).
 - A ZNS write refused for its data pointer no longer moves the write pointer ([6343c4d22](https://github.com/MoatLab/FEMU/commit/6343c4d22)).
 - FDP Write Zeroes is placed by its own directive fields and counted in HBMW and MBMW, instead of reusing the placement of an earlier command ([834abe2cb](https://github.com/MoatLab/FEMU/commit/834abe2cb)).
+- Under FDP, the Directive commands report the Data Placement Directive, and the host can enable it per namespace. The enabled state survives a controller reset.
 - Write Zeroes and deallocate address the backend per namespace, program the media where required, and drop buffered copies ([f44ce6499](https://github.com/MoatLab/FEMU/commit/f44ce6499), [9005cf952](https://github.com/MoatLab/FEMU/commit/9005cf952), [373de039b](https://github.com/MoatLab/FEMU/commit/373de039b), [783131b7d](https://github.com/MoatLab/FEMU/commit/783131b7d), [22988e07b](https://github.com/MoatLab/FEMU/commit/22988e07b)).
 - The write buffer no longer resurrects deallocated pages and is bounded ([d4d03f127](https://github.com/MoatLab/FEMU/commit/d4d03f127), [0ee6d211b](https://github.com/MoatLab/FEMU/commit/0ee6d211b)).
 - A Format rebuilds per-block state ([a79474e73](https://github.com/MoatLab/FEMU/commit/a79474e73), [7e7e36161](https://github.com/MoatLab/FEMU/commit/7e7e36161)).

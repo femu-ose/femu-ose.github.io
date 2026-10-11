@@ -3,12 +3,12 @@ title: "Security and limits"
 description: "What a guest can do to the host through FEMU, what QEMU features FEMU does not support, how device properties change between versions, and how much host..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/concepts/security-and-limits.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/concepts/security-and-limits.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/security-and-limits.md`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/concepts/security-and-limits.md) at FEMU `6c2beaf5d` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/security-and-limits.md`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/concepts/security-and-limits.md) at FEMU `0030de624` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -16,7 +16,7 @@ This page is [`hw/femu/docs/concepts/security-and-limits.md`](https://github.com
 What a guest can do to the host through FEMU, what QEMU features FEMU does
 not support, how device properties change between versions, and how much
 host memory a device takes. To report a vulnerability, follow
-[SECURITY.md](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/SECURITY.md).
+[SECURITY.md](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/SECURITY.md).
 
 ## Security model
 
@@ -178,11 +178,6 @@ default prints one warning at realize, for example
 | `ms_max` | OCSSD 2.0 reports a single LBA format (NLBAF 0), and no other mode reads it |
 | `trcbsy` | no mode enables the cache read model |
 | `nr_thread`, `time_slice`, `context_switch_time` (CSD) | accepted for CEMU configurations; CSD still refuses `nr_thread=0` |
-
-`intc`, `intc_thresh` and `intc_time` do not warn, because Get Features
-returns them: `intc_thresh` and `intc_time` in Interrupt Coalescing (feature
-08h) and `intc` (0 or 1) in Interrupt Vector Configuration (09h). Interrupts
-are still not coalesced.
 
 The [property reference](../reference/properties.md) says this in each
 description, and `-device femu,help` prints the same text.
