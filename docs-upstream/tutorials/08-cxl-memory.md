@@ -3,12 +3,12 @@ title: "Tutorial 08: a CXL SSD as memory"
 description: "You start a guest with femu-cxl-ssd, a CXL Type-3 memory device whose capacity is backed by emulated NAND behind a DRAM page cache. You find the device in..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/ad27d6d45bd5d983ec1a3b002b8af38962db482b/hw/femu/docs/tutorials/08-cxl-memory.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/tutorials/08-cxl-memory.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/tutorials/08-cxl-memory.md`](https://github.com/MoatLab/FEMU/blob/ad27d6d45bd5d983ec1a3b002b8af38962db482b/hw/femu/docs/tutorials/08-cxl-memory.md) at FEMU `ad27d6d45` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/tutorials/08-cxl-memory.md`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/tutorials/08-cxl-memory.md) at FEMU `6c2beaf5d` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

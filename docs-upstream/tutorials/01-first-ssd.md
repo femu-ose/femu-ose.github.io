@@ -3,12 +3,12 @@ title: "Tutorial 01: your first SSD"
 description: "You start a guest with a small BlackBox SSD (BBSSD) from a QEMU command line you write yourself, look at the device the guest sees, measure read and write..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/ad27d6d45bd5d983ec1a3b002b8af38962db482b/hw/femu/docs/tutorials/01-first-ssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/tutorials/01-first-ssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/tutorials/01-first-ssd.md`](https://github.com/MoatLab/FEMU/blob/ad27d6d45bd5d983ec1a3b002b8af38962db482b/hw/femu/docs/tutorials/01-first-ssd.md) at FEMU `ad27d6d45` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/tutorials/01-first-ssd.md`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/tutorials/01-first-ssd.md) at FEMU `6c2beaf5d` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

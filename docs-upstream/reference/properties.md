@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/ad27d6d45bd5d983ec1a3b002b8af38962db482b/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/ad27d6d45bd5d983ec1a3b002b8af38962db482b/hw/femu/docs/reference/properties.md) at FEMU `ad27d6d45` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/6c2beaf5d0dad1d89c0811836d0b1e58cdfb54ee/hw/femu/docs/reference/properties.md) at FEMU `6c2beaf5d` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -310,7 +310,7 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 | `channels` | `uint32` | `4` | Number of NAND channels, 1 to 4096 |
 | `luns-per-channel` | `uint32` | `4` | NAND LUNs per channel, 1 to 128, with one plane per LUN |
 | `pages-per-block` | `uint32` | `256` | 4 KiB pages per NAND block, 1 to 65536 |
-| `blocks-per-plane` | `uint32` | `0` | NAND blocks per plane, 2 to 65536; with the FTL on, the spare lines beyond the media must exceed the free lines gc-threshold-high keeps by two; 0 sizes it to 5/4 of the media plus 4 blocks per plane, or more if that rule needs it |
+| `blocks-per-plane` | `uint32` | `0` | NAND blocks per plane, 2 to 65536; with the FTL on, the lines beyond the free lines gc-threshold-high keeps and two more must hold the media plus 7%; 0 sizes it to 5/4 of the media plus 4 blocks per plane, or more if that rule needs it |
 | `gc-threshold` | `uint32` | `75` | Percent of lines in use at which background garbage collection starts, 1 to 100 |
 | `gc-threshold-high` | `uint32` | `95` | Percent of lines in use at which garbage collection is forced, from gc-threshold to 100 |
 | `read-ns` | `uint64` | `40000` | NAND page read time in ns, at most one second |
