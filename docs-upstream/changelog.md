@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/CHANGELOG.md) at FEMU `ce728dcf4` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/CHANGELOG.md) at FEMU `ab5bb9da6` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -95,6 +95,7 @@ listed one by one.
 - The Endurance Group log is filled in ([074b63f4f](https://github.com/MoatLab/FEMU/commit/074b63f4f)).
 - Media counters (write amplification, host and relocated pages, write buffer hits, read reclaims, retention refreshes) are reported in vendor log page C0h ([e57448e41](https://github.com/MoatLab/FEMU/commit/e57448e41), [4cb1f9ba7](https://github.com/MoatLab/FEMU/commit/4cb1f9ba7), [e9746f6bf](https://github.com/MoatLab/FEMU/commit/e9746f6bf), [e7f182b87](https://github.com/MoatLab/FEMU/commit/e7f182b87)).
 - A QMP command, `query-femu`, reports the geometry, write counters, line counts and per-line state of bbssd namespaces to the host. The FTL thread copies the state between two requests ([reference](reference/query-femu.md)).
+- `query-femu` also reports zoned namespaces: the zone geometry, the zone counts per state and, with kind `zones`, the state, write pointer and capacity of each zone. The main loop copies them under the zone lock, so a zoned namespace needs no enabled controller. Each namespace entry now carries only the members of its mode.
 - Opt-in power loss model (`power_loss`) that drops data still held in the volatile write buffer and records the event in SMART and the event log ([46602b0e7](https://github.com/MoatLab/FEMU/commit/46602b0e7), [303c77aef](https://github.com/MoatLab/FEMU/commit/303c77aef), [7679c443d](https://github.com/MoatLab/FEMU/commit/7679c443d)).
 
 #### ZNS
@@ -110,6 +111,8 @@ listed one by one.
 - ZNS takes NAND timing from the shared media layer, with configurable read, program and erase times and an opt-in channel bus ([3d6056020](https://github.com/MoatLab/FEMU/commit/3d6056020), [34bbe45fa](https://github.com/MoatLab/FEMU/commit/34bbe45fa), [2a4ebc2cb](https://github.com/MoatLab/FEMU/commit/2a4ebc2cb)).
 - Configurable write cache count (`zns_num_wc`) ([66f432117](https://github.com/MoatLab/FEMU/commit/66f432117)).
 - Optional program/erase suspend for reads (`zns_pe_suspend`, `zns_tsusp_ns`) ([9ec423985](https://github.com/MoatLab/FEMU/commit/9ec423985)).
+- Optional LUN contention (`zns_lun_contention`): the planes of one LUN run their operations one at a time, and a zone reset erases each LUN's planes in one multi-plane operation. Off by default, so the timing does not change.
+- Optional zone reset by fill (`zns_reset_by_fill`): a zone reset erases only the blocks that hold programmed pages, so its time and the SMART wear follow the zone's fill. Off by default, so a reset of a non-empty zone still erases every block.
 
 #### BlackBox SSD (bbssd) and NAND media
 
@@ -201,6 +204,9 @@ was not doing anything.
 
 #### Behaviour changes (still boots, numbers move)
 
+- Compare, Write Zeroes, Verify and Copy are on by default: the `oncs` default is now 0x19d instead of 0x14. A guest that sees Write Zeroes in ONCS can send it, and on bbssd the FTL programs the range unless Deallocate is set. `oncs=0x14` gives the old set. Write Uncorrectable still needs bit 0x2.
+- Compare and Verify take the NAND read time of a Read on bbssd, CSD and ZNS namespaces, also after a miscompare. Before, both completed with no media read.
+- A Copy on bbssd issues its destination write when its source reads end. On one LUN, a one-page Copy took the read time twice: 600 ms instead of 500 ms with a 100 ms read and a 400 ms program.
 - A zoned namespace counts the block erases of Zone Reset. SMART Percentage Used (and the Endurance Group log) now reports them against `pe_cycles_rated`, or the rating of `zns_flash_type`; it used to stay 0. Each block passes its erase count to the media layer.
 - A CSD namespace now goes through its FTL, so reads and writes take NAND time
   instead of completing instantly. A pure-CSD device previously timed out on
@@ -265,6 +271,7 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - `femu-cxl-ssd` no longer advertises that unmapped pages read as zeros ([3c85bfd86](https://github.com/MoatLab/FEMU/commit/3c85bfd86)).
 - Switching `femu-cxl-ssd` `fast-load` off no longer sleeps out the NAND backlog on the QEMU main loop. After a fast fill the backlog can be minutes, and the guest's boot disk, served by the main loop, timed out and the guest lost its root file system. The switch now returns at once and the backlog stays on the NAND timelines; the new `nand-idle-ns` tells a harness when the NAND is idle. The switch does not wait for the FTL mutex either, which the worker can hold for a whole forced collection. Device DMA work queued before the switch books its NAND time before any later access, linked NVMe requests included, and `fast-load-drain-ns` includes it once it is booked.
 - A QEMU NVMe read into `femu-cxl-ssd` memory no longer stops the QEMU main loop for the media time of the CXL pages it fills. The block layer completes such a read on the main loop, outside any re-entrancy guard, so the copy took the waiting path and slept up to the whole NAND backlog. Accesses from the main-loop thread now queue their media time as guarded device DMA does; an IOThread's copies, and those of other threads such as RCU's, which also hold the BQL, keep the full model.
+- An Open-Channel SSD no longer runs or advertises Dataset Management, Write Zeroes, Compare, Verify, Copy or Write Uncorrectable. Their common handlers used the sparse Open-Channel address as a flat LBA. The default `oncs` allowed Dataset Management, and a deallocate of a high address zeroed memory past the backing store and stopped QEMU. Flush is still accepted.
 - Many `femu-cxl-ssd` lifecycle, decoder and mapping fixes, including teardown while callers wait on invalidation, little-endian forwarding, and keeping stores when NAND has no page for write-back ([9e0223c19](https://github.com/MoatLab/FEMU/commit/9e0223c19), [bb7e28722](https://github.com/MoatLab/FEMU/commit/bb7e28722), [51c420143](https://github.com/MoatLab/FEMU/commit/51c420143), [d31c48d92](https://github.com/MoatLab/FEMU/commit/d31c48d92), [ec8b1ac7d](https://github.com/MoatLab/FEMU/commit/ec8b1ac7d), [02a872661](https://github.com/MoatLab/FEMU/commit/02a872661), [4505cd9a7](https://github.com/MoatLab/FEMU/commit/4505cd9a7), [86ba15078](https://github.com/MoatLab/FEMU/commit/86ba15078), [842d4ff72](https://github.com/MoatLab/FEMU/commit/842d4ff72), [b322efb8f](https://github.com/MoatLab/FEMU/commit/b322efb8f), [2d0c1404e](https://github.com/MoatLab/FEMU/commit/2d0c1404e)).
 
 #### Data correctness
@@ -299,6 +306,7 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 
 #### Spec conformance and host compatibility
 
+- A Copy descriptor format 2 range that names the command's own namespace is accepted in every mode that accepts Copy. A CSD namespace refused it with Invalid Namespace, although the controller advertised format 2.
 - Identify CNS 19h (Endurance Group List) lists endurance group 1 on a controller in a subsystem, from a starting identifier of 0 or 1, as `nvme list-endgrp` asks. Without a subsystem it is refused.
 - Commands complete on the completion queue they were bound to, and submission queues that share a completion queue are served ([7a3f1d9fa](https://github.com/MoatLab/FEMU/commit/7a3f1d9fa), [dc4289f91](https://github.com/MoatLab/FEMU/commit/dc4289f91)).
 - Completions are not posted into a full queue and the phase tag is written last ([6f998742f](https://github.com/MoatLab/FEMU/commit/6f998742f), [04ce8b1a7](https://github.com/MoatLab/FEMU/commit/04ce8b1a7)).
@@ -331,6 +339,9 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - Log 00h lists the Open-Channel 2.0 chunk information page (CAh) ([209b499b6](https://github.com/MoatLab/FEMU/commit/209b499b6)).
 - Get Log Page answers a page log 00h lists for no command set with Invalid Log Page, so the endurance group and FDP pages without a subsystem no longer answer Invalid Field ([87d5f1372](https://github.com/MoatLab/FEMU/commit/87d5f1372)).
 - A zoned namespace reports no Copy limits in Identify Namespace, since it refuses Copy ([92b3763a3](https://github.com/MoatLab/FEMU/commit/92b3763a3)).
+- Vendor admin command 0xEE outside Open-Channel mode answers Invalid Command Opcode instead of Invalid Field, since log 05h does not list it there.
+- A subsystem with FDP off has no FDP capability, as CTRATT.FDPS already said. The FDP pages 20h to 23h answer Invalid Log Page and Features 1Dh and 1Eh answer Invalid Field; some used to answer FDP Disabled. Where log 05h does not list I/O Management Send and Receive, they answer Invalid Command Opcode instead of their no-operation.
+- Log 00h and the pages of one command set follow CC.CSS: with CC.CSS 000b they serve the NVM set whatever CDW14.CSI names. The Changed Zone List (BFh) answers only for the zoned set. Open-Channel 2.0 Chunk Information (CAh) answers only for NVM. Another set gets Invalid Log Page. BFh with an unknown CSI answers I/O Command Set Not Supported.
 - The controller reports NVMe 2.1 instead of 1.4, with what that requires: CAP.CRMS and the CRTO register, BPCAP 01b, Identify CNS 1Fh, CNS 00h refused for a Key Value namespace (Invalid I/O Command Set), CSI-specific log pages refused for an unknown command set, and CNS 07h refused for a set CC.CSS does not enable. Open-Channel stays at 1.4 ([409db7bb3](https://github.com/MoatLab/FEMU/commit/409db7bb3)).
 - CAP.AMS no longer claims weighted round robin, which nothing arbitrated by, and enabling with another CC.AMS fails ([409db7bb3](https://github.com/MoatLab/FEMU/commit/409db7bb3)).
 - A controller in a subsystem reports its endurance group (CTRATT bit 4, ENDGIDMAX, each namespace's ENDGID, the Key Value Identify structure included) whether or not FDP is on, as log 09h already did ([409db7bb3](https://github.com/MoatLab/FEMU/commit/409db7bb3)).
@@ -349,6 +360,7 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - Added CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CITATION.cff and ROADMAP files ([599a36676](https://github.com/MoatLab/FEMU/commit/599a36676), [da692f5d9](https://github.com/MoatLab/FEMU/commit/da692f5d9)).
 - `ssd-config.sh` expands an INI-style config file into the device arguments, checking keys against the binary ([7f605016e](https://github.com/MoatLab/FEMU/commit/7f605016e)).
 - `femu-test.sh` checks a device from inside the guest for block, zoned, KV and CSD namespaces ([9fee8190c](https://github.com/MoatLab/FEMU/commit/9fee8190c), [2244a1b9c](https://github.com/MoatLab/FEMU/commit/2244a1b9c), [c17a31ea9](https://github.com/MoatLab/FEMU/commit/c17a31ea9)).
+- `guest-conformance.sh` boots a guest for each conformance suite and runs blktests (the `block` and `zbd` groups) or the nvme-cli end-to-end suite against FEMU. The guest scripts `blktests-guest.sh` and `nvme-cli-e2e-guest.sh` also run on their own inside a guest. CI does not run them.
 - `make-guest-image.sh` builds an Ubuntu 24.04 guest image, and the run scripts accept `IMGDIR`, `OSIMGF` and another SSH port ([e877f2dc0](https://github.com/MoatLab/FEMU/commit/e877f2dc0), [e74535012](https://github.com/MoatLab/FEMU/commit/e74535012), [66bb3068e](https://github.com/MoatLab/FEMU/commit/66bb3068e)).
 - The build script fails on a compile error, and the config self-test fails when FEMU does not survive ([a1bf37caf](https://github.com/MoatLab/FEMU/commit/a1bf37caf), [da7c1fcfe](https://github.com/MoatLab/FEMU/commit/da7c1fcfe)).
 - The config self-test requires each device to come up, not only its property names to be accepted. That caught `zns.conf`, which asked for more active zones than it has and was refused at every size ([b509a23a5](https://github.com/MoatLab/FEMU/commit/b509a23a5)).

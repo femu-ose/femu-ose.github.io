@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/design/ftl.md) at FEMU `ce728dcf4` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/design/ftl.md) at FEMU `ab5bb9da6` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -130,12 +130,15 @@ Two things follow from this picture.
 | Write Zeroes | `ssd_write_zeroes()` | with the Deallocate bit: unmap; without it: program the range |
 | Dataset Management | `ssd_trim()` | deallocate each range |
 | Copy | `ssd_copy()` | read every source range, then write the destination |
+| Compare, Verify | `ssd_read()` | read the range as a Read does, without the injected read faults; also after a miscompare, or a protection error of a Verify |
 | Flush | `ssd_buffer_destage(ssd, 0, ...)` | program everything the write buffer holds |
 | I/O Management Send | `ssd_fdp_update_ruhs()` | FDP only: update reclaim unit handles |
 
 Read and Write latency is the largest per-page latency of the request: pages
 on different LUNs proceed in parallel, and pages on one LUN queue on its
-timeline. Copy costs the slowest source read plus the destination write.
+timeline. Copy issues the destination write when the slowest source read
+ends, so it costs that read plus the write. A source in a NoSSD namespace
+costs nothing, and a Copy into a NoSSD namespace charges no source read.
 After the opcode handler, the thread runs one background GC step if the
 device is past the background watermark ([Triggers](#triggers-and-watermarks)).
 
@@ -760,7 +763,7 @@ neighbours in that page become durable with it.
 - **Format** and **Sanitize** call `bbssd_deallocate_all()` on BlackBox
   namespaces (not CSD), which unmaps every LPN of the namespace's FTL. The lines keep their wear.
 
-ONCS bit 0x8 (Write Zeroes) and 0x100 (Copy) are off unless `oncs` sets them.
+ONCS bit 0x8 (Write Zeroes) and 0x100 (Copy) are on by default; `oncs` can clear them.
 
 ## Wear, read reclaim and retention refresh
 
@@ -1028,7 +1031,7 @@ layer.
 | Property | Where documented | Effect in the FTL |
 | --- | --- | --- |
 | `vwc` | [controller identity](../reference/properties.md#controller-identity-and-capabilities) | lets the host turn the write buffer off |
-| `oncs` | same | Write Zeroes and Copy reach the FTL only when enabled |
+| `oncs` | same | Write Zeroes and Copy reach the FTL only when enabled (the default) |
 | `power_loss` | [power loss](../reference/properties.md#namespace-management-streams-and-power-loss) | undo records and `simulate-power-loss` |
 | `streams`, `streams.max` | same | per-stream write pointers; reserve `streams.max + 1` lines |
 

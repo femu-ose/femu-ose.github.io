@@ -3,12 +3,12 @@ title: "ZNS: the zoned namespace model"
 description: "This chapter describes how FEMU implements the NVMe Zoned Namespace (ZNS) command set: the zone state machine, how zones are laid out on the emulated NAND,..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/design/zns.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/design/zns.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/zns.md`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/design/zns.md) at FEMU `ce728dcf4` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/zns.md`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/design/zns.md) at FEMU `ab5bb9da6` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -276,14 +276,16 @@ the closed zones would not fit under the open limit.
 Zone Management Receive. Other I/O opcodes go through the common path in
 `nvme-io.c`, with these zoned rules:
 
-- Compare is checked like a Read (`zns_check_compare()`).
+- Compare is checked like a Read (`zns_check_compare()`). Compare and
+  Verify take the NAND read time of a Read, also after a miscompare.
 - Dataset Management, Write Zeroes, Copy and Write Uncorrectable fail with
   Invalid Opcode on a zoned namespace: they would change blocks without
   going through the state machine. The command effects log for CSI 2 leaves
   them out, and Identify Namespace reports no Copy limits (MSSRL, MCL and
   MSRC are zero) even when `oncs` turns Copy on.
 - Verify runs the common path without zone state or boundary checks.
-- Flush and the I/O Management commands behave as on any namespace.
+- Flush behaves as on any namespace. I/O Management Send and Receive fail
+  with Invalid Command Opcode, since log 05h lists them for NVM only.
 
 ### Read and Write
 
@@ -457,7 +459,7 @@ What each command is charged, in `zftl.c`:
 | --- | --- |
 | Write, Zone Append | the larger of two figures: 1 us for each 4 KiB logical page put into the zone's write cache, summed over the pages added since the request's last cache flush, and the program time of any cache this write caused to be programmed: an evicted cache, or this zone's own cache when a page of this write found it full. The write that fills a cache is not charged for programming it; the next write to the zone is |
 | Read | the largest NAND read time over the 4 KiB pages it touches that have been programmed; pages still in a write cache, or never written, cost nothing |
-| Zone Reset | the largest erase time over the blocks of each reset zone; zones reset by one command share planes, so the command ends with its last erase |
+| Zone Reset | the largest erase time over the blocks of each reset zone; zones reset by one command share planes, so the command ends with its last erase. An Empty zone has no erase. With `zns_reset_by_fill`, only blocks that hold a programmed page are erased, so a zone whose data is all still in its write cache costs nothing |
 | Open, Close, Finish, Report, Offline | nothing |
 
 ### Write cache
@@ -493,8 +495,17 @@ puts this in context with the other modes.
   `nand/nand.h`, replaced by `zns_pg_rd_lat`, `zns_pg_wr_lat` and
   `zns_blk_er_lat` when set; MLC and PLC have no built-in row and need all
   three;
-- the array gated per plane only (`NAND_GATE_PLANE_ONLY`): operations on
-  different planes of one LUN overlap, operations on one plane queue;
+- the array held per plane only (`NAND_GATE_PLANE_ONLY`) by default:
+  operations on different planes of one LUN overlap, operations on one plane
+  queue;
+- with `zns_lun_contention` non-zero, the LUN and the plane both
+  (`NAND_GATE_LUN_AND_PLANE`): the planes of one LUN take turns, as on one
+  die, and `zns_zone_reset()` erases each LUN's planes with one
+  `nand_media_multiplane()` call instead of one erase per plane;
+- with `zns_reset_by_fill` non-zero, `zns_zone_reset()` skips each block
+  whose `page_wp` is 0, before it clears the block state; the erase time,
+  the block's `erase_cnt` and the device's `total_erases` (SMART Percentage
+  Used) then follow the zone's fill;
 - a shared channel bus only if `zns_cmd_addr_lat`, `zns_pg_xfer_lat` or
   `zns_status_lat` is non-zero;
 - program and erase suspend for reads if `zns_pe_suspend` is non-zero, with
@@ -515,7 +526,7 @@ controller uses the same `zns_` values with its own size.
 | Write cache | `zns_num_wc` | At most the zone count. |
 | ZRWA | `zns_zrwa_size`, `zns_zrwafg_size`, `zns_zrwa_num` | All three together, or none. |
 | Reads, appends | `zns_cross_zone_read`, `zns_zasl_bs` | `zns_zasl_bs` 0 follows `mdts`. |
-| Timing | `zns_flash_type`, `zns_pg_rd_lat`, `zns_pg_wr_lat`, `zns_blk_er_lat`, `zns_cmd_addr_lat`, `zns_pg_xfer_lat`, `zns_status_lat`, `zns_pe_suspend`, `zns_tsusp_ns` | Cell type also multiplies the program unit. All latencies are in ns and must not be negative. |
+| Timing | `zns_flash_type`, `zns_pg_rd_lat`, `zns_pg_wr_lat`, `zns_blk_er_lat`, `zns_cmd_addr_lat`, `zns_pg_xfer_lat`, `zns_status_lat`, `zns_pe_suspend`, `zns_tsusp_ns`, `zns_lun_contention`, `zns_reset_by_fill` | Cell type also multiplies the program unit. All latencies are in ns and must not be negative. |
 | Shared with other modes | `devsz_mb`, `namespaces`, `namespace_sizes`, `namespace_modes`, `lba_index`, `nlbaf`, `mdts`, `err_write_fail_ppm` | `lba_index` must select a block of 4 KiB or less. |
 
 The BlackBox geometry and timing properties (`nchs`, `pg_rd_lat` and so on)
@@ -542,7 +553,7 @@ A device with 64 MiB zones of half width on an 8-channel geometry:
 
 | Check | What it covers |
 | --- | --- |
-| qtest cases in `hw/femu/tests/qtest/femu-test.c` | `zone-reset`, `zone-open-limits`, `zone-active-limit`, `zone-append-parallel`, `zoned-append-limit`, `zoned-append-mdts0`, `zone-bad-dptr`, `zone-report-length`, `mdts0-zone-report`, `zoned-format-index`, `zoned-compare`, `zone-change-notice`, `log-contents-zoned`, `sgl-zoned`, `dma-error-zoned`, `ns-mgmt-unavailable-zoned`, `zrwa-reopen`, `zrwa-write-bounds`, `zrwa-odd-granule`, `zrwa-zd-ext`, `io-fuzz-zoned` |
+| qtest cases in `hw/femu/tests/qtest/femu-test.c` | `zone-reset`, `zns-reset-fill-off`, `zns-reset-fill-on`, `zns-reset-fill-lun`, `zone-open-limits`, `zone-active-limit`, `zone-append-parallel`, `zoned-append-limit`, `zoned-append-mdts0`, `zone-bad-dptr`, `zone-report-length`, `mdts0-zone-report`, `zoned-format-index`, `zoned-compare`, `compare-verify-media-zns`, `zone-change-notice`, `log-contents-zoned`, `sgl-zoned`, `dma-error-zoned`, `ns-mgmt-unavailable-zoned`, `zrwa-reopen`, `zrwa-write-bounds`, `zrwa-odd-granule`, `zrwa-zd-ext`, `io-fuzz-zoned` |
 | Documentation examples | each tagged ZNS example starts under qtest, identifies the controller and writes and reads one block |
 | `hw/femu/scripts/zone-aen-probe.c` | in-guest, manual: Zone Descriptor Changed notice end to end with `err_write_fail_ppm` |
 | Guest tools | `blkzone`, `nvme zns`, fio `--zonemode=zbd` on a Linux guest, as in the [mode guide](../modes/zns.md#verify) |

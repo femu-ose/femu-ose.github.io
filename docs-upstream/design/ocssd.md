@@ -3,12 +3,12 @@ title: "OCSSD: the Open-Channel extension"
 description: "This chapter describes how FEMU emulates an Open-Channel SSD (femu_mode=0). It covers the internals: the two protocol versions, their address formats, the..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/design/ocssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/design/ocssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ocssd.md`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/design/ocssd.md) at FEMU `ce728dcf4` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ocssd.md`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/design/ocssd.md) at FEMU `ab5bb9da6` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -203,10 +203,13 @@ bit of the per-address status in completion dwords 0 and 1 is set. Reads
 are not checked. Clearing an entry with 0xF1 makes the block usable again.
 The table starts empty; `nand_bad_blocks` does not seed it.
 
-In both versions the generic NVM commands (Flush, Dataset Management,
-Compare, Write Zeroes, Copy, Verify, Write Uncorrectable) are handled by
-`nvme_io_cmd()` on raw LBAs before the Open-Channel handler is consulted,
-when `oncs` turns them on. They do not follow the Open-Channel rules.
+In both versions, Flush is handled by `nvme_io_cmd()` before the
+Open-Channel handler. The optional NVM commands (Dataset Management, Compare,
+Write Zeroes, Copy, Verify, Write Uncorrectable) fail with Invalid Opcode, and
+ONCS and the command effects log leave them out, whatever `oncs` sets. Their
+common handlers address the backing store with a flat LBA. An Open-Channel
+address is sparse, so these handlers would touch the wrong media or memory
+past the store.
 
 ### What 1.2 does not enforce
 
@@ -535,13 +538,13 @@ Refusals at realize are listed in the
 
 | File | Contents |
 | --- | --- |
-| [`hw/femu/ocssd/oc12.c`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/ocssd/oc12.c), [`oc12.h`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/ocssd/oc12.h) | 1.2 commands, PPA format, sector metadata, bad block tables, init and exit |
-| [`hw/femu/ocssd/oc20.c`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/ocssd/oc20.c), [`oc20.h`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/ocssd/oc20.h) | 2.0 commands, chunk descriptors, write pointer rules, geometry, log page |
-| [`hw/femu/ocssd/oc-timing.c`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/ocssd/oc-timing.c), [`oc-timing.h`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/ocssd/oc-timing.h) | `flash_type` times (`set_latency()`), geometry bound check, 0xEE |
-| [`hw/femu/nand/nand-media.c`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/nand/nand-media.c) | chip and channel busy-until times for both versions |
-| [`hw/femu/nand/nand.h`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/nand/nand.h), [`nand.c`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/nand/nand.c) | per-cell-type latency tables and page-type tables |
-| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/femu.c) | `nvme_register_extensions()`, realize-time checks |
-| [`hw/femu/nvme-io.c`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/nvme-io.c) | `nvme_io_cmd()` dispatch, completion queue |
+| [`hw/femu/ocssd/oc12.c`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/ocssd/oc12.c), [`oc12.h`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/ocssd/oc12.h) | 1.2 commands, PPA format, sector metadata, bad block tables, init and exit |
+| [`hw/femu/ocssd/oc20.c`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/ocssd/oc20.c), [`oc20.h`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/ocssd/oc20.h) | 2.0 commands, chunk descriptors, write pointer rules, geometry, log page |
+| [`hw/femu/ocssd/oc-timing.c`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/ocssd/oc-timing.c), [`oc-timing.h`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/ocssd/oc-timing.h) | `flash_type` times (`set_latency()`), geometry bound check, 0xEE |
+| [`hw/femu/nand/nand-media.c`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/nand/nand-media.c) | chip and channel busy-until times for both versions |
+| [`hw/femu/nand/nand.h`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/nand/nand.h), [`nand.c`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/nand/nand.c) | per-cell-type latency tables and page-type tables |
+| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/femu.c) | `nvme_register_extensions()`, realize-time checks |
+| [`hw/femu/nvme-io.c`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/nvme-io.c) | `nvme_io_cmd()` dispatch, completion queue |
 
 ## Related pages
 

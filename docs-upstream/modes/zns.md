@@ -3,12 +3,12 @@ title: "Zoned Namespace SSD (ZNS)"
 description: "ZNS mode (femu_mode=3) emulates an NVMe SSD with the Zoned Namespace command set. The namespace is divided into zones. The host writes each zone..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/modes/zns.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/modes/zns.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/zns.md`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/modes/zns.md) at FEMU `ce728dcf4` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/zns.md`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/modes/zns.md) at FEMU `ab5bb9da6` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -142,7 +142,12 @@ times. MLC and PLC have none, so they need `zns_pg_rd_lat`, `zns_pg_wr_lat`
 and `zns_blk_er_lat`. Those three also override the built-in times for the
 other types. `zns_cmd_addr_lat`, `zns_pg_xfer_lat` and `zns_status_lat` add a
 shared channel bus, and `zns_pe_suspend` with `zns_tsusp_ns` lets reads
-suspend a program or erase. See the [timing model](../concepts/timing-model.md#zns-write-cache).
+suspend a program or erase. By default each plane runs on its own.
+`zns_lun_contention=1` makes the planes of one LUN take turns, as on one die.
+A zone reset then erases the planes of a LUN in one multi-plane operation.
+By default a reset of a non-empty zone erases every block of the zone.
+`zns_reset_by_fill=1` erases only the blocks that hold programmed pages, so
+the reset time and the wear follow the zone's fill. See the [timing model](../concepts/timing-model.md#zns-write-cache).
 
 ### Optional zone features
 
@@ -313,6 +318,9 @@ without going through the zone state machine. Reset the zone instead.
    formula above.
 3. `sudo nvme zns report-zones /dev/nvme0n1 -d 1` shows zone 0 empty; after
    the fio run the first zones are full and their write pointers moved.
+4. From the host, the QMP command
+   [`query-femu`](../reference/query-femu.md) with `kind` `zones` shows the
+   same zone states and write pointers. It needs no guest tools.
 
 ## Troubleshooting
 
@@ -346,3 +354,5 @@ Related issues: #57, #76, #112, #115, #126, #144, #161, #177, #182, #193.
 - [Multiple namespaces](../features/multi-namespace.md), to mix zoned and
   conventional namespaces
 - [Device property reference: ZNS](../reference/properties.md#zns)
+- [QMP query-femu](../reference/query-femu.md), to read the zones from the
+  host

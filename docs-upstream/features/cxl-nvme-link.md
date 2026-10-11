@@ -3,12 +3,12 @@ title: "CXL NVMe link"
 description: "A BBSSD NVMe controller can serve the medium of a femu-cxl-ssd as its namespace. The guest then sees the same bytes twice: as CXL memory and as an NVMe..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/features/cxl-nvme-link.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/features/cxl-nvme-link.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/cxl-nvme-link.md`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/features/cxl-nvme-link.md) at FEMU `ce728dcf4` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/cxl-nvme-link.md`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/features/cxl-nvme-link.md) at FEMU `ab5bb9da6` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -82,10 +82,9 @@ geometry and timing properties are ignored.
 
 ## What the controller offers
 
-- Read, Write, Flush, Dataset Management (Deallocate), and the optional
-  commands you enable with `oncs` (for example `oncs=0x10c` adds Write
-  Zeroes and Copy). Write Zeroes is off by default, as on any FEMU
-  controller.
+- Read, Write, Flush, and the optional commands that `oncs` sets. The
+  default sets Dataset Management (Deallocate), Write Zeroes, Copy, Compare
+  and Verify.
 - Format NVM is not advertised and Sanitize is refused. Both would rewrite
   the whole medium behind the CXL cache.
 - SMART, vendor log page C0h and the write amplification factor report the

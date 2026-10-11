@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/reference/properties.md) at FEMU `ce728dcf4` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/reference/properties.md) at FEMU `ab5bb9da6` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,7 +28,7 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 166 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 168 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
@@ -77,7 +77,7 @@ Devices:
 | `mpsmin` | `uint8` | `0` | CAP.MPSMIN: smallest host memory page size as 2^(12 + mpsmin) bytes; must not exceed mpsmax |
 | `mpsmax` | `uint8` | `0` | CAP.MPSMAX: largest host memory page size as 2^(12 + mpsmax) bytes, from mpsmin to 15 |
 | `oacs` | `uint16` | `2` | Optional Admin Command Support; only bit 1 (Format NVM, 0x2) may be set, and clearing it refuses Format NVM |
-| `oncs` | `uint16` | `20` | Optional NVM Command Support bit mask: 0x1 Compare, 0x2 Write Uncorrectable, 0x4 Dataset Management, 0x8 Write Zeroes, 0x10 Save/Select, 0x80 Verify, 0x100 Copy; Timestamp is always added |
+| `oncs` | `uint16` | `413` | Optional NVM Command Support bit mask: 0x1 Compare, 0x2 Write Uncorrectable, 0x4 Dataset Management, 0x8 Write Zeroes, 0x10 Save/Select, 0x80 Verify, 0x100 Copy; the default 0x19d sets all but Write Uncorrectable; Timestamp is always added |
 | `sgl` | `bool` | `off` | Advertise and accept address scatter gather lists for data transfer; OCSSD ignores it |
 | `cmbsz` | `uint32` | `0` | Controller Memory Buffer size register; 0 means no buffer, otherwise the size field times the unit must be a non-zero power of two |
 | `cmbloc` | `uint32` | `0` | Controller Memory Buffer location register; its BAR field must be 2 when cmbsz is set |
@@ -218,6 +218,8 @@ Devices:
 | `zns_pg_xfer_lat` | `int64` | `0` | ZNS: page data transfer phase on the channel bus in ns, 0 or more |
 | `zns_status_lat` | `int64` | `0` | ZNS: status read phase on the channel bus in ns, 0 or more |
 | `zns_pe_suspend` | `int32` | `0` | ZNS: non-zero lets a read suspend a program or erase on its plane |
+| `zns_lun_contention` | `int32` | `0` | ZNS: non-zero makes the planes of one LUN share the die, so their operations run one at a time; a zone reset erases each LUN's planes in one multi-plane operation |
+| `zns_reset_by_fill` | `int32` | `0` | ZNS: non-zero makes a zone reset erase only the blocks that hold programmed pages, so its time and wear follow the zone's fill |
 | `zns_tsusp_ns` | `int64` | `0` | ZNS: overhead in ns added to a read that suspends a program or erase, 0 or more |
 | `zns_max_active` | `uint32` | `0` | ZNS: Maximum Active Resources (zones), at most the zone count; 0 means no limit |
 | `zns_max_open` | `uint32` | `0` | ZNS: Maximum Open Resources (zones), at most the zone count and zns_max_active; 0 means no limit |
@@ -366,7 +368,7 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 
 These exist only when QEMU runs under qtest (`-accel qtest`) and serve FEMU's own tests. They are not part of the user interface.
 
-- `femu`: `x-ftl-check`, `x-ftl-trace`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-query-delay-ms`, `x-stream-test`
+- `femu`: `x-ftl-check`, `x-ftl-trace`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-query-delay-ms`, `x-stream-test`, `x-zone-lock-hold-ms`
 - `femu-cxl-ssd`: `test-change-dpa`, `test-fault`, `test-fault-decode`, `test-fault-delivery`, `test-fault-fill`, `test-fault-repeats`, `test-fault-version`, `test-fault-walk`, `test-fill`, `test-fill-race`, `test-ftl-delay`, `test-ftl-hold`, `test-ftl-holding`, `test-guarded-write`, `test-lock-mutex`, `test-lock-wanted`, `test-map`, `test-media-disabled`, `test-nvme-after-posted`, `test-owner`, `test-posted-done`, `test-prefetch-race`, `test-prefetch-race-end`, `test-protect`, `test-protect-window`, `test-revoke-ahead`, `test-revoke-ahead-keep`, `test-rip`, `test-slot-reservation`, `test-storm`, `test-storm-ns`, `test-storm-served`, `test-storm-stops`, `test-storm-wait`, `test-thread-read`, `test-unprotect`
 
 ## Environment variables

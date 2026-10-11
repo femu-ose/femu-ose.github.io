@@ -3,12 +3,12 @@ title: "NoSSD"
 description: "NoSSD mode (femu_mode=2, the default) emulates an NVMe drive with no media model. Reads and writes copy data between guest memory and a host DRAM buffer and..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/modes/nossd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/modes/nossd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/nossd.md`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/modes/nossd.md) at FEMU `ce728dcf4` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/nossd.md`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/modes/nossd.md) at FEMU `ab5bb9da6` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -110,9 +110,9 @@ sees FEMU's own per-command time on top.
 Properties: [controller identity and capabilities](../reference/properties.md#controller-identity-and-capabilities),
 [LBA formats, metadata and protection](../reference/properties.md#lba-formats-metadata-and-protection).
 
-- `oncs` turns on optional NVM commands. The default (0x14) offers Dataset
-  Management and Save/Select. Add 0x8 for Write Zeroes, 0x1 for Compare,
-  0x100 for Copy.
+- `oncs` turns on optional NVM commands. The default (0x19d) offers Compare,
+  Dataset Management, Write Zeroes, Save/Select, Verify and Copy. Add 0x2 for
+  Write Uncorrectable.
 - NoSSD supports [namespace management, metadata and protection information](../features/ns-management-and-pi.md)
   and Streams (`streams=on`, which tracks streams but places nothing).
 

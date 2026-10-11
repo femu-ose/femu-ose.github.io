@@ -3,12 +3,12 @@ title: "Scripts and tools"
 description: "Every script and tool shipped under hw/femu/scripts/ and hw/femu/tools/: what it does, its arguments and the environment variables it reads. The top-level..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/reference/scripts.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/reference/scripts.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/scripts.md`](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/docs/reference/scripts.md) at FEMU `ce728dcf4` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/scripts.md`](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/docs/reference/scripts.md) at FEMU `ab5bb9da6` (2026-10-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -190,6 +190,14 @@ Copy these into the guest and run them there. The C programs build with
 | `aer-probe.c` | `[CONTROLLER]`, default `/dev/nvme0` | That crossing the temperature threshold completes an Asynchronous Event Request, and that the event is re-armed after the log is read |
 | `zone-aen-probe.c` | `[CONTROLLER] [NAMESPACE]`, defaults `/dev/nvme0` `/dev/nvme0n1` | That a zone taken read only raises the Zone Descriptor Changed notice; needs a ZNS device with `err_write_fail_ppm` set ([ZNS](../modes/zns.md)) |
 | `fdp-test-nvme-admin.sh` | none; uses `/dev/nvme0`, `/dev/nvme0n1` and `/dev/ng0n1` | The FDP admin commands of nvme-cli against the configuration `run-blackbox-fdp.sh` creates (4 handles, 1 reclaim group); written for a Linux 6.12 guest |
+| `blktests-guest.sh` | `GROUP [DEVICE]`, default device `/dev/nvme0n1`; reads `BLKTESTS_REPO`, `BLKTESTS_REF` and `WORKDIR` (parent of a new scratch directory, default `/tmp`) | Clones, builds and runs one blktests group against the namespace, and prints the counts of passed, failed and not run tests. Exits 1 when a test that ran on the namespace failed or the run stopped early, and 2 when the setup failed. Needs network access and writes to the namespace. See [conformance suites](../guides/testing.md#conformance-suites). |
+| `nvme-cli-e2e-guest.sh` | `[CONTROLLER [NAMESPACE]]`, defaults `/dev/nvme0` `/dev/nvme0n1`; reads `NVMECLI_REPO`, `NVMECLI_REF` (default `v3.1`), `E2E_TIMEOUT` and `WORKDIR` (parent of a new scratch directory, default `/tmp`) | Builds nvme-cli and runs its end-to-end suite. Exits 1 when a test failed or the suite ended abnormally, and 2 when the setup failed. A failure of `test_get_lba_status` counts as a known nvme-cli defect only when the same command passes with the numeric namespace ID. Needs network access, writes to the namespace and can format it. |
+
+Run this one on the host:
+
+| Script | What it does | Arguments and environment |
+| --- | --- | --- |
+| `guest-conformance.sh` | Boots a guest for each suite with a fresh overlay of the guest image, runs `blktests-guest.sh` or `nvme-cli-e2e-guest.sh` in it over SSH, stops the guest and prints `RESULT SUITE PASS`, `FAIL` or `SETUP-ERROR`. An SMBIOS string checks that the SSH port reaches this guest. It refuses an overlay or PID file that an earlier run left in the result directory. CI does not run it. See [conformance suites](../guides/testing.md#conformance-suites). | Suites `blktests-block`, `blktests-zbd`, `nvme-cli` or `all`. Options `--qemu PATH` (default `./qemu-system-x86_64`), `--image FILE`, `--key FILE`, `--port N` (default 8090), `--outdir DIR`, `--timeout SEC` (default 3600), `--boot-timeout SEC` (default 300), `--sudo`, `--keep`. Reads `QEMU`, `IMGDIR`, `OSIMGF`, `SSH_KEY` and `SSH_PORT`, and passes `BLKTESTS_REPO`, `BLKTESTS_REF`, `NVMECLI_REPO` and `NVMECLI_REF` to the guest. Exits 0 when every suite passed, 1 when a suite failed, and 2 when a suite could not run and no suite failed. |
 
 ## Host tuning helpers
 
@@ -220,7 +228,7 @@ guest builds `libcca.a`, the `ccactl` command and the `cca-test` self-test.
 runs the self-test as root, logging to `cca-guest-YYYYMMDD-HHMMSS.log` by
 default.
 See [the caching API guide](../features/cxl-cca.md) and the
-[tool README](https://github.com/MoatLab/FEMU/blob/ce728dcf4543f1e579375e6b4e8cccce391e5630/hw/femu/tools/cca/README.md).
+[tool README](https://github.com/MoatLab/FEMU/blob/ab5bb9da6b9c129d596f9d9edb38636a4aa8e485/hw/femu/tools/cca/README.md).
 
 ## Legacy scripts
 
