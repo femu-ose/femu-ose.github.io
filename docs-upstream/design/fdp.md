@@ -3,12 +3,12 @@ title: "FDP: Flexible Data Placement"
 description: "This chapter describes how FEMU implements NVMe Flexible Data Placement (FDP): how the subsystem builds reclaim groups, reclaim units and reclaim unit..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/design/fdp.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/design/fdp.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/design/fdp.md) at FEMU `0030de624` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/design/fdp.md) at FEMU `b7e818c7f` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -429,9 +429,10 @@ of the property reference; the controller-side ones are under
 | BlackBox geometry (`nchs`, `luns_per_ch`, `pls_per_lun`, `blks_per_pl`, `pgs_per_blk`, `secs_per_pg`, `secsz`) | `femu` | Sets RUNS (one superblock) and the number of lines, hence units. |
 
 Refused under FDP on a bbssd controller: `buffer_size`, `hot_cold_sep`,
-`read_reclaim_limit`, `retention_limit_sec`, `ecc_retention_sec`,
-`trim_lat_ns`, a `mapping` other than `page`, and a `gc_policy` other than
-`greedy`. Refused on any controller with FDP: more than one namespace, a
+`read_reclaim_limit`, `retention_limit_sec`, a `mapping` other than `page`,
+and a `gc_policy` other than `greedy`. `trim_lat_ns` and `ecc_retention_sec`
+apply as without FDP. A unit's lines take their close time when the unit
+retires, and lose it when collection frees the unit. Refused on any controller with FDP: more than one namespace, a
 second controller in the subsystem, `meta`, `streams`, a KV namespace.
 Each message is listed in the [feature guide](../features/fdp.md#limits-and-refusals).
 

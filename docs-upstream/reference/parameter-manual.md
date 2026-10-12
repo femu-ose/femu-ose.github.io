@@ -3,12 +3,12 @@ title: "Parameter manual"
 description: "This manual explains how to configure an emulated device: the ways a parameter reaches FEMU, then every group of parameters by component, with what each one..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/reference/parameter-manual.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/reference/parameter-manual.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/reference/parameter-manual.md) at FEMU `0030de624` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/reference/parameter-manual.md) at FEMU `b7e818c7f` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -330,7 +330,7 @@ Reference: [NAND timing](properties.md#nand-timing-bbssd-csd-kv). Design:
 | `status_lat` | ns | >= 0 | channel bus status phase |
 | `tplebsy` | ns | >= 0 | busy time between the planes of a multi-plane erase (GC with `pls_per_lun` > 1) |
 | `pe_suspend`, `tsusp_ns` | flag, ns | `tsusp_ns` >= 0 | let a read suspend a program or erase on its LUN, at a cost of `tsusp_ns` |
-| `trim_lat_ns` | ns per range | >= 0; bbssd and CSD; refused with FDP | time charged per Dataset Management deallocate range |
+| `trim_lat_ns` | ns per range | >= 0; bbssd and CSD, also under FDP | time charged per Dataset Management deallocate range |
 
 Interactions:
 
@@ -405,7 +405,11 @@ Applies to bbssd, CSD and KV unless noted. Reference:
 | Parameter | Unit | Valid values | Meaning |
 | --- | --- | --- | --- |
 | `ecc_step_ns` | ns per tier | 0 disables | extra read time per ECC tier: one per 750 erases of the block, one per `ecc_retention_sec` of data age, at most 4 |
-| `ecc_retention_sec` | seconds | 0 counts wear only; refused with FDP | data age that adds one tier |
+| `ecc_retention_sec` | seconds | 0 counts wear only | data age that adds one tier |
+| `pd_edge_wls` | wordlines | 0 disables; set with `pd_edge_tiers` and `ecc_step_ns`; below the wordlines of a block | bottom wordlines of each block that pay `pd_edge_tiers` on a read |
+| `pd_edge_tiers` | ECC tiers | 0 to 4 | program disturb tiers for a read of a `pd_edge_wls` wordline |
+| `pd_open_tiers` | ECC tiers | 0 to 4; needs `ecc_step_ns` | program disturb tiers for a read of a part-programmed block |
+| `pd_open_age` | on/off | off (default); needs `ecc_step_ns` and `ecc_retention_sec` | data age counts from the first program of the line |
 | `pe_cycles_rated` | P/E cycles | 0 takes the rating of `nand_cell_type` | denominator of SMART Percentage Used |
 | `nand_bad_blocks` | blocks | capped at the block count | blocks bad from the start; lowers SMART Available Spare |
 | `blk_pe_limit` | P/E cycles | 0 disables; bbssd and CSD, one namespace, page or dftl mapping, one plane per LUN, no buffer, Streams, hot/cold separation, FDP or `nand_bad_blocks` | erases a block survives; its line then retires while enough lines remain, else the block stays in service and sets SMART critical warning bit 2 |
@@ -450,6 +454,8 @@ Reference: [ZNS](properties.md#zns). Design: [ZNS](../design/zns.md).
 | `zns_num_plane` | planes | 1 to 8 | planes per LUN; the program unit grows with it |
 | `zns_num_blk` | blocks | >= 1 | blocks per plane |
 | `zns_chnls_per_zone` | channels | divides `zns_num_ch`; 0 = all | zone width |
+| `zns_luns_per_zone` | LUNs | divides `zns_num_lun`; 0 = all | LUNs of a zone on each of its channels |
+| `zns_zone_order` | name | `ch` (default) or `lun` | axis a zone fills first |
 | `zns_zone_cap` | bytes | one block to the zone size; 0 = zone size | writable part of each zone |
 | `zns_flash_type` | type | 1 SLC, 2 MLC, 3 TLC, 4 QLC, 5 PLC | cell type; MLC and PLC need the three times below |
 | `zns_pg_rd_lat`, `zns_pg_wr_lat`, `zns_blk_er_lat` | ns | >= 0; 0 = built-in | override the cell type's times |
@@ -470,8 +476,9 @@ Derived quantities (when the divisions are exact):
 ```text
 pages per block = namespace size / 16 KiB / (zns_num_ch x zns_num_lun x zns_num_blk)
 zone width      = zns_chnls_per_zone, or zns_num_ch when 0
-zone size       = zone width x zns_num_lun x zns_num_plane x pages per block x 16 KiB
-zone count      = zns_num_ch x zns_num_blk / (zone width x zns_num_plane)
+zone LUNs       = zns_luns_per_zone, or zns_num_lun when 0
+zone size       = zone width x zone LUNs x zns_num_plane x pages per block x 16 KiB
+zone count      = zns_num_ch x zns_num_lun x zns_num_blk / (zone width x zone LUNs x zns_num_plane)
 ```
 
 Interactions:

@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/CHANGELOG.md) at FEMU `0030de624` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/CHANGELOG.md) at FEMU `b7e818c7f` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -54,11 +54,13 @@ listed one by one.
 
 - Flexible Data Placement (FDP) on a new `femu-subsys` device, with reclaim unit handles, FDP log pages, I/O Management commands and several GC strategies ([c966d341a](https://github.com/MoatLab/FEMU/commit/c966d341a), [6df00de01](https://github.com/MoatLab/FEMU/commit/6df00de01)).
 - FDP placement features can be read and enabled by a Linux host, and the host sees its active reclaim unit and remaining space ([8f00c7117](https://github.com/MoatLab/FEMU/commit/8f00c7117), [9a66fe52d](https://github.com/MoatLab/FEMU/commit/9a66fe52d)).
+- FDP accepts `trim_lat_ns` and `ecc_retention_sec`. A deallocate pays the same time per range as without FDP. The age of a reclaim unit counts from its retirement and starts again when collection frees it.
 - Computational Storage Drive mode (`femu_mode=4`) with program load and execute commands, routed through the bbssd FTL ([eb01bb73b](https://github.com/MoatLab/FEMU/commit/eb01bb73b), [50b65ca91](https://github.com/MoatLab/FEMU/commit/50b65ca91)).
 - CSD `nr_cu` and `csf_runtime_scale` now take effect ([202ab7afb](https://github.com/MoatLab/FEMU/commit/202ab7afb)).
 - A CSD runtime shorter than the program's own run on the host cannot be reached, since the completion carries the result; QEMU now warns once when that happens ([b8e8d6b45](https://github.com/MoatLab/FEMU/commit/b8e8d6b45)).
 - Key-value SSD mode (`femu_mode=5`) with store, retrieve, list, delete and exist commands ([e72465909](https://github.com/MoatLab/FEMU/commit/e72465909)).
 - Every KV namespace has its own command set and key space, the KV command set is advertised to the host, and the KV Configuration feature is served ([39664d242](https://github.com/MoatLab/FEMU/commit/39664d242), [e62db84f2](https://github.com/MoatLab/FEMU/commit/e62db84f2), [e4949509c](https://github.com/MoatLab/FEMU/commit/e4949509c)).
+- Opt-in KV workload-mix timing (`kv_timing=model`): Store and Retrieve take their time from the Samsung KVSSD emulator fit over the last 16 of them, or from coefficients in `kv_model_coeffs`. A device with no KV namespace refuses both.
 
 #### Namespaces
 
@@ -107,6 +109,7 @@ listed one by one.
 - Configurable zone resource limits (`zns_max_active`, `zns_max_open`) and zone descriptor extension size ([6404dd233](https://github.com/MoatLab/FEMU/commit/6404dd233)).
 - Optional conventional zones (`zns_num_conv_zones`) ([6e7395b55](https://github.com/MoatLab/FEMU/commit/6e7395b55)).
 - Configurable zone width (`zns_chnls_per_zone`) ([e04e4e901](https://github.com/MoatLab/FEMU/commit/e04e4e901)).
+- A zone can span fewer LUNs (`zns_luns_per_zone`), and `zns_zone_order=lun` fills a zone LUN first instead of channel first. The defaults keep the full-width, channel-first zone.
 - Zone Random Write Area support (`zns_zrwa_*`) ([b18f56b2b](https://github.com/MoatLab/FEMU/commit/b18f56b2b), [9f51854d7](https://github.com/MoatLab/FEMU/commit/9f51854d7)).
 - An injected write fault (`err_write_fail_ppm`) takes the zone read only and lists it in the Changed Zone List ([ccdae5d3b](https://github.com/MoatLab/FEMU/commit/ccdae5d3b)).
 - Changed Zone List log page ([569608a41](https://github.com/MoatLab/FEMU/commit/569608a41)).
@@ -135,6 +138,7 @@ listed one by one.
 - Log page C0h counts host writes that waited for forced collection or a full write buffer, and completions held for a full completion queue ([5631b3c07](https://github.com/MoatLab/FEMU/commit/5631b3c07)).
 - Opt-in paced collection (`gc_pace`): the victim line is copied a few pages per host page written instead of in one pass, so a write waits for about one copy instead of a whole line ([ff5e4b5ce](https://github.com/MoatLab/FEMU/commit/ff5e4b5ce)).
 - Opt-in copyback for line and FDP collection (`gc_copyback`, off by default). A page moves on its die when the destination shares its channel, LUN and plane, so the move puts no data on the channel. Collection then takes victim pages in the order of the destination dies. A copyback skips ECC, so on a real SSD its bit errors are not corrected and can add up; FEMU models no bit errors, so only timing changes, and pages with extra ECC time and refresh moves stay off-chip for that reason. Log page C0h offset 248 counts the pages moved this way.
+- Opt-in program disturb terms for the ECC read time (`pd_edge_wls`, `pd_edge_tiers`, `pd_open_tiers`, `pd_open_age`) in bbssd, CSD, FDP and KV. Reads of bottom wordlines and of part-programmed blocks pay extra tiers, and open data can age from its first program. The tier counts are chosen values for sensitivity studies.
 - Opt-in thermal model (`thermal_tau_ms`, `thermal_r`, `idle_mw`, `thermal_step_ms`): the SMART composite temperature follows the NAND energy and idle power through a first-order model, and crossing a threshold raises the SMART temperature warning and event ([eda6b6ffe](https://github.com/MoatLab/FEMU/commit/eda6b6ffe)).
 - Opt-in static wear levelling (`wl_spread`): the least worn full line moves into the most worn free line, without a write pointer of its own ([2e1ef35ba](https://github.com/MoatLab/FEMU/commit/2e1ef35ba)).
 - Read reclaim (`read_reclaim_limit`) and retention refresh (`retention_limit_sec`) ([7f9b4f6af](https://github.com/MoatLab/FEMU/commit/7f9b4f6af), [4e09c4797](https://github.com/MoatLab/FEMU/commit/4e09c4797), [e7f182b87](https://github.com/MoatLab/FEMU/commit/e7f182b87)).
@@ -215,6 +219,7 @@ was not doing anything.
 - Compare, Write Zeroes, Verify and Copy are on by default: the `oncs` default is now 0x19d instead of 0x14. A guest that sees Write Zeroes in ONCS can send it, and on bbssd the FTL programs the range unless Deallocate is set. `oncs=0x14` gives the old set. Write Uncorrectable still needs bit 0x2.
 - Compare and Verify take the NAND read time of a Read on bbssd, CSD and ZNS namespaces, also after a miscompare. Before, both completed with no media read.
 - A Copy on bbssd issues its destination write when its source reads end. On one LUN, a one-page Copy took the read time twice: 600 ms instead of 500 ms with a 100 ms read and a 400 ms program.
+- A zone write cache holds one program unit for each die of its zone. A cache sized from the whole device made a narrow zone (`zns_chnls_per_zone` below `zns_num_ch`) program each of its dies several times in series per flush. Full-width zones keep their timing.
 - A zoned namespace counts the block erases of Zone Reset. SMART Percentage Used (and the Endurance Group log) now reports them against `pe_cycles_rated`, or the rating of `zns_flash_type`; it used to stay 0. Each block passes its erase count to the media layer.
 - A CSD namespace now goes through its FTL, so reads and writes take NAND time
   instead of completing instantly. A pure-CSD device previously timed out on

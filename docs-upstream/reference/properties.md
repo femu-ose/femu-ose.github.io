@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/reference/properties.md) at FEMU `0030de624` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/reference/properties.md) at FEMU `b7e818c7f` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,7 +28,7 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 174 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 182 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
@@ -139,7 +139,7 @@ Devices:
 | `mp_read` | `int32` | `0` | bbssd, CSD: non-zero charges host reads of the same page on several planes of a LUN as one multi-plane command (one array time); needs pls_per_lun > 1 and no FDP, and warns at realize otherwise |
 | `plane_first` | `int32` | `0` | bbssd, CSD: non-zero makes write pointers fill the planes of a LUN before the next channel, so consecutive pages form one multi-plane program with mp_program; needs pls_per_lun > 1 and no FDP, and warns at realize otherwise |
 | `trcbsy` | `int32` | `0` | No effect, kept for compatibility; no mode enables the cache read model. A value other than the default warns at realize |
-| `trim_lat_ns` | `int32` | `0` | bbssd, CSD: time in ns charged per Dataset Management deallocate range; refused with FDP |
+| `trim_lat_ns` | `int32` | `0` | bbssd, CSD: time in ns charged per Dataset Management deallocate range, with or without FDP |
 | `pe_suspend` | `int32` | `0` | bbssd, CSD, KV: non-zero lets a read suspend a program or erase on its LUN instead of waiting for it to finish |
 | `tsusp_ns` | `int32` | `0` | bbssd, CSD, KV: overhead in ns added to a read that suspends a program or erase, 0 or more |
 | `nand_cell_type` | `uint8` | `0` | bbssd, CSD, KV: 0 uses the flat pg_rd_lat, pg_wr_lat and blk_er_lat; 1 SLC, 2 MLC, 3 TLC or 4 QLC uses built-in per-page-type timing (other values fall back to 0) |
@@ -151,7 +151,11 @@ Devices:
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `ecc_step_ns` | `int32` | `0` | bbssd, CSD, KV: extra read time in ns per ECC tier, one tier per 750 erases of the block plus one per ecc_retention_sec of data age, at most 4 tiers; 0 turns the model off |
-| `ecc_retention_sec` | `int32` | `0` | bbssd, CSD, KV: data age in seconds that adds one ECC tier, with ecc_step_ns; 0 counts wear only; refused with FDP |
+| `ecc_retention_sec` | `int32` | `0` | bbssd, CSD, KV: data age in seconds that adds one ECC tier, with ecc_step_ns; 0 counts wear only |
+| `pd_edge_wls` | `int32` | `0` | bbssd, CSD, KV: program disturb, bottom wordlines of each block whose reads take pd_edge_tiers more ECC tiers; set with pd_edge_tiers and ecc_step_ns; 0 (default) turns the term off. A wordline is the pages per wordline of nand_cell_type (else the effective cell_pages, 3 with pgtype_lat, else 1) contiguous pages |
+| `pd_edge_tiers` | `int32` | `0` | bbssd, CSD, KV: program disturb, ECC tiers added to a read of a pd_edge_wls wordline, 0 to 4, under the shared tier cap; chosen values for sensitivity studies, not fitted to error rates |
+| `pd_open_tiers` | `int32` | `0` | bbssd, CSD, KV: program disturb, ECC tiers added to a read of a block that is only part programmed, 0 to 4, under the shared tier cap; needs ecc_step_ns; 0 (default) turns the term off |
+| `pd_open_age` | `bool` | `off` | bbssd, CSD, KV: data age for the ECC age tiers counts from the first program of the line instead of the line close, so open data ages too; one time per line; needs ecc_step_ns and ecc_retention_sec; off (default) |
 | `pe_cycles_rated` | `uint32` | `0` | bbssd, CSD, KV, ZNS: rated program/erase cycles used for SMART Percentage Used; 0 takes the rating of nand_cell_type (ZNS: zns_flash_type), or reports none |
 | `nand_bad_blocks` | `uint32` | `0` | bbssd, CSD, KV: blocks marked bad at start, capped at the block count, which lowers SMART Available Spare |
 | `blk_pe_limit` | `uint32` | `0` | bbssd, CSD: mean program/erase cycles a block survives before it wears out; 0 (default) turns wear-out off. A worn-out block stays in service and sets the SMART reliability warning |
@@ -212,7 +216,7 @@ Devices:
 | `zns_num_ch` | `uint8` | `2` | ZNS: number of channels, 1 to 128 |
 | `zns_num_lun` | `uint8` | `4` | ZNS: LUNs (dies) per channel, 1 or more |
 | `zns_num_plane` | `uint8` | `2` | ZNS: planes per LUN, 1 to 8; the program unit grows with it |
-| `zns_num_blk` | `uint8` | `32` | ZNS: blocks per plane, 1 or more; the zone count is zns_num_blk times zns_num_ch divided by the zone width and zns_num_plane |
+| `zns_num_blk` | `uint8` | `32` | ZNS: blocks per plane, 1 or more; the zone count is zns_num_blk times zns_num_ch times zns_num_lun, divided by the zone width, the zone LUNs and zns_num_plane |
 | `zns_flash_type` | `int32` | `4` | ZNS: cell type, 1 SLC, 2 MLC, 3 TLC, 4 QLC or 5 PLC; MLC and PLC have no built-in timing and need zns_pg_rd_lat, zns_pg_wr_lat and zns_blk_er_lat |
 | `zns_pg_rd_lat` | `int64` | `0` | ZNS: page read time in ns, 0 or more; 0 uses the built-in time of zns_flash_type |
 | `zns_pg_wr_lat` | `int64` | `0` | ZNS: page program time in ns, 0 or more; 0 uses the built-in time of zns_flash_type |
@@ -233,6 +237,8 @@ Devices:
 | `zns_num_conv_zones` | `uint32` | `0` | ZNS: number of leading conventional zones, which take random writes; capped at the zone count |
 | `zns_zone_cap` | `size` | `0` | ZNS: zone capacity in bytes, at least one logical block and at most the zone size; 0 means the zone size |
 | `zns_chnls_per_zone` | `uint32` | `0` | ZNS: channels one zone spans (zone width), dividing zns_num_ch; 0 means all channels |
+| `zns_luns_per_zone` | `uint32` | `0` | ZNS: LUNs one zone spans on each of its channels, dividing zns_num_lun; 0 means all LUNs |
+| `zns_zone_order` | `str` | unset | ZNS: ch (default) fills a zone channel first, then LUN; lun fills it LUN first, so consecutive programs share a channel |
 | `zns_zrwa_size` | `uint64` | `0` | ZNS: Zone Random Write Area size in logical blocks, at most 65535 and a multiple of zns_zrwafg_size; 0 disables ZRWA |
 | `zns_zrwafg_size` | `uint64` | `0` | ZNS: ZRWA flush granularity in logical blocks, 1 to 65535 with ZRWA and 0 without; the zone capacity must be a multiple of it |
 | `zns_zrwa_num` | `uint32` | `0` | ZNS: number of zones that may hold a ZRWA at once, 1 or more with ZRWA and 0 without |
@@ -268,6 +274,13 @@ Devices:
 | `context_switch_time` | `uint64` | `200` | No effect, kept for CEMU compatibility. A value other than the default warns at realize |
 | `csf_runtime_scale` | `uint16` | `3` | CSD: non-zero multiplier applied to the host run time of a program that sets neither a runtime nor its own scale |
 | `csd_program_dir` | `str` | unset | CSD: host directory that shared-object and uBPF programs are loaded from, named by a file name with no slash that must resolve inside it; unset allows only the built-in phantom program type |
+
+### KV timing
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| `kv_timing` | `str` | unset | KV: media (default) times every command on the NAND model; model times Store and Retrieve from the workload mix of the last 16 of them, with the Samsung KVSSD emulator fit |
+| `kv_model_coeffs` | `str` | unset | KV with kv_timing=model: 36 comma-separated numbers, the intercept then the 35 polynomial coefficients; unset uses the Samsung fit |
 
 ### Generic PCI device properties
 

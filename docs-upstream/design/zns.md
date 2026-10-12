@@ -3,12 +3,12 @@ title: "ZNS: the zoned namespace model"
 description: "This chapter describes how FEMU implements the NVMe Zoned Namespace (ZNS) command set: the zone state machine, how zones are laid out on the emulated NAND,..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/design/zns.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/design/zns.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/zns.md`](https://github.com/MoatLab/FEMU/blob/0030de624c50a1d12ce4c920c4159fbb68a919bb/hw/femu/docs/design/zns.md) at FEMU `0030de624` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/zns.md`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/design/zns.md) at FEMU `b7e818c7f` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -93,7 +93,8 @@ namespace size and the `zns_` geometry, with a fixed 16 KiB NAND page
 ```text
 pages per block  = namespace bytes / 16 KiB / (zns_num_ch * zns_num_lun * zns_num_blk)
 zone width       = zns_chnls_per_zone, or zns_num_ch when it is 0
-zone size        = zone width * zns_num_lun * zns_num_plane * pages per block * 16 KiB
+zone LUNs        = zns_luns_per_zone, or zns_num_lun when it is 0
+zone size        = zone width * zone LUNs * zns_num_plane * pages per block * 16 KiB
 zone count       = namespace bytes / zone size          (rounded down)
 zone capacity    = zns_zone_cap, or the zone size when it is 0
 ```
@@ -142,27 +143,49 @@ one block index sit in different groups:
 ```
 
 So narrowing the zones doubles the zone count for each halving of the
-width, and each zone has fewer channels to program in parallel. The
-geometry check refuses a configuration with more zones than
+width, and each zone has fewer channels to program in parallel.
+
+`zns_luns_per_zone` splits the LUNs of each channel group the same way.
+The groups are then pairs of a channel group and a LUN group.
+`zns_zone_span()` in `zftl.c` computes them, and the write, reset and erase
+paths all call it:
+
+```text
+ ch_groups = zns_num_ch / width       lun_groups = zns_num_lun / zone LUNs
+ groups    = ch_groups * lun_groups
+ g         = zone % groups
+ channels  = (g % ch_groups) * width     .. + width - 1
+ LUNs      = (g / ch_groups) * zone LUNs .. + zone LUNs - 1
+ block     = zone / groups
+
+ zns_num_ch=2, zns_num_lun=2, width 1, zone LUNs 1 -> 4 groups
+
+          ch0      ch1
+  LUN0    z0, z4   z1, z5      block 0: z0..z3
+  LUN1    z2, z6   z3, z7      block 1: z4..z7
+```
+
+The geometry check refuses a configuration with more zones than
 `zns_num_blk * groups`, since every zone needs its own block.
 
 ### Placement inside a zone
 
 `get_new_page()` in `zftl.c` picks the next location from the zone's slot
-counter `zone_wp_slot[zone]`. A slot is one (channel, LUN) pair. Slots go
-channel first, then LUN:
+counter `zone_wp_slot[zone]`, through `zns_zone_die()`. A slot is one
+(channel, LUN) pair of the zone. Slots go channel first, then LUN, unless
+`zns_zone_order=lun`:
 
 ```text
- slot s (full width):  ch = s % zns_num_ch
-                       lun = (s / zns_num_ch) % zns_num_lun
- slot s (narrow):      ch = (zone % groups) * width + s % width
-                       lun = (s / width) % zns_num_lun
+ order ch (default):  ch  = first channel + s % width
+                      lun = first LUN + (s / width) % zone LUNs
+ order lun:           lun = first LUN + s % zone LUNs
+                      ch  = first channel + (s / zone LUNs) % width
 
  one slot programs, on each plane of that LUN, zns_flash_type pages of
  16 KiB (4 logical 4 KiB pages each):
 
    program unit = 16 KiB * zns_flash_type * zns_num_plane
-   stripe unit  = program unit * zns_num_ch * zns_num_lun
+   stripe unit  = program unit * zone width * zone LUNs
 ```
 
 With `run-zns.sh` (8 channels, 4 LUNs, 2 planes, QLC) the program unit is
