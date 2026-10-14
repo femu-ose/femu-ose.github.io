@@ -3,12 +3,12 @@ title: "Flexible Data Placement (FDP)"
 description: "Flexible Data Placement lets the host tell the SSD which writes belong together. The device groups its NAND into reclaim units and offers a few reclaim unit..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/features/fdp.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/features/fdp.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/fdp.md`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/features/fdp.md) at FEMU `57a01cb3a` (2026-10-13), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/fdp.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/features/fdp.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -98,9 +98,19 @@ apply. Two properties are specific to FDP
 ([garbage collection, mapping and caches](../reference/properties.md#garbage-collection-mapping-and-caches)):
 
 - `gc_strategy`: how GC picks a victim reclaim unit: 0 greedy (default),
-  1 cost-benefit, 2 random, 4 per-handle. `gc_policy` does not apply under FDP.
+  1 cost-benefit, 2 random, 4 per-handle.
   The random strategy draws from a generator seeded by `gc_seed`, so it
   repeats run to run.
+- `gc_policy`: the same choice by name. `cost-benefit` and `random` are
+  strategies 1 and 2; `fifo` and `d-choice` exist only by name. A name
+  other than `greedy` needs `gc_strategy=0`. `d-choice` draws from the
+  same generator.
+- `buffer_size`, `buffer_thres_pcent`, `vwc`: the write buffer holds placed
+  writes. Each held page goes to the unit of the handle that last wrote
+  it, and RUH Update writes the buffer back first
+  ([design](../design/fdp.md#parameters)).
+- `mapping=dftl`: a placed write charges the translation page of each
+  page it programs.
 - `fdp_trim_erase_all`: non-zero makes a deallocate reset every reclaim unit
   instead of the given ranges.
 
@@ -129,7 +139,9 @@ sudo nvme fdp status /dev/nvme0n1
 `configs` lists the handles and the reclaim unit size, `usage` gives each
 handle's attributes, `stats` gives host and media bytes written, and
 `status` lists the placement identifiers the namespace accepts with the
-space left in each one's reclaim unit (RUAMW).
+space left in each one's reclaim unit (RUAMW). Every page programmed into
+the unit counts. This includes pages that collection moves into the unit
+of an Initially Isolated handle. A Format does not give the room back.
 Every handle backs a placement handle of the namespace, so `usage` reports
 each one as host specified:
 
@@ -225,7 +237,9 @@ reclaim unit handle wrote and moved, and the state of each reclaim unit:
 | `FEMU bbssd: fdp.runs must be 67108864, the size of one superblock of this geometry, or unset` | `fdp.runs` does not match the geometry. |
 | `FDP supports a single namespace; set namespaces=1 or disable FDP on the subsystem` | `namespaces` above 1. |
 | `femu-subsys with fdp=on takes a single controller` | A second controller joins the FDP subsystem. |
-| `FEMU bbssd: buffer_size has no effect under FDP` | FDP has its own write path. The same message names `hot_cold_sep`, a `mapping` other than `page` and a `gc_policy` other than `greedy`. A CSD controller gets the same messages with `FEMU csd:`. |
+| `FEMU bbssd: set gc_policy or gc_strategy under FDP, not both` | Both pick the reclaim unit strategy. Set one of them, or leave `gc_policy` at `greedy`. |
+| `FEMU bbssd: hot_cold_sep is not supported under FDP: the placement handle of a write chooses its reclaim unit, ...` | The placement handle of a write names its reclaim unit, and the hot write pointer writes past it. Give hot data a placement handle of its own. |
+| `FEMU bbssd: mapping=hybrid is not supported under FDP: the log-block mappings write and merge through lines that are not FDP-aware; use page or dftl` | The same for `mapping=fast`. The log-block mappings keep their own log and data lines. A CSD controller gets these messages with `FEMU csd:`. |
 | `meta: not supported with placement (fdp)` | `meta` (with a valid `mc`) under FDP. |
 | `streams requires bbssd or NoSSD with FDP disabled` | `streams=on` under FDP. |
 | `the key-value command set and FDP cannot share a controller: ...` | A KV namespace under FDP. |

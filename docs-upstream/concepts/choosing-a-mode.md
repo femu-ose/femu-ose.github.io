@@ -3,12 +3,12 @@ title: "Choosing a mode"
 description: "An NVMe femu device emulates one kind of SSD, chosen with femu_mode. Features such as Flexible Data Placement or several namespaces are added on top of a..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/concepts/choosing-a-mode.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/concepts/choosing-a-mode.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/choosing-a-mode.md`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/concepts/choosing-a-mode.md) at FEMU `57a01cb3a` (2026-10-13), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/choosing-a-mode.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/concepts/choosing-a-mode.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -74,8 +74,7 @@ placement then has no effect on where data goes. FDP requires a single
 controller in the subsystem, a single namespace (`namespaces=1`), `fdp.nrg=1`
 and `fdp.nruh` from 1 to `fdp.nru`. It cannot be combined with a KV namespace,
 `meta`, Streams or a subsystem with `ns_mgmt=on`. A BBSSD controller under FDP
-also refuses `buffer_size`, `hot_cold_sep`, a `mapping` other than `page`
-and a `gc_policy` other than `greedy`.
+also refuses `hot_cold_sep` and the `hybrid` and `fast` mappings.
 
 **Several namespaces and per-namespace modes.** `namespaces` is 1 to 256. The
 backend of `devsz_mb` MiB is split evenly, or by `namespace_sizes`.
@@ -125,7 +124,7 @@ medium's size.
 
 *Figure: Modes against layers: the interface each mode offers, where its FTL runs, which timing model it uses, where its data lives and which thread charges its time; below, the features each mode supports (CUs are CSD compute units).*
 
-Generated from [`modes.py`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/modes.py): how to turn each mode or feature
+Generated from [`modes.py`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/modes.py): how to turn each mode or feature
 on, the guest kernel and tools it needs, what the host needs, and what CI
 checks. [requirements.md](../getting-started/requirements.md#kernel-per-mode)
 has the guest kernel configuration in more detail.

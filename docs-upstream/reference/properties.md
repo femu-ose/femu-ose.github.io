@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/reference/properties.md) at FEMU `57a01cb3a` (2026-10-13), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/properties.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,7 +28,7 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 186 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 191 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
@@ -136,13 +136,16 @@ Devices:
 | `onfi_mts` | `int32` | `0` | bbssd, CSD, KV: with onfi_mode, the page payload rate in MT/s in place of the mode's own rate, 1 to 100000; 0 (default) uses the mode |
 | `onfi_spare_bytes` | `int32` | `0` | bbssd, CSD, KV: with onfi_mode, the spare bytes moved with each page on the bus; the page on the bus must be an even number of bytes; 0 (default) moves the data bytes only |
 | `onfi_tccs_ns` | `int32` | `0` | bbssd, CSD, KV: with onfi_mode, tCCS in ns from a datasheet, paid before a data out when several LUNs share a channel and per plane of a multi-plane read; ONFI 6.0 gives no value, so 0 (default) pays nothing |
+| `onfi_param_page` | `str` | unset | bbssd, CSD, KV: path of an ONFI 6.0 parameter page image (256 bytes per copy, CRC checked, redundant copies tried). It turns the ONFI profile on, gives the mode when onfi_mode is -1, and sets the spare bytes and address cycles. Realize refuses a page whose geometry, features or modes do not match the device; unset (default) uses none |
+| `onfi_sca` | `int32` | `0` | bbssd, CSD, KV: with the ONFI profile, non-zero selects the SCA protocol (ONFI 6.0 Section 5): commands, addresses and status use a separate CA bus, and the channel bus carries only the data bursts; 0 (default) is the conventional protocol |
+| `onfi_cache_read` | `int32` | `0` | bbssd, CSD: with the ONFI profile, non-zero reads the pages of one read command that land on one LUN as a read cache sequence (31h, 00h-addr-31h, 3Fh; ONFI 6.0 Section 6.15), or as plain reads when the sequence would end later on an idle LUN. Refused with mp_read, mapping=dftl and read_cache_mb; 0 (default) is off |
 | `tplpbsy` | `int32` | `0` | bbssd, CSD: busy time in ns between the planes of a multi-plane program; only with mp_program, and a value without it warns at realize. Negative is refused |
 | `tplrbsy` | `int32` | `0` | bbssd, CSD: busy time in ns between the planes of a multi-plane read; only with mp_read, and a value without it warns at realize. Negative is refused |
 | `tplebsy` | `int32` | `0` | bbssd, CSD, KV: busy time in ns between the planes of a multi-plane erase, which garbage collection issues when pls_per_lun > 1 |
 | `mp_program` | `int32` | `0` | bbssd, CSD: non-zero charges programs of the same page on several planes of a LUN as one multi-plane command (one array time); needs pls_per_lun > 1 and no FDP, and warns at realize otherwise |
 | `mp_read` | `int32` | `0` | bbssd, CSD: non-zero charges host reads of the same page on several planes of a LUN as one multi-plane command (one array time); needs pls_per_lun > 1 and no FDP, and warns at realize otherwise |
 | `plane_first` | `int32` | `0` | bbssd, CSD: non-zero makes write pointers fill the planes of a LUN before the next channel, so consecutive pages form one multi-plane program with mp_program; needs pls_per_lun > 1 and no FDP, and warns at realize otherwise |
-| `trcbsy` | `int32` | `0` | No effect, kept for compatibility; no mode enables the cache read model. A value other than the default warns at realize |
+| `trcbsy` | `int32` | `0` | bbssd, CSD: tRCBSY in ns, the busy time of each copy in a read cache sequence; only with onfi_cache_read, and a value without it warns at realize. 0 (default) takes 3000, the ONFI 6.0 typical value. Negative is refused with onfi_cache_read |
 | `trim_lat_ns` | `int32` | `0` | bbssd, CSD: time in ns charged per Dataset Management deallocate range, with or without FDP |
 | `pe_suspend` | `int32` | `0` | bbssd, CSD, KV: non-zero lets a read suspend a program or erase on its LUN instead of waiting for it to finish |
 | `tsusp_ns` | `int32` | `0` | bbssd, CSD, KV: overhead in ns added to a read that suspends a program or erase, 0 or more |
@@ -160,6 +163,8 @@ Devices:
 | `pd_edge_tiers` | `int32` | `0` | bbssd, CSD, KV: program disturb, ECC tiers added to a read of a pd_edge_wls wordline, 0 to 4, under the shared tier cap; chosen values for sensitivity studies, not fitted to error rates |
 | `pd_open_tiers` | `int32` | `0` | bbssd, CSD, KV: program disturb, ECC tiers added to a read of a block that is only part programmed, 0 to 4, under the shared tier cap; needs ecc_step_ns; 0 (default) turns the term off |
 | `pd_open_age` | `bool` | `off` | bbssd, CSD, KV: data age for the ECC age tiers counts from the first program of the line instead of the line close, so open data ages too; one time per line; needs ecc_step_ns and ecc_retention_sec; off (default) |
+| `pd_open_read_limit` | `int32` | `0` | bbssd, CSD, FDP: program disturb, reads of a part-programmed block that queue its line or reclaim unit; the next Write rewrites it, after it seals a frontier line or retires a frontier unit with its free pages unprogrammed; not above a non-zero read_reclaim_limit; 0 (default) turns it off |
+| `pd_open_close_sec` | `int32` | `0` | bbssd, CSD, FDP: program disturb, seconds of device time (age_scale) a frontier line or reclaim unit may stay open after its first program; the next request pads its free pages and closes it; under FDP the handle gets a fresh unit and event 1h; 0 (default) turns it off |
 | `pe_cycles_rated` | `uint32` | `0` | bbssd, CSD, KV, ZNS: rated program/erase cycles used for SMART Percentage Used; 0 takes the rating of nand_cell_type (ZNS: zns_flash_type), or reports none |
 | `nand_bad_blocks` | `uint32` | `0` | bbssd, CSD, KV: blocks marked bad at start, capped at the block count, which lowers SMART Available Spare |
 | `blk_pe_limit` | `uint32` | `0` | bbssd, CSD: mean program/erase cycles a block survives before it wears out; 0 (default) turns wear-out off. A worn-out block stays in service and sets the SMART reliability warning |
@@ -185,13 +190,13 @@ Devices:
 | --- | --- | --- | --- |
 | `gc_thres_pcent` | `int32` | `75` | bbssd, CSD: percent of lines in use at which background garbage collection starts, 1 to 100; KV uses it only as the fraction of NAND usable for values |
 | `gc_thres_pcent_high` | `int32` | `95` | bbssd, CSD: percent of lines in use at which garbage collection is forced, from gc_thres_pcent to 100; under FDP it keeps at least one reclaim unit free unless it is 100 |
-| `gc_policy` | `str` | unset | bbssd, CSD without FDP: line victim policy, one of greedy, random, cost-benefit, fifo or d-choice; unset is greedy |
+| `gc_policy` | `str` | unset | bbssd, CSD: victim policy, one of greedy, random, cost-benefit, fifo or d-choice; unset is greedy. Under FDP it picks the reclaim unit strategy, and a name other than greedy needs gc_strategy=0 |
 | `gc_seed` | `uint64` | `0` | bbssd, CSD: seed for the victims the random and d-choice gc_policy and the FDP random gc_strategy pick; the same seed and workload pick the same victims, so vary it to vary runs |
-| `gc_strategy` | `int32` | `0` | bbssd with FDP: reclaim unit victim strategy, 0 greedy, 1 cost-benefit, 2 random or 4 per-handle |
+| `gc_strategy` | `int32` | `0` | bbssd with FDP: reclaim unit victim strategy, 0 greedy, 1 cost-benefit, 2 random or 4 per-handle; a gc_policy other than greedy picks it instead |
 | `wl_spread` | `int32` | `0` | bbssd, CSD: static wear levelling starts when the erases of lines in service differ by more than this and stops at half of it; it moves the least worn full line into the most worn free line and copies at most a quarter of the host pages; 0 (default) turns it off |
 | `gc_pace` | `bool` | `off` | bbssd, CSD: collect the victim line a few pages per host page written, in proportion to its valid pages, instead of in one pass; the forced pass stays as the last resort; off (default) |
 | `gc_copyback` | `bool` | `off` | bbssd, CSD, FDP: collection moves a page on its die (copyback) when the destination is on the same channel, LUN and plane; collection takes victim pages in the order of the destination dies. A copyback skips ECC: the data never reaches the controller, so a real SSD does not correct its bit errors, and they can add up over repeated copybacks. FEMU models no bit errors, so here only the timing changes. For that reason a page whose read has extra ECC time, and every read reclaim or retention refresh, moves off-chip. Not for KV. Refused with gc_pace, pe_suspend, cxl_ssd, namespace_modes, ns_mgmt, shared namespaces and the hybrid and fast mappings; off (default) |
-| `mapping` | `str` | unset | bbssd, CSD: logical-to-physical mapping scheme, one of page, dftl, hybrid or fast; unset is page, and FDP supports only page |
+| `mapping` | `str` | unset | bbssd, CSD: logical-to-physical mapping scheme, one of page, dftl, hybrid or fast; unset is page, and FDP takes page or dftl |
 | `mapping_cache_mb` | `uint32` | `0` | bbssd, CSD with mapping=dftl: size of the cached mapping table in MiB; 0 means 4 |
 | `read_cache_mb` | `uint32` | `0` | bbssd, CSD: size of the DRAM read cache in MiB; 0 disables it |
 | `cache_evict` | `str` | unset | bbssd, CSD: read cache eviction policy, one of clock, random, lru or arc; unset is clock |

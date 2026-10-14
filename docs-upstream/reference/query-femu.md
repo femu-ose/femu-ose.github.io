@@ -3,12 +3,12 @@ title: "QMP query-femu"
 description: "query-femu is a QMP command that reports the FTL state of a FEMU NVMe controller to the host. It needs no guest tools. The schema is in qapi/femu.json, and..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/reference/query-femu.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/query-femu.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/reference/query-femu.md) at FEMU `57a01cb3a` (2026-10-13), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/query-femu.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -86,7 +86,7 @@ A `bbssd` entry has these members:
 | Member | Content |
 | --- | --- |
 | `geometry` | `channels`, `luns-per-channel`, `planes-per-lun`, `blocks-per-plane`, `pages-per-block`, `page-size` (bytes) and `pages-per-line` |
-| `counters` | `host-write-pages`, `nand-write-pages`, `gc-write-pages`, `block-erases`, and `waf` |
+| `counters` | `host-write-pages`, `nand-write-pages`, `gc-write-pages`, `block-erases`, `pad-write-pages` (only after a pad), and `waf` |
 | `media` | the NAND bus timing: see [Media timing](#media-timing) |
 | `line-counts` | lines that are `free`, `victim`, `full`, `retired` and `spare`, and the `total`; absent with FDP |
 | `fdp` | with FDP only: see [FDP namespaces](#fdp-namespaces) |
@@ -95,7 +95,8 @@ A `bbssd` entry has these members:
 
 The page counters are the counters of [log page C0h](log-pages-and-counters.md#vendor-log-page-c0h)
 for one namespace. C0h adds them over the namespaces of the controller.
-`waf` is (`nand-write-pages` + `gc-write-pages`) / `host-write-pages` as a
+`waf` is (`nand-write-pages` + `gc-write-pages` + `pad-write-pages`) /
+`host-write-pages` as a
 real number, and it is absent until the host writes a page. C0h reports the
 same value multiplied by 1000 as an integer.
 
@@ -134,7 +135,8 @@ has these members:
 `host-bytes` counts the NAND pages that the host wrote through the
 handle, in bytes, so a 512-byte write on a 4 KiB page adds 4096.
 `media-bytes` adds the data that garbage collection moved out of the
-handle's units. Both keep their values when a controller replaces another
+handle's units, and the pad pages that closed its units
+(`pd_open_close_sec`). Both keep their values when a controller replaces another
 on the same subsystem.
 The FDP Statistics log (log page 22h) reports the sum of each counter over
 the handles. Its fields are Host Bytes with Metadata Written (HBMW) and
@@ -144,6 +146,8 @@ Media Bytes with Metadata Written (MBMW). The counters stop at the largest 64-bi
  host write via handle h  --> host-bytes[h] += n   media-bytes[h] += n
  GC moves m bytes out of
  a unit that h wrote      -->                      media-bytes[h] += m
+ p pad bytes close a unit
+ that h owns              -->                      media-bytes[h] += p
  log page 22h: HBMW = sum(host-bytes)   MBMW = sum(media-bytes)
 ```
 
@@ -195,34 +199,45 @@ fallbacks. Times are in ns.
 | Member | Content |
 | --- | --- |
 | `staged-bus` | true when the channel bus phases are charged |
-| `onfi-profile`, `onfi-mode` | true when `onfi_mode` 0 to 26 sets the bus phases; `onfi-mode` is present only then |
+| `onfi-profile`, `onfi-mode` | true when `onfi_mode` 0 to 26 or `onfi_param_page` sets the bus phases; `onfi-mode` is present only then, and with a parameter page and `onfi_mode=-1` it is the highest mode the page lists |
+| `column-cycles`, `row-cycles` | the address cycles of each command with the profile: 2 and 3, or the page's byte 101; 0 without the profile |
 | `page-transfer-ns` | one page on the bus |
 | `read-command-ns`, `program-command-ns`, `erase-command-ns` | the command and address phase of each op |
 | `copyback-read-command-ns`, `copyback-program-command-ns` | the two command phases of a copyback |
 | `status-ns` | one status read |
-| `data-out-lead-ns`, `data-out-tail-ns` | the command and preamble before the page of a read, and the postamble and turnaround after it |
+| `data-out-lead-ns`, `data-out-tail-ns` | the command and preamble before the page of a read, and the postamble and turnaround after it; with `sca`, the lead is the column select on the CA bus plus the tCCS wait, which holds no bus |
 | `plane-select-ns` | the column select before each page of a multi-plane read |
 | `data-in-edges-ns`, `program-confirm-ns` | the burst edges of the page of a program, and the confirm cycle after it |
 | `plane-read-busy-ns`, `plane-program-busy-ns`, `plane-erase-busy-ns` | tPLRBSY, tPLPBSY and tPLEBSY between the planes of a multi-plane op; they apply with the bus on or off |
 | `onfi-order` | a read reads its status before its data out, and a program or erase ends at its status |
 | `page-register-hold` | an op sends its command only when its LUN is ready, and holds the LUN until its last bus phase ends |
 | `status-per-plane` | a multi-plane program or erase reads one status per plane |
+| `sca` | `onfi_sca` is on: the command, status and confirm members are times on the separate CA bus, and the channel bus carries only data bursts. The lead and plane select are the CA column select plus the tCCS wait, which holds no bus |
+| `cache-read`, `read-cache-busy-ns`, `cache-step-ns`, `cache-select-ns` | `onfi_cache_read` is on for this namespace (never for `kvssd`); then tRCBSY, the 31h or 3Fh command, and the 78h status before it with several LUNs (0 with one LUN); every time is 0 when `cache-read` is false |
+| `data-in-gap-ns`, `data-out-edges-ns` | with `sca`, the wait from a program command to its data burst (tCDL - SCE - tSCD - tWPRE2, as tCDL ends with the write preamble), and the burst time of a read without the page; 0 otherwise |
 
 With `onfi_mode=26`, 4 KiB pages and two LUNs on a channel, `media` holds
 the values of the [ONFI 6.0 profile table](../design/nand-timing.md#onfi-60-profile-bbssd-csd-kv):
 
 ```json
 "media": {"staged-bus": true, "onfi-profile": true, "onfi-mode": 26,
-          "page-transfer-ns": 855, "read-command-ns": 275,
+          "column-cycles": 2, "row-cycles": 3, "page-transfer-ns": 855, "read-command-ns": 275,
           "program-command-ns": 562, "erase-command-ns": 225,
           "copyback-read-command-ns": 275, "copyback-program-command-ns": 275,
           "status-ns": 321, "data-out-lead-ns": 200, "data-out-tail-ns": 115,
           "plane-select-ns": 200, "data-in-edges-ns": 57,
           "program-confirm-ns": 125, "plane-read-busy-ns": 500,
           "plane-program-busy-ns": 500, "plane-erase-busy-ns": 500,
-          "onfi-order": true, "page-register-hold": true,
+          "data-in-gap-ns": 0, "data-out-edges-ns": 0, "sca": false,
+          "cache-read": false, "read-cache-busy-ns": 0, "cache-step-ns": 0,
+          "cache-select-ns": 0, "onfi-order": true, "page-register-hold": true,
           "status-per-plane": true}
 ```
+
+With `onfi_sca=1` on the same device, the CA bus lengths replace the
+command members: `read-command-ns` 184, `program-command-ns` 84,
+`status-ns` 277, `data-out-lead-ns` 84 and `data-out-tail-ns` 0. Then
+`data-in-gap-ns` is 313 and `data-out-edges-ns` is 168.
 
 A default `bbssd` device has no bus phases: `staged-bus` and every rule
 are false, and every time is 0. With `cmd_addr_lat=1000`, the five
@@ -253,13 +268,17 @@ command takes comes from the model instead.
                "page-size": 4096, "pages-per-line": 16384},
   "counters": {"host-write-pages": 20480, "nand-write-pages": 20480,
                "gc-write-pages": 0, "block-erases": 0, "waf": 1.0},
-  "media": {"staged-bus": false, "onfi-profile": false, "page-transfer-ns": 0,
+  "media": {"staged-bus": false, "onfi-profile": false, "column-cycles": 0,
+            "row-cycles": 0, "page-transfer-ns": 0,
             "read-command-ns": 0, "program-command-ns": 0, "erase-command-ns": 0,
             "copyback-read-command-ns": 0, "copyback-program-command-ns": 0,
             "status-ns": 0, "data-out-lead-ns": 0, "data-out-tail-ns": 0,
             "plane-select-ns": 0, "data-in-edges-ns": 0, "program-confirm-ns": 0,
             "plane-read-busy-ns": 0, "plane-program-busy-ns": 0,
-            "plane-erase-busy-ns": 0, "onfi-order": false,
+            "plane-erase-busy-ns": 0, "data-in-gap-ns": 0,
+            "data-out-edges-ns": 0, "sca": false,
+            "cache-read": false, "read-cache-busy-ns": 0, "cache-step-ns": 0,
+            "cache-select-ns": 0, "onfi-order": false,
             "page-register-hold": false, "status-per-plane": false},
   "line-counts": {"free": 254, "victim": 0, "full": 1, "retired": 0, "spare": 0,
                   "total": 256},
@@ -286,13 +305,17 @@ Each handle has one unit open:
                "page-size": 4096, "pages-per-line": 16},
   "counters": {"host-write-pages": 0, "nand-write-pages": 0,
                "gc-write-pages": 0, "block-erases": 0},
-  "media": {"staged-bus": false, "onfi-profile": false, "page-transfer-ns": 0,
+  "media": {"staged-bus": false, "onfi-profile": false, "column-cycles": 0,
+            "row-cycles": 0, "page-transfer-ns": 0,
             "read-command-ns": 0, "program-command-ns": 0, "erase-command-ns": 0,
             "copyback-read-command-ns": 0, "copyback-program-command-ns": 0,
             "status-ns": 0, "data-out-lead-ns": 0, "data-out-tail-ns": 0,
             "plane-select-ns": 0, "data-in-edges-ns": 0, "program-confirm-ns": 0,
             "plane-read-busy-ns": 0, "plane-program-busy-ns": 0,
-            "plane-erase-busy-ns": 0, "onfi-order": false,
+            "plane-erase-busy-ns": 0, "data-in-gap-ns": 0,
+            "data-out-edges-ns": 0, "sca": false,
+            "cache-read": false, "read-cache-busy-ns": 0, "cache-step-ns": 0,
+            "cache-select-ns": 0, "onfi-order": false,
             "page-register-hold": false, "status-per-plane": false},
   "fdp": {"reclaim-groups": 1, "units-per-group": 25, "pages-per-unit": 16,
           "handles": [{"id": 0, "type": "persistently-isolated",
@@ -324,13 +347,17 @@ A zoned namespace with one zone written and one zone finished:
   "zone-counts": {"empty": 14, "implicitly-open": 1, "explicitly-open": 0,
                   "closed": 0, "read-only": 0, "full": 1, "offline": 0,
                   "total": 16},
-  "media": {"staged-bus": false, "onfi-profile": false, "page-transfer-ns": 0,
+  "media": {"staged-bus": false, "onfi-profile": false, "column-cycles": 0,
+            "row-cycles": 0, "page-transfer-ns": 0,
             "read-command-ns": 0, "program-command-ns": 0, "erase-command-ns": 0,
             "copyback-read-command-ns": 0, "copyback-program-command-ns": 0,
             "status-ns": 0, "data-out-lead-ns": 0, "data-out-tail-ns": 0,
             "plane-select-ns": 0, "data-in-edges-ns": 0, "program-confirm-ns": 0,
             "plane-read-busy-ns": 0, "plane-program-busy-ns": 0,
-            "plane-erase-busy-ns": 0, "onfi-order": false,
+            "plane-erase-busy-ns": 0, "data-in-gap-ns": 0,
+            "data-out-edges-ns": 0, "sca": false,
+            "cache-read": false, "read-cache-busy-ns": 0, "cache-step-ns": 0,
+            "cache-select-ns": 0, "onfi-order": false,
             "page-register-hold": false, "status-per-plane": false},
   "zones": [{"index": 0, "type": "sequential", "state": "full",
              "start-lba": 0, "capacity": 131072, "zrwa": false},

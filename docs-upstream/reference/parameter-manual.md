@@ -3,12 +3,12 @@ title: "Parameter manual"
 description: "This manual explains how to configure an emulated device: the ways a parameter reaches FEMU, then every group of parameters by component, with what each one..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/reference/parameter-manual.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/parameter-manual.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/reference/parameter-manual.md) at FEMU `57a01cb3a` (2026-10-13), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/parameter-manual.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -332,6 +332,10 @@ Reference: [NAND timing](properties.md#nand-timing-bbssd-csd-kv). Design:
 | `onfi_mts` | MT/s | 0 to 100000 | with `onfi_mode`, the page rate instead of the mode's; 0 uses the mode |
 | `onfi_spare_bytes` | bytes | >= 0; the page on the bus must be even | with `onfi_mode`, spare bytes moved with each page |
 | `onfi_tccs_ns` | ns | >= 0 | with `onfi_mode`, tCCS before a data out on a shared channel; 0 charges nothing |
+| `onfi_sca` | 0 or 1 | 0 (default) | with the ONFI profile, 1 selects the SCA protocol: commands, addresses and status use a separate CA bus |
+| `onfi_cache_read` | 0 or 1 | 0 (default) | with the ONFI profile, 1 reads the pages of one read command on one LUN as a read cache sequence; refused with `mp_read`, `mapping=dftl` and `read_cache_mb` |
+| `trcbsy` | ns | >= 0 | with `onfi_cache_read`, tRCBSY of each copy; 0 takes 3000 (Table 4-30 typical); without it, a value warns |
+| `onfi_param_page` | path | an ONFI 6.0 parameter page image | turns the profile on; gives the mode when `onfi_mode` is -1, and the spare bytes and address cycles; refused when the page does not match the device |
 | `tplebsy` | ns | >= 0 | busy time between the planes of a multi-plane erase (GC with `pls_per_lun` > 1) |
 | `pe_suspend`, `tsusp_ns` | flag, ns | `tsusp_ns` >= 0 | let a read suspend a program or erase on its LUN, at a cost of `tsusp_ns` |
 | `trim_lat_ns` | ns per range | >= 0; bbssd and CSD, also under FDP | time charged per Dataset Management deallocate range |
@@ -360,7 +364,7 @@ Design: [the BlackBox FTL](../design/ftl.md).
 | `read_cache_mb` | MiB | 0 disables | DRAM read cache; a hit costs DRAM time instead of a NAND read |
 | `cache_evict` | name | `clock`, `random`, `lru`, `arc` | read cache eviction policy |
 | `hot_cold_sep` | bool | acts with `page` or `dftl`; ignored under `hybrid` and `fast`, which still reserve its line; refused with FDP | write overwrites of mapped pages to separate hot lines |
-| `buffer_size` | NAND pages, not bytes | >= 0; refused with FDP | DRAM write buffer; 0 programs every write directly |
+| `buffer_size` | NAND pages, not bytes | >= 0; under FDP each page keeps its placement handle | DRAM write buffer; 0 programs every write directly |
 | `buffer_thres_pcent` | percent | 1 to 100 when `buffer_size` > 0 | fill level at which buffered pages are written to NAND |
 | `debug_ftl` | bool | | print FTL invariant violations and log-block merge counts |
 
@@ -385,7 +389,7 @@ Design: [garbage collection](../design/ftl.md#garbage-collection).
 | --- | --- | --- | --- |
 | `gc_thres_pcent` | percent of lines in use | 1 to 100 | background GC starts; KV: share of the NAND usable for values |
 | `gc_thres_pcent_high` | percent of lines in use | `gc_thres_pcent` to 100 | forced GC inside writes; also sizes the reserve |
-| `gc_policy` | name | `greedy`, `random`, `cost-benefit`, `fifo`, `d-choice`; without FDP | victim line policy |
+| `gc_policy` | name | `greedy`, `random`, `cost-benefit`, `fifo`, `d-choice`; under FDP a name other than `greedy` needs `gc_strategy=0` | victim line policy; under FDP the reclaim unit policy |
 | `gc_strategy` | number | 0 greedy, 1 cost-benefit, 2 random, 4 per-handle; FDP only | victim reclaim unit policy |
 | `fdp_trim_erase_all` | flag | FDP only | a deallocate resets every reclaim unit instead of the given ranges |
 
@@ -414,6 +418,8 @@ Applies to bbssd, CSD and KV unless noted. Reference:
 | `pd_edge_tiers` | ECC tiers | 0 to 4 | program disturb tiers for a read of a `pd_edge_wls` wordline |
 | `pd_open_tiers` | ECC tiers | 0 to 4; needs `ecc_step_ns` | program disturb tiers for a read of a part-programmed block |
 | `pd_open_age` | on/off | off (default); needs `ecc_step_ns` and `ecc_retention_sec` | data age counts from the first program of the line |
+| `pd_open_read_limit` | reads | 0 disables; bbssd and CSD, also FDP; not above a non-zero `read_reclaim_limit` | a part-programmed block read this often gets its line or unit rewritten on a following Write; a frontier line is sealed first, a frontier unit retired with its free pages unprogrammed |
+| `pd_open_close_sec` | seconds of device time (`age_scale`) | 0 disables; bbssd and CSD, also FDP | a frontier line or unit open this long after its first program is padded and closed at the next request; under FDP the handle gets a fresh unit and event 1h |
 | `pe_cycles_rated` | P/E cycles | 0 takes the rating of `nand_cell_type` | denominator of SMART Percentage Used |
 | `nand_bad_blocks` | blocks | capped at the block count | blocks bad from the start; lowers SMART Available Spare |
 | `blk_pe_limit` | P/E cycles | 0 disables; bbssd and CSD, one namespace, page or dftl mapping, one plane per LUN, no buffer, Streams, hot/cold separation, FDP or `nand_bad_blocks` | erases a block survives; its line then retires while enough lines remain, else the block stays in service and sets SMART critical warning bit 2 |
@@ -514,11 +520,12 @@ Interactions:
 
 - The subsystem takes one controller with one namespace, and must come
   first on the command line.
-- The controller's `gc_strategy` and `fdp_trim_erase_all` apply;
-  `gc_policy` other than `greedy`, `mapping` other than `page`,
-  `buffer_size`, `hot_cold_sep`, `read_reclaim_limit`,
-  `retention_limit_sec`, `ecc_retention_sec`, `trim_lat_ns`, `meta`,
-  `streams` and `ns_mgmt` are refused.
+- The controller's `gc_strategy`, `gc_policy`, `fdp_trim_erase_all`,
+  `read_reclaim_limit`, `retention_limit_sec`, `ecc_retention_sec` and
+  `trim_lat_ns` apply. A `gc_policy` other than `greedy` together with a
+  `gc_strategy` other than 0, `mapping=hybrid` or `fast`,
+  `hot_cold_sep`, `meta`, `streams` and `ns_mgmt` are
+  refused.
 - KV is refused under FDP; NoSSD, ZNS and OCSSD report FDP but ignore it
   for placement.
 
@@ -616,7 +623,7 @@ to anything but its default prints a warning at realize.
 
 | Device | Properties |
 | --- | --- |
-| `femu` | `serial`, `ms`, `ms_max`, `dlfeat`, `trcbsy`, `nr_thread`, `time_slice`, `context_switch_time` |
+| `femu` | `serial`, `ms`, `ms_max`, `dlfeat`, `nr_thread`, `time_slice`, `context_switch_time` |
 
 `nr_thread` is still refused at 0 by CSD. Identify Controller reports a
 serial number FEMU generates, whatever `serial` says.

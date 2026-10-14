@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/design/ftl.md) at FEMU `57a01cb3a` (2026-10-13), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/design/ftl.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -285,9 +285,10 @@ flat `maptbl` stays the source of truth, and `cmt_touch()` in
 With `mapping_cache_mb` left at 0, DFTL uses 4 MiB, which holds 1024
 translation pages and so covers 2 GiB of logical space on a 4 KiB page. The
 translation-page traffic occupies the LUN timelines like any other NAND
-operation but is not counted as host or GC writes. Host reads, host writes and
-buffer write-backs are charged; GC relocation, deallocate, Write Zeroes and
-the FDP write path update `maptbl` without a CMT access.
+operation but is not counted as host or GC writes. Host reads, host writes
+and buffer write-backs are charged, and under FDP placed writes and Write
+Zeroes without Deallocate too. GC relocation, deallocate and, without FDP,
+Write Zeroes update `maptbl` without a CMT access.
 
 ### Log-block mapping: BAST (`mapping=hybrid`) and FAST (`mapping=fast`)
 
@@ -351,7 +352,7 @@ the merge, and the relocated pages count in the write amplification factor.
 | `hybrid` | BAST log blocks | switch and full merges per log | LOG | C0h bytes 88 to 111 |
 | `fast` | FAST log blocks | bounded random merges, sequential switch merges | LOG | none exported |
 
-Streams need `page` or `dftl`. FDP supports only `page`.
+Streams and FDP need `page` or `dftl`.
 
 ## Lines, superblocks and write pointers
 
@@ -714,7 +715,7 @@ forced pass or the budget had to finish at 240.
 With Flexible Data Placement the FTL places data in reclaim units, one line
 each, through per-handle write pointers, and collects reclaim units instead
 of lines (`do_gc_fdp_style()` in `hw/femu/bbssd/ftl-fdp.c`). `gc_strategy`
-picks that victim policy; `gc_policy` and the other FTL knobs listed under
+picks that victim policy, or `gc_policy` by name; the FTL knobs listed under
 [Interactions](#interactions-and-refusals) are refused. The [FDP chapter](fdp.md)
 and the [FDP guide](../features/fdp.md) describe
 it.
@@ -734,7 +735,10 @@ The write buffer models DRAM in front of the NAND. It holds logical page
 numbers, not data: a write it accepts costs a DRAM access, and the program
 is charged later to whatever forces the page out. Repeated writes to a
 buffered page cost one program. The code is in
-`hw/femu/bbssd/ftl-datapath.c`.
+`hw/femu/bbssd/ftl-datapath.c`. Under FDP each held page also keeps the
+placement handle of its last write, and its write-back goes to that
+handle's reclaim unit (`fdp_buffer_destage()` in
+`hw/femu/bbssd/ftl-fdp.c`; see the [FDP chapter](fdp.md#parameters)).
 
 ```text
   host write, pages P..Q
@@ -1035,7 +1039,7 @@ ratio is the hit rate. Telemetry log 07h captures the same 512 bytes.
 | Available Spare | `ssd_available_spare()`, lowest namespace; below 20 sets the spare critical warning |
 | Media and Data Integrity Errors | injected read and write faults (and ZNS write faults) |
 | Data units, host commands | the pollers' host I/O counters, not the FTL |
-| Endurance Group Media Units Written | (NAND + GC write pages) x page size, in units of 10^9 bytes rounded up; needs a `femu-subsys` |
+| Endurance Group Media Units Written | (NAND + GC + pad write pages) x page size, in units of 10^9 bytes rounded up; needs a `femu-subsys` |
 
 ### Counters kept but not exported
 
@@ -1071,15 +1075,15 @@ does inside the FTL and what it interacts with.
 | --- | --- | --- |
 | `gc_thres_pcent` | background GC watermark | must not exceed `gc_thres_pcent_high` |
 | `gc_thres_pcent_high` | forced GC watermark; sizes the reserve | lower values cost exposed capacity |
-| `gc_policy` | line victim selection | refused with FDP |
+| `gc_policy` | line victim selection | under FDP, the reclaim unit strategy; needs `gc_strategy=0` |
 | `gc_seed` | seed for the `random` and `d-choice` policies and FDP random reclaim | no effect on the other policies |
 | `gc_pace` | paced collection: copies the victim in step with host writes ([paced collection](#paced-collection-gc_pace)) | replaces the background pass; refused where `blk_pe_limit` is |
-| `gc_strategy` | reclaim unit victim selection | FDP only |
-| `mapping` | L2P scheme | `hybrid` and `fast` reserve a line and refuse Streams; FDP needs `page` |
+| `gc_strategy` | reclaim unit victim selection | FDP only; a `gc_policy` other than `greedy` replaces it |
+| `mapping` | L2P scheme | `hybrid` and `fast` reserve a line and refuse Streams and FDP |
 | `mapping_cache_mb` | DFTL cache size | used only with `mapping=dftl` |
 | `read_cache_mb`, `cache_evict` | read cache size and eviction | hit time is `pg_rd_lat` / 16 at realize; 0xEF does not change it |
 | `hot_cold_sep` | hot write pointer for overwrites | page or DFTL only; reserves a line; refused with FDP |
-| `buffer_size`, `buffer_thres_pcent` | write buffer capacity in pages, and the write-back watermark | `vwc`, `power_loss`; refused with FDP |
+| `buffer_size`, `buffer_thres_pcent` | write buffer capacity in pages, and the write-back watermark | `vwc`, `power_loss`; under FDP each page goes to its handle's unit |
 | `fdp_trim_erase_all` | FDP deallocate resets every reclaim unit | FDP only |
 | `debug_ftl` | prints invalid page transitions and merge counts | none |
 
@@ -1096,6 +1100,7 @@ does inside the FTL and what it interacts with.
 | `blk_pe_limit`, `blk_pe_spread`, `blk_pe_seed` | per-block erase limit; after a line erase that takes a block to it, the line retires while usable lines stay at or above the namespace's lines + forced collection lines + 2 and an open line and a free line remain; otherwise the block stays in service (overworn) and sets SMART critical warning bit 2 | refused with the settings the parameter manual lists |
 | `ecc_step_ns`, `ecc_retention_sec` | read time grows with erase count and line age | under FDP, a line's age counts from the retirement of its reclaim unit |
 | `pd_edge_wls`, `pd_edge_tiers`, `pd_open_tiers`, `pd_open_age` | program disturb: extra ECC tiers for bottom wordlines and part-programmed blocks; age from the first program | chosen tier values; `nand_block.wp` counts programs since the erase; refused with ZNS, OCSSD, NoSSD, `cxl_ssd` and shared namespaces ([NAND timing](nand-timing.md#program-disturb-terms)) |
+| `pd_open_read_limit`, `pd_open_close_sec` | program disturb actions: a lower read limit for part-programmed blocks, which takes the line out of its write frontier and rewrites it; pad and close a frontier left open too long | bbssd and CSD, also FDP units; checked at each request, served on the next Write; pads count in WAF and media bytes; refused with KV, `mapping=fast` or `hybrid` and the phase 1 refusals ([NAND timing](nand-timing.md#program-disturb-actions)) |
 | `err_read_unc_ppm`, `err_write_fail_ppm` | fixed-period command failures | counted in SMART media errors |
 | `read_reclaim_limit` | read count that queues a line for rewrite | needs host writes to act; under FDP it refreshes the whole reclaim unit ([FDP](fdp.md)) |
 | `wl_spread` | static wear levelling (`do_wear_level()`): at a fresh data line, swap it for the most worn free line and move the least worn full line into it | no write pointer of its own; credit of one per host page programmed, four lines per move; the earlier attempts are described in the function comment |
@@ -1122,9 +1127,11 @@ layer.
 
 ### Interactions and refusals
 
-- **FDP** refuses `buffer_size`, `hot_cold_sep`, a `mapping` other than
-  `page` and a `gc_policy` other than `greedy`, with
-  `FEMU bbssd: <name> has no effect under FDP`.
+- **FDP** refuses a `gc_policy` other than `greedy` together with a
+  `gc_strategy` other than 0. It
+  refuses `hot_cold_sep` and the `hybrid` and `fast` mappings with a
+  message that says why: they write through pointers of their own, past
+  the unit the placement handle names.
 - **Unknown names** for `mapping`, `gc_policy` and `cache_evict` are refused
   at realize.
 - **Watermarks** outside [1, 100], or a high watermark below the low one, are

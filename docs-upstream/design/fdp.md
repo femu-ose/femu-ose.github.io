@@ -3,12 +3,12 @@ title: "FDP: Flexible Data Placement"
 description: "This chapter describes how FEMU implements NVMe Flexible Data Placement (FDP): how the subsystem builds reclaim groups, reclaim units and reclaim unit..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/design/fdp.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/design/fdp.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/design/fdp.md) at FEMU `57a01cb3a` (2026-10-13), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/design/fdp.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -224,6 +224,26 @@ per placement handle and reclaim group: PID, RUHID, EARUTR (always 0) and
 the RUAMW of the handle's current unit, or 0 while the handle has none
 because its last unit filled with no free unit to follow it.
 
+RUAMW is the room left in a unit, in logical blocks. Each unit counts the
+bytes programmed into it since its erase, from every path:
+
+```text
+ host program (direct, FUA, Write Zeroes) --+
+ buffer write-back                         --+--> ru->prog_bytes += page size
+ relocation (collection, refresh, copyback) -+         |
+ pad (pd_open_close_sec)                   --+         v
+                          RUAMW = (RU size - prog_bytes) >> LBA size bits
+ unit freed (erase)  --> prog_bytes = 0, RUAMW = a full unit
+ Format              --> RUAMW from prog_bytes again, in the new LBA size
+```
+
+Collection writes into the active unit of the last handle of an
+Initially Isolated configuration, so that handle's RUAMW drops for the
+moved pages too. The remaining bytes round down once, so a page smaller
+than a block counts the same on every path. `x-fdp-check` (a test hook)
+counts a unit whose bytes differ from its valid and invalid pages, or
+whose RUAMW differs from the room they leave.
+
 ## Garbage collection
 
 ```text
@@ -263,15 +283,18 @@ because its last unit filled with no free unit to follow it.
 
 ### Victim selection
 
-`gc_strategy` selects the policy. The BlackBox `gc_policy` property does
-not apply under FDP and only `greedy` is accepted with it.
+`gc_strategy` selects the policy, or `gc_policy` by name. A `gc_policy`
+other than `greedy` needs `gc_strategy=0`; unset or `greedy`, it leaves
+the choice to `gc_strategy`.
 
-| `gc_strategy` | Policy |
-| --- | --- |
-| 0 (default) | greedy: the unit with the fewest valid pages |
-| 1 | cost-benefit: an empty unit first, otherwise the largest `(1 - u) * age / u`, with `u` the valid pages over all the unit's pages (pages a part-written unit never wrote count as freed) and `age` the time since a page in the unit was last invalidated, computed at selection time; a unit retired with no page invalidated is aged from its retirement |
-| 2 | random among the victims |
-| 4 | per handle: the unit with the fewest valid pages among the per-handle queues of Persistently Isolated handles, falling back to greedy |
+| `gc_strategy` | `gc_policy` | Policy |
+| --- | --- | --- |
+| 0 (default) | `greedy` | greedy: the unit with the fewest valid pages |
+| 1 | `cost-benefit` | cost-benefit: an empty unit first, otherwise the largest `(1 - u) * age / u`, with `u` the valid pages over all the unit's pages (pages a part-written unit never wrote count as freed) and `age` the time since a page in the unit was last invalidated, computed at selection time; a unit retired with no page invalidated is aged from its retirement |
+| 2 | `random` | random among the victims |
+| - | `fifo` | the unit retired first; an empty unit goes before it, and a background pass takes the oldest unit it accepts |
+| - | `d-choice` | the fewest valid pages among 4 random draws from the victims, with replacement; the first of equal counts wins; an empty unit goes first |
+| 4 | - | per handle: the unit with the fewest valid pages among the per-handle queues of Persistently Isolated handles, falling back to greedy |
 
 ### Where relocated data goes
 
@@ -363,7 +386,7 @@ in 22h.
 | Counter | Grows by | Where |
 | --- | --- | --- |
 | HBMW (host bytes with metadata written) | bytes a Write, Copy or Write Zeroes without Deallocate actually programmed | `fdp_count_write()` |
-| MBMW (media bytes with metadata written) | the same host bytes, plus bytes relocated by GC | `fdp_count_write()`, `do_gc_fdp_style()` |
+| MBMW (media bytes with metadata written) | the same host bytes, plus bytes relocated by GC, plus pad bytes (`pd_open_close_sec`) | `fdp_count_write()`, `do_gc_fdp_style()`, `fdp_pd_leave_ru()` |
 | MBE (media bytes erased) | bytes of every block erased by GC | `do_gc_fdp_style()` |
 
 The ratio MBMW / HBMW is the write amplification of the endurance group.
@@ -383,7 +406,9 @@ Each event carries the Timestamp feature's current value.
 | 3h Invalid Placement Identifier | host | a placed write (Write, Copy, Write Zeroes) on a bbssd namespace has DTYPE 2 and a DSPEC that is not a valid PID; checked against the event filter of placement handle 0; other modes never raise it |
 | 80h Media Reallocated | controller | a collection or refresh pass moved pages of a unit of the Initially Isolated handle; one event per pass, split around each 81h the pass causes, also for a pass that stops part way; checked against that handle's filter |
 | 81h Implicitly Modified Reclaim Unit Handle | controller | a move, not the host, gave the Initially Isolated handle a new unit: the moves filled its active unit and a free unit follows, or the pass takes a unit for a handle left with none; checked against that handle's filter |
-| 1h, 2h | | accepted by the event filter, never generated |
+| 1h Reclaim Unit Active Time Limit Exceeded | host | `pd_open_close_sec`: the controller padded a handle's active unit and gave the handle a fresh one; LV, NSIDV and PIV as for 81h |
+| 81h, program disturb | controller | `pd_open_read_limit`: the controller took a handle's active unit away to refresh it; this one also for a Persistently Isolated handle |
+| 2h | | accepted by the event filter, never generated |
 
 A Persistently Isolated handle moves its data into a collection unit that
 the host never sees, so its moves log no event. A host write that fills a
@@ -464,9 +489,12 @@ of the property reference; the controller-side ones are under
 
 Refused under FDP on a bbssd controller:
 
-- `buffer_size` and `hot_cold_sep`;
-- a `mapping` other than `page`;
-- a `gc_policy` other than `greedy`.
+- `hot_cold_sep`: the placement handle of a write names its unit, and the
+  hot write pointer writes past it;
+- `mapping=hybrid` and `mapping=fast`, whose log and data lines are not
+  FDP-aware;
+- a `gc_policy` other than `greedy` together with a `gc_strategy` other
+  than 0.
 
 The FTL applies `trim_lat_ns` and `ecc_retention_sec` as without FDP. A unit's lines
 take their close time when the unit retires, and lose it when collection
@@ -488,6 +516,68 @@ its valid pages to where collection would move them, then erases the unit.
 
 The refresh logs the same FDP events as a collection pass (see
 [Events](#events)).
+
+`buffer_size` puts the write buffer in front of placed writes. The buffer
+models time only: it holds page numbers, and the backend holds the data.
+Each held page keeps the handle and group of its last write. A write-back
+programs each page into the active unit of its own handle, so a unit takes
+only the pages of its handle.
+
+```
+ Write or Copy, no FUA, cache on
+   --> each page: held?  no, and buffer at the watermark
+         --> write back the oldest (buffer_size - watermark) pages
+         --> still at the watermark: Capacity Exceeded
+   --> entry {lpn, handle, group, written 512-byte pieces} := this write
+   --> HBMW += pages x page size; C0h host pages, 72 and 80 count
+ write-back of entry e
+   --> collect for e.handle; e.handle has no unit and none is free: stop
+   --> program into e.handle's active unit, RUAMW of that unit drops
+   --> MBMW of the group and of e.handle += page size; e leaves the buffer
+```
+
+The FTL maps whole pages. The handle of the last write to a page takes
+the whole page, with or without the buffer, also when two handles wrote
+different blocks of it. The other commands:
+
+| Command | Effect on held pages |
+| --- | --- |
+| Flush | writes every held page back; Capacity Exceeded if one finds no room, and those stay held |
+| Write with FUA, Write Zeroes without Deallocate | program at once; a held copy of a page goes when this command programs that page |
+| Volatile Write Cache off (feature 06h) | writes every held page back first; if one finds no room, the command fails and the cache stays on |
+| DSM Deallocate, Write Zeroes with Deallocate, Format | drop the held copy, which never reaches the media |
+| I/O Management Send, RUH Update | writes every held page back first, so the pages land in the units the handles named before the update; if one finds no room, no handle moves and the command returns Capacity Exceeded |
+| Read | a held page is served from the buffer |
+
+HBMW counts pages a write accepts, and MBMW pages that reach the media,
+so MBMW can be below HBMW when the buffer absorbs rewrites. RUAMW drops
+when a page reaches its unit, for written back and direct pages alike
+(see RUAMW above). The
+admin commands above charge no modelled time for their write-back.
+
+The program disturb actions work on units too
+([NAND timing](nand-timing.md#program-disturb-actions)). A unit today is one
+line, so its open time is the open time of that line.
+
+```
+ pd_open_read_limit: unit U queued for a part-programmed block
+   next write --> U a handle's curr_ru --> fresh unit to the handle first,
+                                           U retired with its free pages
+                                           unprogrammed; 81h (handle)
+              --> U a handle's gc_ru   --> U retired, gc_ru cleared; no event
+              --> then the refresh above; C0h pd_open_reclaims + 1
+ pd_open_close_sec: curr_ru or gc_ru open past the limit, at a request
+   --> its free pages padded, U retired, MBMW + pad bytes
+   --> curr_ru: fresh unit to the handle; host event 1h (handle)
+   --> ERUTL stays 0: the limit counts from the first program
+```
+
+The fresh unit is taken before anything changes. With no free unit to
+spare, or a group at the high watermark, nothing changes. The handle's
+`curr_ru`, `rus[rg]` and the unit the host is shown change together. The
+configuration descriptor keeps ERUTL at 0 (not reported). ERUTL times a
+unit from when the handle takes it, but the limit here counts from the
+first program, so an empty unit is never padded.
 Collection that frees a queued unit first drops the request, and the
 counters do not move. A collection of a queued unit does not use copyback.
 
@@ -515,8 +605,8 @@ last:
 
 | Check | What it covers |
 | --- | --- |
-| qtest cases in `hw/femu/tests/qtest/femu-test.c` | `fdp-events`, `fdp-features`, `fdp-report-length`, `fdp-ruh-usage`, `fdp-write-zeroes`, `fdp-write-zeroes-placed`, `fdp-ruh-update`, `fdp-ruh-update-full`, `fdp-background-gc`, `fdp-cb-unwritten-age`, `fdp-cb-utilization`, `fdp-cb-background`, `wide-lba-fdp`, `io-fuzz-fdp`, `copy-fdp`, `log-contents-fdp`, `ns-mgmt-unavailable-fdp`, `fdp-csd-knobs`, `fdp-csd-runs`, `fdp-gc-strategy-refused`, `fdp-events-gc-pi`, `fdp-events-gc-ii`, `fdp-events-gc-ii-cb`, `fdp-events-gc-ii-4k`, `fdp-events-gc-ii-part`, `fdp-events-gc-ii-rot`, `fdp-events-gc-ii-mask`, `fdp-events-gc-ii-no80`, `fdp-events-gc-ii-no81`, `fdp-events-gc-ii-other`, `fdp-events-gc-ii-empty`, `fdp-events-rf-pi`, `fdp-events-rf-ii`, `fdp-events-rf-ii-part` |
-| Exact traces and victim-order digests (qtest-only `x-ftl-trace`) | `ftl-trace-fdp` and `ftl-trace-fdp-reread` (greedy), `ftl-trace-fdp-random` (`gc_strategy=2`), `ftl-trace-fdp-noisy` and `ftl-trace-fdp-noisy-ii` (`gc_strategy=4` on two handles, the second one Initially Isolated in `-ii`), `ftl-trace-fdp-trim-erase-all` (`fdp_trim_erase_all=1` while both kinds of heap hold victims; afterwards the mapping holds exactly the pages written since) |
+| qtest cases in `hw/femu/tests/qtest/femu-test.c` | `fdp-events`, `fdp-features`, `fdp-report-length`, `fdp-ruh-usage`, `fdp-write-zeroes`, `fdp-write-zeroes-placed`, `fdp-ruh-update`, `fdp-ruh-update-full`, `fdp-background-gc`, `fdp-cb-unwritten-age`, `fdp-cb-utilization`, `fdp-cb-background`, `wide-lba-fdp`, `io-fuzz-fdp`, `copy-fdp`, `log-contents-fdp`, `ns-mgmt-unavailable-fdp`, `fdp-csd-knobs`, `fdp-knobs-refused`, `fdp-policy-fifo`, `fdp-policy-fifo-greedy`, `fdp-policy-fifo-empty`, `fdp-policy-fifo-csd`, `fdp-policy-fifo-background`, `fdp-policy-cb`, `fdp-policy-cb-strategy`, `fdp-policy-cb-greedy`, `fdp-policy-refused`, `fdp-dftl`, `fdp-dftl-page`, `fdp-dftl-csd`, `fdp-buffer-isolation`, `fdp-buffer-isolation-csd`, `fdp-buffer-rehandle`, `fdp-buffer-dealloc`, `fdp-buffer-fua`, `fdp-buffer-vwc`, `fdp-buffer-update`, `fdp-buffer-full`, `fdp-buffer-copy`, `fdp-events-gc-ii-part-buffer`, `fdp-events-gc-ii-mix-buffer`, `fdp-events-gc-ii-fua-buffer`, `fdp-events-gc-ii-redo-buffer`, `fdp-csd-runs`, `fdp-gc-strategy-refused`, `fdp-events-gc-pi`, `fdp-events-gc-ii`, `fdp-events-gc-ii-cb`, `fdp-events-gc-ii-4k`, `fdp-events-gc-ii-part`, `fdp-events-gc-ii-rot`, `fdp-events-gc-ii-mask`, `fdp-events-gc-ii-no80`, `fdp-events-gc-ii-no81`, `fdp-events-gc-ii-other`, `fdp-events-gc-ii-empty`, `fdp-events-rf-pi`, `fdp-events-rf-ii`, `fdp-events-rf-ii-part` |
+| Exact traces and victim-order digests (qtest-only `x-ftl-trace`) | `ftl-trace-fdp` and `ftl-trace-fdp-reread` (greedy), `ftl-trace-fdp-random` (`gc_strategy=2`), `ftl-trace-fdp-policy-random` (`gc_policy=random`, the same trace), `ftl-trace-fdp-fifo` and `ftl-trace-fdp-d-choice` (`gc_policy`), `ftl-trace-fdp-knobs-off` (`gc_policy=greedy`, `mapping=page` and `buffer_size=0` given: the `ftl-trace-fdp` trace), `ftl-trace-fdp-noisy` and `ftl-trace-fdp-noisy-ii` (`gc_strategy=4` on two handles, the second one Initially Isolated in `-ii`), `ftl-trace-fdp-trim-erase-all` (`fdp_trim_erase_all=1` while both kinds of heap hold victims; afterwards the mapping holds exactly the pages written since) |
 | Documentation examples | each tagged FDP example starts under qtest and moves one block |
 | `hw/femu/scripts/fdp-test-nvme-admin.sh` | in-guest nvme-cli checks against the `run-blackbox-fdp.sh` configuration; manual |
 | `hw/femu/tests/unit/test-pqueue.c` | the priority queue the victim queues are built on |
@@ -532,8 +622,9 @@ last:
   the handle's RUAMW and records event 0h if the unit still had room; no
   data is placed. CSD uses the bbssd path, with the same refused knobs and
   RUNS. KV is refused.
-- Page mapping only, no write buffer, no read reclaim or retention model
-  under FDP.
+- Page or DFTL mapping only.
+- The CSD NVM-to-AFDM transfer reads the mapping only, without FDP as
+  well: a page the write buffer holds and never wrote back costs no read.
 - EARUTR is always 0; there is no active reclaim unit time limit, so event
   1h is never raised.
 - The 128-bit statistics carry only their low 64 bits.

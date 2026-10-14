@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/CHANGELOG.md) at FEMU `57a01cb3a` (2026-10-13), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/CHANGELOG.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -56,6 +56,10 @@ listed one by one.
 - FDP placement features can be read and enabled by a Linux host, and the host sees its active reclaim unit and remaining space ([8f00c7117](https://github.com/MoatLab/FEMU/commit/8f00c7117), [9a66fe52d](https://github.com/MoatLab/FEMU/commit/9a66fe52d)).
 - FDP accepts `trim_lat_ns` and `ecc_retention_sec`. A deallocate pays the same time per range as without FDP. The age of a reclaim unit counts from its retirement and starts again when collection frees it.
 - FDP accepts `read_reclaim_limit` and `retention_limit_sec`. A read queues the reclaim unit of its line. The next write moves the valid pages of that unit to where collection would move them. The moves count in MBMW and in the C0h refresh counters.
+- FDP accepts `gc_policy`. Each name picks the reclaim unit version of its policy: `cost-benefit` and `random` are `gc_strategy` 1 and 2, `fifo` takes the unit retired first, and `d-choice` the fewest valid pages of 4 random units. A name other than `greedy` needs `gc_strategy=0`.
+- FDP accepts `mapping=dftl`. A placed write charges the translation page of each page it programs, as a write without FDP does.
+- FDP accepts `buffer_size`. Each held page keeps the placement handle of its last write and goes to that handle's reclaim unit when it is written back. RUH Update, Flush and disabling the volatile write cache write the buffer back first, and fail with Capacity Exceeded if a page finds no room.
+- FDP still refuses `hot_cold_sep` and the `hybrid` and `fast` mappings, and the message now says why: they write host data through pointers of their own, past the unit the placement handle names.
 - Computational Storage Drive mode (`femu_mode=4`) with program load and execute commands, routed through the bbssd FTL ([eb01bb73b](https://github.com/MoatLab/FEMU/commit/eb01bb73b), [50b65ca91](https://github.com/MoatLab/FEMU/commit/50b65ca91)).
 - CSD `nr_cu` and `csf_runtime_scale` now take effect ([202ab7afb](https://github.com/MoatLab/FEMU/commit/202ab7afb)).
 - A CSD runtime shorter than the program's own run on the host cannot be reached, since the completion carries the result; QEMU now warns once when that happens ([b8e8d6b45](https://github.com/MoatLab/FEMU/commit/b8e8d6b45)).
@@ -142,7 +146,12 @@ listed one by one.
 - Opt-in copyback for line and FDP collection (`gc_copyback`, off by default). A page moves on its die when the destination shares its channel, LUN and plane, so the move puts no data on the channel. Collection then takes victim pages in the order of the destination dies. A copyback skips ECC, so on a real SSD its bit errors are not corrected and can add up; FEMU models no bit errors, so only timing changes, and pages with extra ECC time and refresh moves stay off-chip for that reason. Log page C0h offset 248 counts the pages moved this way.
 - Opt-in ONFI 6.0 bus timing (`onfi_mode` 0 to 26, with `onfi_mts`, `onfi_spare_bytes` and `onfi_tccs_ns`) for bbssd, CSD and KV. The timing mode sets the page transfer, and the ONFI command, status and burst times set the other bus phases. Status comes before a read's data out and after a program, and a page register holds its LUN to the end of the op. The array times stay with `pg_rd_lat`, `pg_wr_lat` and `blk_er_lat`.
 - With the ONFI profile, an op with an older start time can use an idle bus gap before the latest start time on its channel. The channel keeps about 1024 past bus windows for this. An op older than those starts no earlier than the end of the newest dropped window.
+- `onfi_param_page` loads an ONFI 6.0 parameter page image. It turns the ONFI profile on and gives the mode, the spare bytes and the address cycles. Realize refuses a page with a bad CRC or one that does not match the device geometry and features. `query-femu` reports the address cycles.
+- `onfi_sca=1` selects the ONFI SCA protocol. Commands, addresses and status use a separate CA bus per channel, and the channel bus carries only the data bursts. A burst owns the channel bus from its SCE packet to the hold after its SCT packet. `query-femu` reports `sca` and the burst times.
+- `onfi_cache_read=1` reads the pages of one read command that land on one LUN as an ONFI read cache sequence. It sends 31h for the next page of a block, 00h-addr-31h for any other page, and 3Fh after the last. `trcbsy`, which had no effect, now sets the busy time of each copy. The array reads the next page while the bus moves the current one.
+- With `onfi_cache_read`, a LUN group reads as plain reads when a read cache sequence would end later on an idle LUN. Mode 26 with 4 KiB pages reads 8 pages in 332328 ns, not 345912 ns. The choice uses only timing fields, so it is the same for every run.
 - Opt-in program disturb terms for the ECC read time (`pd_edge_wls`, `pd_edge_tiers`, `pd_open_tiers`, `pd_open_age`) in bbssd, CSD, FDP and KV. Reads of bottom wordlines and of part-programmed blocks pay extra tiers, and open data can age from its first program. The tier counts are chosen values for sensitivity studies.
+- Opt-in program disturb actions in bbssd, CSD and FDP: `pd_open_read_limit` rewrites a line or reclaim unit whose part-programmed block takes too many reads, and takes it out of its write frontier first, and `pd_open_close_sec` pads and closes one left open too long. Log page C0h counts both at offsets 256 to 279, and pad pages count in the write amplification. Under FDP the pad gives the handle a fresh unit and logs event 1h.
 - Opt-in thermal model (`thermal_tau_ms`, `thermal_r`, `idle_mw`, `thermal_step_ms`): the SMART composite temperature follows the NAND energy and idle power through a first-order model, and crossing a threshold raises the SMART temperature warning and event ([eda6b6ffe](https://github.com/MoatLab/FEMU/commit/eda6b6ffe)).
 - Opt-in static wear levelling (`wl_spread`): the least worn full line moves into the most worn free line, without a write pointer of its own ([2e1ef35ba](https://github.com/MoatLab/FEMU/commit/2e1ef35ba)).
 - Read reclaim (`read_reclaim_limit`) and retention refresh (`retention_limit_sec`) ([7f9b4f6af](https://github.com/MoatLab/FEMU/commit/7f9b4f6af), [4e09c4797](https://github.com/MoatLab/FEMU/commit/4e09c4797), [e7f182b87](https://github.com/MoatLab/FEMU/commit/e7f182b87)).
@@ -216,7 +225,7 @@ was not doing anything.
 
 #### Accepted with a warning (still no effect)
 
-- `serial`, `ms`, `ms_max`, `dlfeat`, `trcbsy`, and the CSD `nr_thread`, `time_slice` and `context_switch_time` are still accepted, but nothing reads them, so a value other than the default now prints one warning at realize naming the property; for `ms` it points to `meta` ([03da6e9d2](https://github.com/MoatLab/FEMU/commit/03da6e9d2)). `tplpbsy` and `tplrbsy` were on this list; they now set the multi-plane program and read busy times, and warn only when set without `mp_program` or `mp_read`.
+- `serial`, `ms`, `ms_max`, `dlfeat`, and the CSD `nr_thread`, `time_slice` and `context_switch_time` are still accepted, but nothing reads them, so a value other than the default now prints one warning at realize naming the property; for `ms` it points to `meta` ([03da6e9d2](https://github.com/MoatLab/FEMU/commit/03da6e9d2)). `tplpbsy` and `tplrbsy` were on this list; they now set the multi-plane program and read busy times, and warn only when set without `mp_program` or `mp_read`. `trcbsy` was on it too; it now sets tRCBSY and warns only without `onfi_cache_read`.
 
 #### Behaviour changes (still boots, numbers move)
 
@@ -317,6 +326,8 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - FDP GC moves all of a reclaim unit's pages before erasing any block, retires each moved page's old copy, and runs foreground GC per page. A pass that stopped part way used to leave the unit with erased blocks counted again later ([c7b373186](https://github.com/MoatLab/FEMU/commit/c7b373186)).
 - FDP GC takes a new unit for a collection destination that was dropped when it filled with nothing free, and collects a unit with no valid pages without one. GC used to stop for good once the destination was gone, so a full device stayed full even after the host deallocated everything ([22a0fc5ee](https://github.com/MoatLab/FEMU/commit/22a0fc5ee)).
 - An FDP handle whose last unit filled with nothing free reports no room in RUH Status. It used to report the room of its retired unit, which GC could free and give to another handle ([4e7a06666](https://github.com/MoatLab/FEMU/commit/4e7a06666)).
+- FDP RUAMW counts every page programmed into a reclaim unit, also the pages that collection or a refresh moves into the active unit of an Initially Isolated handle. That unit used to report the room of the moved pages as free. A Format keeps the programmed pages, so RUAMW no longer returns to a full unit after it.
+- RUH Update on a CSD namespace moves the handle to a fresh reclaim unit, as on a BlackBox one. It used to reset only the RUAMW, while the FTL went on writing into the old unit.
 - The `random` and `d-choice` GC policies and FDP's random reclaim strategy draw victims from a generator seeded by the new `gc_seed` property instead of the wall clock and `rand()`, so the same configuration and workload give the same victims and WAF on every run. `fifo` finds its victim at the top of a queue ordered by close order instead of scanning every line, with the same victims as before ([04ba1c0aa](https://github.com/MoatLab/FEMU/commit/04ba1c0aa)).
 - FDP background GC counts the pages a unit never wrote as reclaimable. A unit that RUH Update retired holding a few valid pages had none invalid, so each background pass took it from the top of the victim queue, refused it and stopped; units behind it were collected only under the foreground watermark ([beb9878ac](https://github.com/MoatLab/FEMU/commit/beb9878ac)).
 - FDP cost-benefit GC ages a unit retired with no page invalidated from its retirement. It used to count from time zero, so a part-written unit left by RUH Update outscored every other victim; with few pages to free, background GC refused it on every pass and collected nothing. ([a9e0e1af6](https://github.com/MoatLab/FEMU/commit/a9e0e1af6))

@@ -3,12 +3,12 @@ title: "Computational storage (CSD)"
 description: "CSD mode (femu_mode=4) emulates a computational storage drive. On top of a normal NVMe namespace, the device has its own memory (function data memory, FDM)..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/modes/csd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/modes/csd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/csd.md`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/modes/csd.md) at FEMU `57a01cb3a` (2026-10-13), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/csd.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/modes/csd.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -228,7 +228,7 @@ sudo ./csd/csd-passthru /dev/nvme0n1 bench 4096 32
 ```
 
 `bench` reports the average latency of device memory writes, reads and
-namespace-to-memory copies. [hw/femu/tests/csd/README.md](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/tests/csd/README.md)
+namespace-to-memory copies. [hw/femu/tests/csd/README.md](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/tests/csd/README.md)
 lists every subcommand, the eBPF steps and the program ABI.
 
 The vendor log page C0h counts the namespace's NAND traffic as for
@@ -244,7 +244,7 @@ BlackBox ([log pages and counters](../reference/log-pages-and-counters.md#vendor
 | `CSD csf_runtime_scale must be non-zero` | `csf_runtime_scale=0`. |
 | `csd supports at most one namespace per controller` | Two CSD namespaces, from `namespace_modes` or from `femu_mode=4` with `namespaces` above 1. Other namespaces of the controller may use other modes. |
 | `FEMU bbssd: namespace 1 exposes ...` | The namespace does not fit the NAND geometry; see the [BlackBox limits](blackbox.md#limits-and-refusals). |
-| `FEMU csd: buffer_size has no effect under FDP` | A knob the FDP write path ignores, on a controller in an FDP subsystem; the same list as for BlackBox ([FDP](../features/fdp.md)). |
+| `FEMU csd: hot_cold_sep is not supported under FDP: ...` | A knob the FDP write path does not take, on a controller in an FDP subsystem; the same list as for BlackBox ([FDP](../features/fdp.md#limits-and-refusals)). |
 
 A program load that fails returns Invalid Field to the guest, or Capacity
 Exceeded when the program table is full. For a missing or bad program file,
@@ -306,7 +306,7 @@ please also cite:
 
 ## Related pages
 
-- [hw/femu/tests/csd/README.md](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/tests/csd/README.md): the guest tool
+- [hw/femu/tests/csd/README.md](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/tests/csd/README.md): the guest tool
   and program ABI
 - [BlackBox SSD](blackbox.md): the FTL under the namespace
 - [Timing model: KV and CSD](../concepts/timing-model.md#kv-and-csd)

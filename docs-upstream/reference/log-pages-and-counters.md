@@ -3,12 +3,12 @@ title: "Log pages and counters"
 description: "How to read FEMU's own counters from the guest. Device properties are in properties.md, and the counters of femu-cxl-ssd are QOM properties listed in..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/reference/log-pages-and-counters.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/log-pages-and-counters.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `57a01cb3a` (2026-10-13), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -25,7 +25,7 @@ own media counters, little-endian at these offsets (`FemuStatsLog` in
 
 | Offset | Size | Field |
 | --- | --- | --- |
-| 0 | 4 | Write amplification factor, scaled by 1000: (pages programmed + pages relocated by garbage collection) x 1000 / pages the host asked to program |
+| 0 | 4 | Write amplification factor, scaled by 1000: (pages programmed + pages relocated by garbage collection + pad pages at offset 264) x 1000 / pages the host asked to program |
 | 8 | 8 | Pages the host asked to program |
 | 16 | 8 | Pages relocated by garbage collection |
 | 24 | 8 | Pages actually programmed |
@@ -57,8 +57,11 @@ own media counters, little-endian at these offsets (`FemuStatsLog` in
 | 232 | 8 | Lines paced collection finished, freed or retired |
 | 240 | 8 | Paced lines the forced pass or the budget finished in one pass |
 | 248 | 8 | Pages collection moved by copyback on their die (`gc_copyback`; also counted at offset 16) |
+| 256 | 8 | Lines (reclaim units under FDP) rewritten for the open-block read limit (`pd_open_read_limit`); not counted at offset 40 |
+| 264 | 8 | Pages programmed with pad data to close lines or units left open (`pd_open_close_sec`) |
+| 272 | 8 | Lines or units those pads closed |
 
-Bytes 4-7 and 256-511 are reserved and read as zero. The counters are summed
+Bytes 4-7 and 280-511 are reserved and read as zero. The counters are summed
 over the controller's bbssd, CSD and KV namespaces (the block read count is the
 largest of them); other modes leave them zero. The write amplification factor
 stays zero until the host has written a page.
