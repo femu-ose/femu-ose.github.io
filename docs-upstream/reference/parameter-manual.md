@@ -3,12 +3,12 @@ title: "Parameter manual"
 description: "This manual explains how to configure an emulated device: the ways a parameter reaches FEMU, then every group of parameters by component, with what each one..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/reference/parameter-manual.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/reference/parameter-manual.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/reference/parameter-manual.md) at FEMU `b7e818c7f` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/reference/parameter-manual.md) at FEMU `57a01cb3a` (2026-10-13), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -328,6 +328,10 @@ Reference: [NAND timing](properties.md#nand-timing-bbssd-csd-kv). Design:
 | `pg_xfer_lat` | ns | >= 0 | channel bus data phase per page; 0 uses `ch_xfer_lat` |
 | `ch_xfer_lat` | ns | >= 0 | data phase when `pg_xfer_lat` is 0; also the OCSSD 1.2 transfer time |
 | `status_lat` | ns | >= 0 | channel bus status phase |
+| `onfi_mode` | mode | -1 (off), 0 to 26 | ONFI 6.0 NV-LPDDR4 timing mode; sets every bus phase, refused with the four phase knobs above and with `pe_suspend` |
+| `onfi_mts` | MT/s | 0 to 100000 | with `onfi_mode`, the page rate instead of the mode's; 0 uses the mode |
+| `onfi_spare_bytes` | bytes | >= 0; the page on the bus must be even | with `onfi_mode`, spare bytes moved with each page |
+| `onfi_tccs_ns` | ns | >= 0 | with `onfi_mode`, tCCS before a data out on a shared channel; 0 charges nothing |
 | `tplebsy` | ns | >= 0 | busy time between the planes of a multi-plane erase (GC with `pls_per_lun` > 1) |
 | `pe_suspend`, `tsusp_ns` | flag, ns | `tsusp_ns` >= 0 | let a read suspend a program or erase on its LUN, at a cost of `tsusp_ns` |
 | `trim_lat_ns` | ns per range | >= 0; bbssd and CSD, also under FDP | time charged per Dataset Management deallocate range |
@@ -418,8 +422,8 @@ Applies to bbssd, CSD and KV unless noted. Reference:
 | `spare_lines` | lines | below `blks_per_pl`; needs `blk_pe_limit` | lines held back; their blocks replace worn-out blocks of the same plane; they hold no data, so the namespace must fit without them |
 | `err_read_unc_ppm` | per million | 0 disables; bbssd and CSD | reads that fail as Unrecovered Read Error, at a fixed period |
 | `err_write_fail_ppm` | per million | 0 disables; bbssd, CSD and ZNS | writes that fail; a ZNS zone then becomes read only |
-| `read_reclaim_limit` | reads | 0 disables; bbssd and CSD; refused with FDP | a block read this often since its erase gets its line rewritten on a following write |
-| `retention_limit_sec` | seconds | 0 disables; bbssd and CSD; refused with FDP | a read that hits a line filled at least this long ago queues the line, which is rewritten on a following write |
+| `read_reclaim_limit` | reads | 0 disables; bbssd and CSD; under FDP a whole reclaim unit | a block read this often since its erase gets its line rewritten on a following write |
+| `retention_limit_sec` | seconds | 0 disables; bbssd and CSD; under FDP a whole reclaim unit | a read that hits a line filled at least this long ago queues the line, which is rewritten on a following write |
 | `thermal_tau_ms`, `thermal_r`, `idle_mw`, `thermal_step_ms` | ms, mK per mW, mW, ms | `thermal_tau_ms` 0 (default) turns the model off; it needs `thermal_r`; step 1 to 60000, default 100 | the SMART temperature follows a first-order model heated by `idle_mw` and the NAND energy ([thermal model](log-pages-and-counters.md#thermal-model)) |
 | `energy_read_nj`, `energy_prog_nj`, `energy_erase_nj` | nJ per plane operation | 0 (default) gives no figure | price the plane reads, programs and erases log page C0h counts; the total is reported in uJ at offset 184 |
 | `wl_spread` | erases | 0 disables; the settings `blk_pe_limit` refuses are refused too | static wear levelling: when the erases of lines in service differ by more than this, the least worn full line moves into the most worn free line, at most a quarter of the host pages; it stops at half the gap |

@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/CHANGELOG.md) at FEMU `b7e818c7f` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/CHANGELOG.md) at FEMU `57a01cb3a` (2026-10-13), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -55,6 +55,7 @@ listed one by one.
 - Flexible Data Placement (FDP) on a new `femu-subsys` device, with reclaim unit handles, FDP log pages, I/O Management commands and several GC strategies ([c966d341a](https://github.com/MoatLab/FEMU/commit/c966d341a), [6df00de01](https://github.com/MoatLab/FEMU/commit/6df00de01)).
 - FDP placement features can be read and enabled by a Linux host, and the host sees its active reclaim unit and remaining space ([8f00c7117](https://github.com/MoatLab/FEMU/commit/8f00c7117), [9a66fe52d](https://github.com/MoatLab/FEMU/commit/9a66fe52d)).
 - FDP accepts `trim_lat_ns` and `ecc_retention_sec`. A deallocate pays the same time per range as without FDP. The age of a reclaim unit counts from its retirement and starts again when collection frees it.
+- FDP accepts `read_reclaim_limit` and `retention_limit_sec`. A read queues the reclaim unit of its line. The next write moves the valid pages of that unit to where collection would move them. The moves count in MBMW and in the C0h refresh counters.
 - Computational Storage Drive mode (`femu_mode=4`) with program load and execute commands, routed through the bbssd FTL ([eb01bb73b](https://github.com/MoatLab/FEMU/commit/eb01bb73b), [50b65ca91](https://github.com/MoatLab/FEMU/commit/50b65ca91)).
 - CSD `nr_cu` and `csf_runtime_scale` now take effect ([202ab7afb](https://github.com/MoatLab/FEMU/commit/202ab7afb)).
 - A CSD runtime shorter than the program's own run on the host cannot be reached, since the completion carries the result; QEMU now warns once when that happens ([b8e8d6b45](https://github.com/MoatLab/FEMU/commit/b8e8d6b45)).
@@ -100,6 +101,7 @@ listed one by one.
 - Opt-in I/O stage times (`io_stages`): the QMP command `query-femu-stages` returns histograms of the submit, FTL, hold, post-delay and total time of each I/O command. post-delay shows how far completions land after the model's time.
 - A QMP command, `query-femu`, reports the geometry, write counters, line counts and per-line state of bbssd namespaces to the host. The FTL thread copies the state between two requests ([reference](reference/query-femu.md)).
 - `query-femu` also reports zoned namespaces: the zone geometry, the zone counts per state and, with kind `zones`, the state, write pointer and capacity of each zone. The main loop copies them under the zone lock, so a zoned namespace needs no enabled controller. Each namespace entry now carries only the members of its mode.
+- `query-femu` reports the NAND bus timing of each namespace in a `media` member. It gives the page transfer and the command, status and burst phases after their fallbacks. It also gives the multi-plane gaps, the ONFI mode and the ordering rules. CSD, KV and OCSSD namespaces now report this member only ([reference](reference/query-femu.md#media-timing)).
 - `query-femu` also reports FDP namespaces: the reclaim group geometry, unit counts per state, and the host and media bytes of each reclaim unit handle. Kind `reclaim-units` lists the state, handle, valid pages and wear of each unit. The handle byte counters sum to the FDP Statistics log.
 - Opt-in power loss model (`power_loss`) that drops data still held in the volatile write buffer and records the event in SMART and the event log ([46602b0e7](https://github.com/MoatLab/FEMU/commit/46602b0e7), [303c77aef](https://github.com/MoatLab/FEMU/commit/303c77aef), [7679c443d](https://github.com/MoatLab/FEMU/commit/7679c443d)).
 
@@ -138,6 +140,8 @@ listed one by one.
 - Log page C0h counts host writes that waited for forced collection or a full write buffer, and completions held for a full completion queue ([5631b3c07](https://github.com/MoatLab/FEMU/commit/5631b3c07)).
 - Opt-in paced collection (`gc_pace`): the victim line is copied a few pages per host page written instead of in one pass, so a write waits for about one copy instead of a whole line ([ff5e4b5ce](https://github.com/MoatLab/FEMU/commit/ff5e4b5ce)).
 - Opt-in copyback for line and FDP collection (`gc_copyback`, off by default). A page moves on its die when the destination shares its channel, LUN and plane, so the move puts no data on the channel. Collection then takes victim pages in the order of the destination dies. A copyback skips ECC, so on a real SSD its bit errors are not corrected and can add up; FEMU models no bit errors, so only timing changes, and pages with extra ECC time and refresh moves stay off-chip for that reason. Log page C0h offset 248 counts the pages moved this way.
+- Opt-in ONFI 6.0 bus timing (`onfi_mode` 0 to 26, with `onfi_mts`, `onfi_spare_bytes` and `onfi_tccs_ns`) for bbssd, CSD and KV. The timing mode sets the page transfer, and the ONFI command, status and burst times set the other bus phases. Status comes before a read's data out and after a program, and a page register holds its LUN to the end of the op. The array times stay with `pg_rd_lat`, `pg_wr_lat` and `blk_er_lat`.
+- With the ONFI profile, an op with an older start time can use an idle bus gap before the latest start time on its channel. The channel keeps about 1024 past bus windows for this. An op older than those starts no earlier than the end of the newest dropped window.
 - Opt-in program disturb terms for the ECC read time (`pd_edge_wls`, `pd_edge_tiers`, `pd_open_tiers`, `pd_open_age`) in bbssd, CSD, FDP and KV. Reads of bottom wordlines and of part-programmed blocks pay extra tiers, and open data can age from its first program. The tier counts are chosen values for sensitivity studies.
 - Opt-in thermal model (`thermal_tau_ms`, `thermal_r`, `idle_mw`, `thermal_step_ms`): the SMART composite temperature follows the NAND energy and idle power through a first-order model, and crossing a threshold raises the SMART temperature warning and event ([eda6b6ffe](https://github.com/MoatLab/FEMU/commit/eda6b6ffe)).
 - Opt-in static wear levelling (`wl_spread`): the least worn full line moves into the most worn free line, without a write pointer of its own ([2e1ef35ba](https://github.com/MoatLab/FEMU/commit/2e1ef35ba)).
@@ -339,6 +343,7 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - A reset zone holds no data, an offline zone returns its resources, and zone geometry is reported for the namespace's format ([bce5e1c3e](https://github.com/MoatLab/FEMU/commit/bce5e1c3e), [2c7062ed0](https://github.com/MoatLab/FEMU/commit/2c7062ed0), [901d0908f](https://github.com/MoatLab/FEMU/commit/901d0908f), [b4d9585ca](https://github.com/MoatLab/FEMU/commit/b4d9585ca), [f0f989c21](https://github.com/MoatLab/FEMU/commit/f0f989c21)).
 - KV list entries are padded to 4 bytes, NVM-only commands are refused on KV namespaces, and KV Identify requires a KV namespace ([240e21c43](https://github.com/MoatLab/FEMU/commit/240e21c43), [f5a7d7bc8](https://github.com/MoatLab/FEMU/commit/f5a7d7bc8), [5ec9ee859](https://github.com/MoatLab/FEMU/commit/5ec9ee859)).
 - FDP reports the reclaim unit size the FTL uses and moves a handle to a new reclaim unit on update ([7fe32c556](https://github.com/MoatLab/FEMU/commit/7fe32c556), [78de60448](https://github.com/MoatLab/FEMU/commit/78de60448)).
+- FDP reports reclaim moves with the controller events of the specification. A collection or refresh of Initially Isolated data logs 80h with the blocks moved, and 81h when the moves give that handle a new unit. Moves of Persistently Isolated data log nothing; collection used to log 81h for every unit.
 - The FDP Reclaim Unit Handle Usage log uses 8 byte descriptors, so `nvme fdp usage` reports every handle as host specified instead of reading some as unused, and the placement logs store their fields little endian ([1bc8508a6](https://github.com/MoatLab/FEMU/commit/1bc8508a6), [31bd13259](https://github.com/MoatLab/FEMU/commit/31bd13259)).
 - With `namespace_modes`, the controller's model number and serial come from its own `femu_mode` instead of the namespace brought up last ([efdb98643](https://github.com/MoatLab/FEMU/commit/efdb98643), [c3f968029](https://github.com/MoatLab/FEMU/commit/c3f968029)).
 - SMART wear counters are summed across namespaces ([4a4f0d9bf](https://github.com/MoatLab/FEMU/commit/4a4f0d9bf)).

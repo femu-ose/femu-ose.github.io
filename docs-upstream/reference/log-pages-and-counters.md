@@ -3,12 +3,12 @@ title: "Log pages and counters"
 description: "How to read FEMU's own counters from the guest. Device properties are in properties.md, and the counters of femu-cxl-ssd are QOM properties listed in..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/reference/log-pages-and-counters.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/reference/log-pages-and-counters.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `b7e818c7f` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `57a01cb3a` (2026-10-13), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -30,8 +30,8 @@ own media counters, little-endian at these offsets (`FemuStatsLog` in
 | 16 | 8 | Pages relocated by garbage collection |
 | 24 | 8 | Pages actually programmed |
 | 32 | 8 | Reads of the most-read block since its erase |
-| 40 | 8 | Lines rewritten because of read stress |
-| 48 | 8 | Lines rewritten because of retention age |
+| 40 | 8 | Lines rewritten because of read stress (reclaim units under FDP) |
+| 48 | 8 | Lines rewritten because of retention age (reclaim units under FDP) |
 | 56 | 8 | Host read pages the write buffer saw |
 | 64 | 8 | Of those, pages the buffer held |
 | 72 | 8 | Host write pages the write buffer saw |

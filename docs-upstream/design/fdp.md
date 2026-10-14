@@ -3,12 +3,12 @@ title: "FDP: Flexible Data Placement"
 description: "This chapter describes how FEMU implements NVMe Flexible Data Placement (FDP): how the subsystem builds reclaim groups, reclaim units and reclaim unit..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/design/fdp.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/design/fdp.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/design/fdp.md) at FEMU `b7e818c7f` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/design/fdp.md) at FEMU `57a01cb3a` (2026-10-13), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -295,11 +295,11 @@ relocated data goes back into its own current unit.
 A pass copies every valid page of the victim, invalidating each old copy as
 it goes, and only then erases the planes of each LUN as one multi-plane
 erase when `enable_gc_delay` is on (the default). It adds the copied bytes
-to MBMW and the erased bytes to MBE, records a controller event for the
-handle, and returns the unit to the free list. If the destination runs out
-of space part way, the pass stops before erasing anything: the pages already
-moved live at their new location, the rest stay in the victim, and the
-victim goes back on the queue to be finished by a later pass.
+to MBMW and the erased bytes to MBE, records the controller events of
+[Events](#events), and returns the unit to the free list. If the
+destination runs out of space part way, the pass stops before it erases
+anything. The pages already moved live at their new location, and the rest
+stay in the victim. The victim goes back on the queue for a later pass.
 
 With `gc_copyback` on, the pass takes the victim's pages in the order of
 the destination dies. A page whose destination is on its own die and plane
@@ -381,8 +381,42 @@ Each event carries the Timestamp feature's current value.
 | --- | --- | --- |
 | 0h Reclaim Unit Not Fully Written | host | RUH Update moves a handle off a unit that still had room |
 | 3h Invalid Placement Identifier | host | a placed write (Write, Copy, Write Zeroes) on a bbssd namespace has DTYPE 2 and a DSPEC that is not a valid PID; checked against the event filter of placement handle 0; other modes never raise it |
-| 81h (implicit reclaim unit change) | controller | GC frees a unit of the handle |
-| 1h, 2h, 80h | | accepted by the event filter, never generated |
+| 80h Media Reallocated | controller | a collection or refresh pass moved pages of a unit of the Initially Isolated handle; one event per pass, split around each 81h the pass causes, also for a pass that stops part way; checked against that handle's filter |
+| 81h Implicitly Modified Reclaim Unit Handle | controller | a move, not the host, gave the Initially Isolated handle a new unit: the moves filled its active unit and a free unit follows, or the pass takes a unit for a handle left with none; checked against that handle's filter |
+| 1h, 2h | | accepted by the event filter, never generated |
+
+A Persistently Isolated handle moves its data into a collection unit that
+the host never sees, so its moves log no event. A host write that fills a
+unit is a host action and logs no 81h either.
+
+```
+ pass over victim unit V of handle h
+   |
+   +-- h Persistently Isolated --> moves into h's gc_ru ------> no event
+   |
+   +-- h Initially Isolated ----> moves into h's active unit
+          |  a move fills it, next unit follows --> 80h (moves so far)
+          |                                         81h (h)
+          |  pass ends, moves not yet reported --> 80h (the rest)
+```
+
+Both events have LV set, with the victim's reclaim group and handle. The
+FTL belongs to one namespace, so NSIDV and PIV are set too. PID encodes
+the victim's reclaim group and the lowest placement handle of that
+namespace that maps to the handle. The
+Event Type Specific field of 80h is in NVM Command Set 1.2, Figure 112. It
+holds LBAV, the number of blocks moved (at most FFFFh) and one of them.
+
+The FTL moves whole pages, so the count takes only the blocks of a moved
+page that a host write programmed into it. The FTL notes those blocks as it
+programs each page, in 512-byte pieces. The block reported is the first such
+block. With a page size that is not a multiple of 512 bytes, the FTL keeps
+no such record, and 80h reports no count and no block. The FTL drops a handle's active unit when it fills with no free
+unit. That logs nothing, and the unit taken later logs the 81h.
+
+The FTL maps whole pages. A host write of part of a page programs the whole
+page through the write's handle. The other blocks of that page then change
+handle with it. That is a host action, and FEMU logs no 80h for it.
 
 Get and Set Features 1Eh (FDP Events) read and change the enabled event
 types of one placement handle, named in CDW11; an unsupported type in a Set
@@ -428,11 +462,36 @@ of the property reference; the controller-side ones are under
 | `gc_copyback` | `femu` | Moves collected pages on their die; off by default. A copyback skips ECC (timing only in FEMU). |
 | BlackBox geometry (`nchs`, `luns_per_ch`, `pls_per_lun`, `blks_per_pl`, `pgs_per_blk`, `secs_per_pg`, `secsz`) | `femu` | Sets RUNS (one superblock) and the number of lines, hence units. |
 
-Refused under FDP on a bbssd controller: `buffer_size`, `hot_cold_sep`,
-`read_reclaim_limit`, `retention_limit_sec`, a `mapping` other than `page`,
-and a `gc_policy` other than `greedy`. `trim_lat_ns` and `ecc_retention_sec`
-apply as without FDP. A unit's lines take their close time when the unit
-retires, and lose it when collection frees the unit. Refused on any controller with FDP: more than one namespace, a
+Refused under FDP on a bbssd controller:
+
+- `buffer_size` and `hot_cold_sep`;
+- a `mapping` other than `page`;
+- a `gc_policy` other than `greedy`.
+
+The FTL applies `trim_lat_ns` and `ecc_retention_sec` as without FDP. A unit's lines
+take their close time when the unit retires, and lose it when collection
+frees the unit.
+
+`read_reclaim_limit` and `retention_limit_sec` refresh a whole reclaim unit.
+A read queues the unit of its line, as in line mode. The next write moves
+its valid pages to where collection would move them, then erases the unit.
+
+```
+ read of unit U: read count >= read_reclaim_limit, or age >= retention_limit_sec
+   --> U queued (one at a time)
+ next write: no group at the high watermark, 2 or more free units
+   --> U active (curr_ru or gc_ru)   --> request dropped
+   --> U full or a victim            --> taken off its list
+   --> move every valid page, no copyback --> erase U, free U
+   --> C0h read_reclaims or retention_refreshes + 1, MBMW + moved bytes
+```
+
+The refresh logs the same FDP events as a collection pass (see
+[Events](#events)).
+Collection that frees a queued unit first drops the request, and the
+counters do not move. A collection of a queued unit does not use copyback.
+
+Refused on any controller with FDP: more than one namespace, a
 second controller in the subsystem, `meta`, `streams`, a KV namespace.
 Each message is listed in the [feature guide](../features/fdp.md#limits-and-refusals).
 
@@ -456,7 +515,7 @@ last:
 
 | Check | What it covers |
 | --- | --- |
-| qtest cases in `hw/femu/tests/qtest/femu-test.c` | `fdp-events`, `fdp-features`, `fdp-report-length`, `fdp-ruh-usage`, `fdp-write-zeroes`, `fdp-write-zeroes-placed`, `fdp-ruh-update`, `fdp-ruh-update-full`, `fdp-background-gc`, `fdp-cb-unwritten-age`, `fdp-cb-utilization`, `fdp-cb-background`, `wide-lba-fdp`, `io-fuzz-fdp`, `copy-fdp`, `log-contents-fdp`, `ns-mgmt-unavailable-fdp`, `fdp-csd-knobs`, `fdp-csd-runs`, `fdp-gc-strategy-refused` |
+| qtest cases in `hw/femu/tests/qtest/femu-test.c` | `fdp-events`, `fdp-features`, `fdp-report-length`, `fdp-ruh-usage`, `fdp-write-zeroes`, `fdp-write-zeroes-placed`, `fdp-ruh-update`, `fdp-ruh-update-full`, `fdp-background-gc`, `fdp-cb-unwritten-age`, `fdp-cb-utilization`, `fdp-cb-background`, `wide-lba-fdp`, `io-fuzz-fdp`, `copy-fdp`, `log-contents-fdp`, `ns-mgmt-unavailable-fdp`, `fdp-csd-knobs`, `fdp-csd-runs`, `fdp-gc-strategy-refused`, `fdp-events-gc-pi`, `fdp-events-gc-ii`, `fdp-events-gc-ii-cb`, `fdp-events-gc-ii-4k`, `fdp-events-gc-ii-part`, `fdp-events-gc-ii-rot`, `fdp-events-gc-ii-mask`, `fdp-events-gc-ii-no80`, `fdp-events-gc-ii-no81`, `fdp-events-gc-ii-other`, `fdp-events-gc-ii-empty`, `fdp-events-rf-pi`, `fdp-events-rf-ii`, `fdp-events-rf-ii-part` |
 | Exact traces and victim-order digests (qtest-only `x-ftl-trace`) | `ftl-trace-fdp` and `ftl-trace-fdp-reread` (greedy), `ftl-trace-fdp-random` (`gc_strategy=2`), `ftl-trace-fdp-noisy` and `ftl-trace-fdp-noisy-ii` (`gc_strategy=4` on two handles, the second one Initially Isolated in `-ii`), `ftl-trace-fdp-trim-erase-all` (`fdp_trim_erase_all=1` while both kinds of heap hold victims; afterwards the mapping holds exactly the pages written since) |
 | Documentation examples | each tagged FDP example starts under qtest and moves one block |
 | `hw/femu/scripts/fdp-test-nvme-admin.sh` | in-guest nvme-cli checks against the `run-blackbox-fdp.sh` configuration; manual |

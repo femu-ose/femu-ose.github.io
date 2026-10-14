@@ -3,12 +3,12 @@ title: "Flexible Data Placement (FDP)"
 description: "Flexible Data Placement lets the host tell the SSD which writes belong together. The device groups its NAND into reclaim units and offers a few reclaim unit..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/features/fdp.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/features/fdp.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/fdp.md`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/features/fdp.md) at FEMU `b7e818c7f` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/fdp.md`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/features/fdp.md) at FEMU `57a01cb3a` (2026-10-13), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -141,7 +141,11 @@ Reclaim Unit Handle 3 Attributes: 0x1 (Host Specified)
 ```
 
 `events -E` shows host events, such as a write with an invalid placement
-identifier; every event type is enabled by default.
+identifier; every event type is enabled by default. Without `-E`, `events`
+shows controller events. When collection or a read refresh moves data of the
+Initially Isolated handle, it logs 80h (Media Reallocated) with the number
+of blocks moved. When such a move gives that handle a new reclaim unit, it
+logs 81h (Implicitly Modified Reclaim Unit Handle).
 
 ### Write with a placement identifier
 
@@ -221,7 +225,7 @@ reclaim unit handle wrote and moved, and the state of each reclaim unit:
 | `FEMU bbssd: fdp.runs must be 67108864, the size of one superblock of this geometry, or unset` | `fdp.runs` does not match the geometry. |
 | `FDP supports a single namespace; set namespaces=1 or disable FDP on the subsystem` | `namespaces` above 1. |
 | `femu-subsys with fdp=on takes a single controller` | A second controller joins the FDP subsystem. |
-| `FEMU bbssd: buffer_size has no effect under FDP` | FDP has its own write path. The same message names `hot_cold_sep`, `read_reclaim_limit`, `retention_limit_sec`, a `mapping` other than `page` and a `gc_policy` other than `greedy`. A CSD controller gets the same messages with `FEMU csd:`. |
+| `FEMU bbssd: buffer_size has no effect under FDP` | FDP has its own write path. The same message names `hot_cold_sep`, a `mapping` other than `page` and a `gc_policy` other than `greedy`. A CSD controller gets the same messages with `FEMU csd:`. |
 | `meta: not supported with placement (fdp)` | `meta` (with a valid `mc`) under FDP. |
 | `streams requires bbssd or NoSSD with FDP disabled` | `streams=on` under FDP. |
 | `the key-value command set and FDP cannot share a controller: ...` | A KV namespace under FDP. |

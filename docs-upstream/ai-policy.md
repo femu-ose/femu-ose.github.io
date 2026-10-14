@@ -3,12 +3,12 @@ title: "Use of AI tools in FEMU contributions"
 description: "FEMU accepts contributions made with AI coding tools. The person who submits a change is its author and is responsible for every line, whether they typed it..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/ai-policy.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/ai-policy.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/ai-policy.md`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/ai-policy.md) at FEMU `b7e818c7f` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/ai-policy.md`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/ai-policy.md) at FEMU `57a01cb3a` (2026-10-13), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -82,7 +82,7 @@ verbatim if you label it and checked that it is real.
 ## 7. Maintainers
 
 Much of the maintainers' own consolidation work is AI-assisted, as the
-[README](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/README.md) states. Maintainers may use AI to triage or
+[README](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/README.md) states. Maintainers may use AI to triage or
 pre-review, but post only review comments they have checked, and a person
 decides every merge.
 

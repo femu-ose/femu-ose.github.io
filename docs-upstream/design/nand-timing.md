@@ -3,12 +3,12 @@ title: "NAND media and timing model"
 description: "This chapter describes the component that decides how long a flash operation takes in FEMU. It covers the geometry the model works on, the time it charges..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/design/nand-timing.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/design/nand-timing.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nand-timing.md`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/docs/design/nand-timing.md) at FEMU `b7e818c7f` (2026-10-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nand-timing.md`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/docs/design/nand-timing.md) at FEMU `57a01cb3a` (2026-10-13), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -349,6 +349,119 @@ as OCSSD 1.2 charges a partial page.
  a phase that arrives at 20 fits in the idle gap; one that would overlap
  [52,62) moves to 62
 ```
+
+### ONFI 6.0 profile (BBSSD, CSD, KV)
+
+`onfi_mode` (0 to 26) sets every channel bus phase from an ONFI 6.0
+NV-LPDDR4 timing mode. ONFI 6.0 gives no array times, so `pg_rd_lat`,
+`pg_wr_lat`, `blk_er_lat` and `nand_cell_type` still set tR, tPROG and
+tBERS. The default, -1, turns the profile off and changes nothing.
+
+```text
+ onfi_mode, onfi_mts --> tDSC --> page_xfer = bytes * tDSC / 2 (x8, DDR)
+ Table 4-34 constants --> per-op command, status and burst phases
+ pg_rd_lat, pg_wr_lat, blk_er_lat ------------------> array times (unchanged)
+
+ read     |00h addr 30h tWB|..... tR .....|70h status|00h pre| page |post|
+ program  |80h addr tADL|edges| page |10h tWB|...... tPROG ......|70h status|
+ erase    |60h addr D0h tWB|.............. tBERS ..............|70h status|
+           ^ sent only when the LUN is ready (RDY)       LUN held to here ^
+```
+
+The profile derives these phases (`nand/onfi.c`). Each one is a sum in ps,
+rounded up to whole ns once. The table shows mode 26 with 2 column and 3
+row address cycles.
+
+| Phase | Sequence | Mode 26 |
+| --- | --- | --- |
+| read command | 00h, 5 address cycles, 30h, tWB | 275 ns |
+| program command | 80h, 5 address cycles, tADL | 562 ns |
+| data in edges | tWPRE2 + tWPST2 + tWPSTH2 | 57 ns |
+| program confirm | 10h, tWB | 125 ns |
+| erase command | 60h, 3 address cycles, D0h, tWB | 225 ns |
+| status | 70h (78h + 3 cycles with several LUNs), tWHR, tRPRE2, one byte, tRPSTH, tRHW | 246 ns (321 ns) |
+| data out lead | 00h, tRPRE2; with several LUNs 06h, 5 cycles, E0h, tCCS, tRPRE2 | 50 ns (200 ns) |
+| data out tail | tRPSTH, tRHW | 115 ns |
+| page of 4 KiB | 4096 bytes at 0.417 ns per 2 bytes | 855 ns |
+
+- `onfi_mts` replaces the mode's rate for the page only:
+  `ceil(bytes * 1000 / mts)` ns. The status byte keeps the mode's tDSC.
+- `onfi_spare_bytes` adds spare bytes to each page on the bus.
+- `onfi_tccs_ns` gives tCCS. ONFI 6.0 has no value, so 0 charges nothing.
+- A `tplpbsy`, `tplrbsy` or `tplebsy` left at 0 takes 500 ns, the Table 4-30
+  typical value.
+- A read sends its status before its data out (Section 6.14). A program,
+  erase or copyback ends at its status.
+- An op sends its command only when its LUN is ready, because the page
+  register is in use until then. The LUN stays busy to the end of the
+  read's data out, or of the program, erase or copyback status.
+- A command that waits for a busy LUN books a future window, so an op on
+  an idle LUN can use the bus first.
+- Op start times are not monotonic. A copy's write starts at the end of
+  its reads, and garbage collection starts at the wall clock. An op with
+  an older start time can still use an idle bus gap before the latest
+  start time on its channel.
+
+```text
+ latest start time on the channel: high
+ dropped      | kept history (ends <= high)  | future windows
+ [=] [==]     | [==]  [=]   [===] ... [==]   | [====]  [==]
+              low                           high
+ an op with start t >= low:  can use any idle gap after t
+ an op with start t <  low:  starts no earlier than low (the fallback)
+```
+
+- At the start of each op, a grown list drops old windows. When more than
+  1024 windows end before `high` in time, it keeps the newest 512. The
+  `NAND_BUS_HISTORY_MAX` value sets this cap. Then `low` moves to the end
+  of the newest dropped window, and the op can add a few windows of its
+  own.
+- A window that ends before `ch_avail` also goes, because no phase can
+  start before it. A bounded 32-entry list has no room for history, so it
+  keeps `low` at `high`.
+- An op that starts at or after `low` gets the gaps it would get from a
+  list that never drops a window. Its LUN and `ch_avail` can still delay
+  it.
+- A phase that happens now (a command to a ready LUN) still starts after
+  `ch_avail` in arrival order, as without the profile.
+- Future windows stay until they end, so the list grows with the media
+  ops in flight: one set of windows per queued op.
+- A multi-plane program sends every plane's command and data, with the
+  tPLPBSY gaps, as one bus window (Section 3.1.3). A multi-plane read or
+  erase books each later plane command after its gap.
+- With several LUNs, a multi-plane program or erase reads one 78h status
+  per plane. With one LUN, one 70h status reads the composite.
+
+Approximations:
+
+- The status and data out phases charge tRPSTH (15 ns) and not tRPST.
+  tRPST is tDQSRE plus half a tRC, and tDQSRE is 1 to 25 ns by device
+  (Table 4-38).
+- Warmup cycles are not modelled. Section 4.12 calls them optional, but
+  Section 4.15 note 12 asks for them above 800 MT/s.
+- The profile assumes the program page register clear enhancement is on.
+- With the profile, the channel keeps every future window it books, so a
+  full list never books the bus from now.
+
+Realize refuses these settings:
+
+- `onfi_mode` outside -1 to 26, or `onfi_mts` above 100000;
+- a negative `onfi_mts`, `onfi_spare_bytes` or `onfi_tccs_ns`;
+- an odd page size on the bus (`secsz * secs_per_pg + onfi_spare_bytes`),
+  because a DDR burst moves bytes in pairs;
+- `cmd_addr_lat`, `pg_xfer_lat`, `ch_xfer_lat` or `status_lat` with the profile;
+- a namespace that is not bbssd, CSD or KV;
+- `cxl_ssd`, `ns_mgmt` or shared namespaces;
+- `pe_suspend`, because ONFI 6.0 has no suspend and a held page register
+  has no suspend rule.
+
+`onfi_mts`, `onfi_spare_bytes` or `onfi_tccs_ns` without `onfi_mode` warns.
+
+QMP [`query-femu`](../reference/query-femu.md#media-timing) reports the
+phases a namespace charges in its `media` member, for every mode with a
+media layer, with the profile on or off. The values come after the
+fallbacks: a command phase of 0 takes `cmd_addr_ns`, and with the bus off
+every bus phase is 0.
 
 ## Plane parallelism and multi-plane operations
 
@@ -983,18 +1096,18 @@ make -C hw/femu/tests check
 
 | File | What it holds |
 | --- | --- |
-| [`hw/femu/nand/nand-media.h`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/nand/nand-media.h) | Media layer types and API: `NandLoc`, `NandMediaTiming`, `NandMediaPolicy`, `NandTimelineOps`, `nand_media_op()`, `nand_media_multiplane()`, `nand_media_copyback()` |
-| [`hw/femu/nand/nand-media.c`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/nand/nand-media.c) | Array time, rules, bus booking (`bus_now()`, `bus_later()`), suspend, ECC, multi-plane, copyback |
-| [`hw/femu/nand/nand.h`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/nand/nand.h), [`nand.c`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/nand/nand.c) | Cell-type timing tables, page pairing tables, rated P/E cycles |
-| [`hw/femu/bbssd/ftl-media.c`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/bbssd/ftl-media.c) | BBSSD adapter: `bb_decode_loc()`, `bb_nand_media_init()`, `ssd_advance_status()`, `ssd_advance_status_multiplane()`, `bb_nand_media_refresh_timing()` |
-| [`hw/femu/bbssd/ftl-geom.c`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/bbssd/ftl-geom.c) | Geometry checks and parameter copy (`bb_check_geometry()`, `ssd_init_params()`) |
-| [`hw/femu/bbssd/ftl-datapath.c`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/bbssd/ftl-datapath.c) | Host read and write: per-page operations and max latency |
-| [`hw/femu/bbssd/ftl-line-gc.c`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/bbssd/ftl-line-gc.c) | Write pointer order, GC reads, programs and multi-plane erase |
-| [`hw/femu/bbssd/bb.c`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/bbssd/bb.c) | 0xEF handler (`bb_flip()`, `bb_flip_apply()`) |
-| [`hw/femu/zns/zftl.c`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/zns/zftl.c) | ZNS adapter, write cache flush, zone reset erase |
-| [`hw/femu/zns/zns.c`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/zns/zns.c), [`zns.h`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/zns/zns.h) | ZNS timing values and property overrides (`zns_init_params()`) |
-| [`hw/femu/ocssd/oc-timing.c`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/ocssd/oc-timing.c) | OCSSD `flash_type` times, geometry check, 0xEE |
-| [`hw/femu/ocssd/oc12.c`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/ocssd/oc12.c), [`oc20.c`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/ocssd/oc20.c) | OCSSD per-command timing (`oc12_advance_status()`, `oc20_advance_status()`) |
-| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/femu.c) | FTL thread: `expire_time += latency`; timing properties |
-| [`hw/femu/nvme-io.c`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/nvme-io.c) | `stime` stamp, host link and firmware CPU models, priority queue and completion |
-| [`hw/femu/tests/unit/test-nand-media.c`](https://github.com/MoatLab/FEMU/blob/b7e818c7f54ace608d26e70812100c015d2ce046/hw/femu/tests/unit/test-nand-media.c) | Media layer unit tests |
+| [`hw/femu/nand/nand-media.h`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/nand/nand-media.h) | Media layer types and API: `NandLoc`, `NandMediaTiming`, `NandMediaPolicy`, `NandTimelineOps`, `nand_media_op()`, `nand_media_multiplane()`, `nand_media_copyback()` |
+| [`hw/femu/nand/nand-media.c`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/nand/nand-media.c) | Array time, rules, bus booking (`bus_now()`, `bus_later()`), suspend, ECC, multi-plane, copyback |
+| [`hw/femu/nand/nand.h`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/nand/nand.h), [`nand.c`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/nand/nand.c) | Cell-type timing tables, page pairing tables, rated P/E cycles |
+| [`hw/femu/bbssd/ftl-media.c`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/bbssd/ftl-media.c) | BBSSD adapter: `bb_decode_loc()`, `bb_nand_media_init()`, `ssd_advance_status()`, `ssd_advance_status_multiplane()`, `bb_nand_media_refresh_timing()` |
+| [`hw/femu/bbssd/ftl-geom.c`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/bbssd/ftl-geom.c) | Geometry checks and parameter copy (`bb_check_geometry()`, `ssd_init_params()`) |
+| [`hw/femu/bbssd/ftl-datapath.c`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/bbssd/ftl-datapath.c) | Host read and write: per-page operations and max latency |
+| [`hw/femu/bbssd/ftl-line-gc.c`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/bbssd/ftl-line-gc.c) | Write pointer order, GC reads, programs and multi-plane erase |
+| [`hw/femu/bbssd/bb.c`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/bbssd/bb.c) | 0xEF handler (`bb_flip()`, `bb_flip_apply()`) |
+| [`hw/femu/zns/zftl.c`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/zns/zftl.c) | ZNS adapter, write cache flush, zone reset erase |
+| [`hw/femu/zns/zns.c`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/zns/zns.c), [`zns.h`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/zns/zns.h) | ZNS timing values and property overrides (`zns_init_params()`) |
+| [`hw/femu/ocssd/oc-timing.c`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/ocssd/oc-timing.c) | OCSSD `flash_type` times, geometry check, 0xEE |
+| [`hw/femu/ocssd/oc12.c`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/ocssd/oc12.c), [`oc20.c`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/ocssd/oc20.c) | OCSSD per-command timing (`oc12_advance_status()`, `oc20_advance_status()`) |
+| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/femu.c) | FTL thread: `expire_time += latency`; timing properties |
+| [`hw/femu/nvme-io.c`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/nvme-io.c) | `stime` stamp, host link and firmware CPU models, priority queue and completion |
+| [`hw/femu/tests/unit/test-nand-media.c`](https://github.com/MoatLab/FEMU/blob/57a01cb3a16dbe0397a9a8fc85b05295bb085959/hw/femu/tests/unit/test-nand-media.c) | Media layer unit tests |
