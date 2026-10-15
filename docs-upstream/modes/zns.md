@@ -3,12 +3,12 @@ title: "Zoned Namespace SSD (ZNS)"
 description: "ZNS mode (femu_mode=3) emulates an NVMe SSD with the Zoned Namespace command set. The namespace is divided into zones. The host writes each zone..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/modes/zns.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/modes/zns.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/zns.md`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/modes/zns.md) at FEMU `8c80dbd1d` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/zns.md`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/modes/zns.md) at FEMU `c752f6498` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -330,7 +330,12 @@ followed by up to 511 zone start LBAs, and lists only zone changes the host
 did not cause. As the ZNS specification requires, it leaves out changes
 that follow a Zone Management Send command, writes that open or fill a
 zone, and the controller closing a zone to free a resource. Reading it
-without `--rae` clears both the list and the event behind it.
+without `--rae` clears both the list and the event behind it, once the
+page reached the host. A read whose transfer fails clears nothing, and a
+zone that changes during a read keeps its entry for the next one. A notice
+names its namespace in dword 1 of the completion. Notice events stay
+masked until the host reads the list of that namespace; a read of another
+namespace's list leaves them masked.
 
 With `err_write_fail_ppm` and `zns_fzr_sec` unset nothing adds to the
 list, and it stays empty. With it set, one write in every 1,000,000 / `err_write_fail_ppm`
@@ -378,6 +383,17 @@ applications.
 On a zoned namespace, Dataset Management (deallocate), Write Zeroes, Write
 Uncorrectable and Copy fail with Invalid Opcode: they would change blocks
 without going through the zone state machine. Reset the zone instead.
+
+A Zone Management Send command waits until every write to its zones that
+the controller already accepted has its data copied. So a Reset sent while
+a write to the zone is in flight on another queue acts after that write:
+the data and the zone descriptor are correct. The FTL timing model takes
+each queue's requests in that queue's order, and it can still see the two
+commands in the other order. An older write can then refill the write
+cache after the Reset, or a newer write can lose its cache entries to it.
+That changes later mappings, media counters and read latencies, not data.
+To keep the model exact, wait for every write to a zone to complete before
+you reset it, and for the Reset to complete before you write it again.
 
 ## Verify
 

@@ -3,12 +3,12 @@ title: "Parameter manual"
 description: "This manual explains how to configure an emulated device: the ways a parameter reaches FEMU, then every group of parameters by component, with what each one..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/reference/parameter-manual.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/reference/parameter-manual.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/reference/parameter-manual.md) at FEMU `8c80dbd1d` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/reference/parameter-manual.md) at FEMU `c752f6498` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -361,7 +361,7 @@ Design: [the BlackBox FTL](../design/ftl.md).
 | Parameter | Unit | Valid values | Meaning |
 | --- | --- | --- | --- |
 | `mapping` | name | `page`, `dftl`, `hybrid`, `fast` | logical-to-physical scheme: a full page table, a cached page table, BAST or FAST log-block mapping |
-| `mapping_cache_mb` | MiB | 32-bit; 0 picks the built-in size | with `mapping=dftl`, the cached part of the table; a miss costs a NAND read |
+| `mapping_cache_mb` | MiB | 32-bit; 0 picks the built-in size (4 MiB) | with `mapping=dftl`, the cache of whole translation pages; a miss reads the translation page, and a dirty eviction programs it |
 | `read_cache_mb` | MiB | 0 disables | DRAM read cache; a hit costs DRAM time instead of a NAND read |
 | `cache_evict` | name | `clock`, `random`, `lru`, `arc` | read cache eviction policy |
 | `hot_cold_sep` | bool | acts with `page` or `dftl`; ignored under `hybrid` and `fast`, which still reserve its line; refused with FDP | write overwrites of mapped pages to separate hot lines |
@@ -378,6 +378,9 @@ Interactions:
 - `hybrid` and `fast` reserve one more line and count merges in log page
   C0h; `hot_cold_sep` reserves one more line.
 - `mapping_cache_mb` has no effect except under `dftl`.
+- `mapping=dftl` without FDP keeps its translation pages on flash. Realize
+  keeps lines for them and two forced free lines, so the largest namespace a
+  geometry exposes is smaller than with `page`.
 - Unknown names for `mapping`, `gc_policy` and `cache_evict` are refused.
 
 ## 8. Garbage collection

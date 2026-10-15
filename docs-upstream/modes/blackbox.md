@@ -3,12 +3,12 @@ title: "BlackBox SSD (BBSSD)"
 description: "BlackBox mode (femu_mode=1) emulates a conventional NVMe SSD: the device runs its own flash translation layer (FTL), garbage collection (GC) and NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/modes/blackbox.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/modes/blackbox.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/modes/blackbox.md) at FEMU `8c80dbd1d` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/modes/blackbox.md) at FEMU `c752f6498` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -237,6 +237,9 @@ All of these are off by default.
   needs a bound: `mdts` must be 1 or more. Write Zeroes is limited to MDTS
   (WZSL, with ONCS bit 3 clear). Copy is limited to MDTS (MCL), or to one
   block of the largest LBA format when that is larger.
+- With `mapping=dftl`, read-only media opens no new translation page line.
+  The reserve stays for the writes in flight. Their mapping changes stay in
+  the CMT or pending, in power-loss-protected DRAM.
 - The controller raises a SMART asynchronous event once for each of these,
   if the host enabled its bit of Asynchronous Event Configuration:
 

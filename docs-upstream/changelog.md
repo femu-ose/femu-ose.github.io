@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/CHANGELOG.md) at FEMU `8c80dbd1d` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/CHANGELOG.md) at FEMU `c752f6498` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -298,6 +298,11 @@ was not doing anything.
 - Under FDP, forced GC keeps at least one reclaim unit free unless `gc_thres_pcent_high` is 100. Below 20 units the watermark rounded to none, and a pass that filled its destination part way had no unit to go on with ([89f34939f](https://github.com/MoatLab/FEMU/commit/89f34939f)).
 - With `hot_cold_sep`, Streams, or a `hybrid` or `fast` mapping, forced GC keeps at least one line free. Below 20 lines, where the watermark used to round to zero, such a namespace can expose one line less ([5a81d02cd](https://github.com/MoatLab/FEMU/commit/5a81d02cd)).
 - OC 1.2 Identify no longer advertises hybrid commands, and unsupported OC 1.2 block opcodes are rejected ([f5fc7d573](https://github.com/MoatLab/FEMU/commit/f5fc7d573), [6b5081821](https://github.com/MoatLab/FEMU/commit/6b5081821)).
+- `mapping=dftl` without FDP keeps its translation pages on flash, in lines of their own. Collection moves them, and dirty evictions and the changes that collection and deallocate make program them. FDP keeps the timing-only model.
+- Log page C0h (bytes 280 and 288) and `query-femu` count the translation page programs and reads of `mapping=dftl`, and the write amplification factor includes the programs. Realize keeps lines for these pages, so the largest namespace a geometry exposes is smaller than before. `x-ftl-check` adds the translation page checks.
+- With `mapping=dftl` and no FDP, a read starts its media read when its translation is ready. So a CMT miss adds the translation read to the page read; before, the two overlapped. With `hot_cold_sep` a write also waits for its translation.
+- With `mapping=dftl` and no FDP, DSM Deallocate and Write Zeroes with Deallocate write the translation pages they change once each, and charge that to the command. Write Zeroes without Deallocate pays the translation of each page, as a write does. Format and Sanitize drop the translation pages with no write-back.
+- With `mapping=dftl` and `eol_read_only`, read-only media opens no new translation page line, so the reserve lines stay for the writes in flight.
 - The `run-*.sh` launchers name QEMU's threads (`-name ...,debug-threads=on`), so `ps -T` and `top -H` show `femu-poller`, `FEMU-FTL-Thread` and `CPU N/KVM` ([e29fe6ee2](https://github.com/MoatLab/FEMU/commit/e29fe6ee2)).
 
 The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
@@ -335,6 +340,8 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - A QEMU NVMe read into `femu-cxl-ssd` memory no longer stops the QEMU main loop for the media time of the CXL pages it fills. The block layer completes such a read on the main loop, outside any re-entrancy guard, so the copy took the waiting path and slept up to the whole NAND backlog. Accesses from the main-loop thread now queue their media time as guarded device DMA does; an IOThread's copies, and those of other threads such as RCU's, which also hold the BQL, keep the full model.
 - An Open-Channel SSD no longer runs or advertises Dataset Management, Write Zeroes, Compare, Verify, Copy or Write Uncorrectable. Their common handlers used the sparse Open-Channel address as a flat LBA. The default `oncs` allowed Dataset Management, and a deallocate of a high address zeroed memory past the backing store and stopped QEMU. Flush is still accepted.
 - Many `femu-cxl-ssd` lifecycle, decoder and mapping fixes, including teardown while callers wait on invalidation, little-endian forwarding, and keeping stores when NAND has no page for write-back ([9e0223c19](https://github.com/MoatLab/FEMU/commit/9e0223c19), [bb7e28722](https://github.com/MoatLab/FEMU/commit/bb7e28722), [51c420143](https://github.com/MoatLab/FEMU/commit/51c420143), [d31c48d92](https://github.com/MoatLab/FEMU/commit/d31c48d92), [ec8b1ac7d](https://github.com/MoatLab/FEMU/commit/ec8b1ac7d), [02a872661](https://github.com/MoatLab/FEMU/commit/02a872661), [4505cd9a7](https://github.com/MoatLab/FEMU/commit/4505cd9a7), [86ba15078](https://github.com/MoatLab/FEMU/commit/86ba15078), [842d4ff72](https://github.com/MoatLab/FEMU/commit/842d4ff72), [b322efb8f](https://github.com/MoatLab/FEMU/commit/b322efb8f), [2d0c1404e](https://github.com/MoatLab/FEMU/commit/2d0c1404e)).
+- Device threads copy guest memory through the translation they checked. A guest that mapped a ROM over a buffer between the check and the copy could make a poller wait for the BQL while a pause held it.
+- A ZNS zone report is built under the zone lock and sent after the lock is released, to directly reachable memory only. A report into ROM used to hang the VM when a Changed Zone List read waited for that lock.
 
 #### Data correctness
 
@@ -370,6 +377,7 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - FDP cost-benefit GC ages a unit retired with no page invalidated from its retirement. It used to count from time zero, so a part-written unit left by RUH Update outscored every other victim; with few pages to free, background GC refused it on every pass and collected nothing. ([a9e0e1af6](https://github.com/MoatLab/FEMU/commit/a9e0e1af6))
 - FDP cost-benefit GC measures a unit's utilization against all its pages at every invalidation, as it already did at retirement. The first overwrite in a part-written unit used to measure it against the pages written only, so a unit holding 3 valid pages of 16 scored as 3 of 4 full and lost to units that cost more to collect. ([529d70960](https://github.com/MoatLab/FEMU/commit/529d70960))
 - FDP background cost-benefit GC takes the best-scoring unit with enough to free. A unit with one invalid page and an old invalidation could outscore every other victim; the pass refused it and collected nothing until the others aged past it or the foreground watermark was reached ([fe29da90b](https://github.com/MoatLab/FEMU/commit/fe29da90b)).
+- A ZNS Zone Management Send waits for the writes to its zones that the controller already accepted. A Reset in the gap between a write's acceptance and its data copy left an Empty zone with a moved write pointer and the old data.
 
 #### Spec conformance and host compatibility
 
@@ -422,6 +430,9 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - The spare critical warning in the SMART and Endurance Group logs is set when the available spare falls below the threshold, not when it equals it ([4faaff90a](https://github.com/MoatLab/FEMU/commit/4faaff90a)).
 - A memory backend that the host cannot allocate now refuses the device with a message that names its size. Before, QEMU aborted in the allocator.
 - An asynchronous event identical to one already queued (type, information, log page, namespace) is not queued again. Copies used to fill the 16-entry queue and push out other namespaces' events.
+- Reading one zoned namespace's Changed Zone List no longer unmasks Notice events while another namespace's reported notice is unread. That read used to send the other namespace's queued notice before its log was read (Base 2.3, 5.2.2).
+- A Changed Zone List read without RAE clears the list and its event only after a successful transfer, as SMART and Error Information already did. A failed transfer used to lose the changes. A zone that changes during the read keeps its entry.
+- An asynchronous event about a namespace no longer counts against the 16 queued controller events. With more than 16 zoned namespaces, a Zone Descriptor Changed notice used to be dropped and never raised again.
 
 ### Documentation and tooling
 

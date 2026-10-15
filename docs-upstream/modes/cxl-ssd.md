@@ -3,12 +3,12 @@ title: "CXL SSD"
 description: "femu-cxl-ssd is a CXL Type-3 memory device whose capacity is backed by emulated NAND flash. The guest sees ordinary CXL memory: it creates a region, then..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/modes/cxl-ssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/modes/cxl-ssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/cxl-ssd.md`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/modes/cxl-ssd.md) at FEMU `8c80dbd1d` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/cxl-ssd.md`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/modes/cxl-ssd.md) at FEMU `c752f6498` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
