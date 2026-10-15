@@ -3,12 +3,12 @@ title: "FDP: Flexible Data Placement"
 description: "This chapter describes how FEMU implements NVMe Flexible Data Placement (FDP): how the subsystem builds reclaim groups, reclaim units and reclaim unit..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/design/fdp.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/design/fdp.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/design/fdp.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/design/fdp.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -35,7 +35,8 @@ so you can measure that effect.
 
 FDP is not a `femu_mode`. It is turned on with `fdp=on` on a `femu-subsys`
 device, and a controller joins the subsystem with `subsys=`. Only a BlackBox
-(bbssd) namespace has the placement data path.
+(bbssd) namespace has the placement data path. A NoSSD namespace counts the
+host side of FDP ([NoSSD namespaces](#nossd-namespaces)).
 
 ## Place in the hierarchy
 
@@ -48,15 +49,19 @@ device, and a controller joins the subsystem with `subsys=`. Only a BlackBox
    |
    +-- femu device, femu_mode=1, subsys=   one controller
          |
+         +-- namespace 2 ...                 its own handle list, the same FTL
          +-- namespace 1                     placement handles PH 0..nruh-1
-               |                             (PH i -> RUH i)
+               |                             (default: PH i -> RUH i)
                +-- struct ssd (BlackBox FTL)
-                     FemuRuHandle[nruh]       current RU, GC RU, counters
-                     FemuReclaimGroup[nrg]    free list, full list,
-                                              victim queues
-                     FemuReclaimUnit[nru]     one line (superblock) each,
-                                              write pointer, valid pages
-                     lines -> blocks on every channel, LUN and plane
+                     FemuRuHandle[nruh]       per group: active RU and
+                                              collection RU; counters
+                     FemuReclaimGroup[nrg]    its dies, free list, full
+                                              list, victim queues
+                     FemuReclaimUnit[nrg][nru] one block index on the dies
+                                              of its group, write pointer,
+                                              valid pages
+                     lines -> blocks on the channels, LUNs and planes of
+                              the group (every die with one group)
 ```
 
 Two layers of state exist side by side. The subsystem holds what the host
@@ -73,18 +78,22 @@ with a single FDP configuration when the subsystem is realized:
 
 | Item | Value | Property |
 | --- | --- | --- |
-| Reclaim groups (NRG) | 1; any other value is refused | `fdp.nrg` |
+| Reclaim groups (NRG) | 1 to 128 | `fdp.nrg` |
 | Reclaim units per group | as set, at most 65536 | `fdp.nru` |
-| Reclaim unit handles (NRUH) | 1 to `fdp.nru`; must be set | `fdp.nruh` |
+| Reclaim unit handles (NRUH) | 1 to `fdp.nru`, at most 16366 (the descriptor size of log 20h is 16 bits); must be set | `fdp.nruh` |
 | Handle type (RUHT) | Persistently Isolated; with `fdp.isolation_mode` non-zero the last handle is Initially Isolated | `fdp.isolation_mode` |
-| Reclaim unit size (RUNS) | one BlackBox superblock (see below); the subsystem default of 96 MiB applies only when no bbssd controller overwrites it | `fdp.runs` |
-| Reclaim group identifier format (RGIF) | 0 with one group | derived |
-| MAXPIDS | 128 (reported zero-based as 127) | fixed |
+| Reclaim unit size (RUNS) | one BlackBox superblock of the dies of a group (see below); the subsystem default of 96 MiB applies only when no bbssd controller overwrites it | `fdp.runs` |
+| Reclaim group identifier format (RGIF) | the bits that hold `nrg - 1`: 0 with one group, 1 with two; the placement handle keeps the rest, at least enough for `MIN(nruh, 128)` handles | derived |
+| MAXPIDS | `MIN(128, NRG x NRUH)`, reported zero-based, so below NRG x NRUH (Base 2.3, Figure 287) | derived |
 | Event filter | every supported event type enabled on every handle | Set Features 1Eh |
 
-With FDP on, a controller that joins runs `nvme_ns_init_fdp()`, which gives
-namespace 1 every handle in order: placement handle `i` is RUH `i`, the
-namespace's ENDGID is 1, and each handle's RUAMW starts at a full unit. The
+With FDP on, a controller that joins runs `nvme_ns_init_fdp()` for each
+namespace. It takes the placement handle list of the namespace from its
+entry in `namespace_phls`, if set. Unset, the list holds the first
+`MIN(fdp.nruh, 128)` handles in order. Each placement handle then selects
+the RUH of the same number. A list holds at most 128 handles (NVM Command
+Set 1.2, Figure 125). The namespace's ENDGID is 1, and each handle's RUAMW
+starts at a full unit. The
 controller then sets CTRATT bit 19 (FDP), and the effects log lists I/O
 Management Send and Receive for NVM namespaces. Without FDP, and on
 namespaces of other command sets, the two commands fail with Invalid Command
@@ -98,14 +107,14 @@ The BlackBox side (`bb.c`, `ftl-fdp.c`) adds the following, for a CSD
 namespace as for a bbssd one, since CSD runs the same FTL
 (`bb_init_fdp()`):
 
-- RUNS is overwritten with the bytes of one superblock:
-  `nchs * luns_per_ch * pls_per_lun * pgs_per_blk * secs_per_pg * secsz`.
-  `fdp.runs` must be unset or exactly that.
-- The FTL uses `min(lines, fdp.nru)` reclaim units, one line each
-  (`lines_per_ru = 1`). Lines left over are not used by the placement write
-  path.
-- It needs at least `fdp.nruh * fdp.nrg + fdp.nruh + 1` units: one open unit
-  per handle, one collection unit per handle, and one spare.
+- RUNS is overwritten with the bytes of one superblock of a group:
+  `nchs * luns_per_ch * pls_per_lun * pgs_per_blk * secs_per_pg * secsz /
+  fdp.nrg`. `fdp.runs` must be unset or exactly that.
+- Each group has `min(lines, fdp.nru)` reclaim units (`lines_per_ru = 1`).
+  A unit is one block index on the dies of the group. Lines left over are
+  not used by the placement write path.
+- Each group needs at least `2 * fdp.nruh + 1` units: one open unit per
+  handle, one collection unit per handle, and one spare.
 - `gc_thres_pcent` and `gc_thres_pcent_high` set the free-unit watermarks
   instead of free-line watermarks. The forced watermark keeps at least one
   unit free, even where the percentage rounds to none, unless
@@ -115,21 +124,159 @@ namespace as for a bbssd one, since CSD runs the same FTL
   (`bb_check_capacity()`), or the controller is refused at realize:
 
   ```text
-  reserve = fdp.nruh * fdp.nrg          one open unit per handle and group
+  in each group:
+  reserve = fdp.nruh                    one open unit per handle
           + Persistently Isolated handles one collection unit each
           + forced watermark            free units forced GC keeps
-  usable  = (units - reserve) * superblock size
+  usable  = (units - reserve) * unit size     (refused if units <= reserve)
+  every namespace together must fit in usable: the host may send all of
+  its data to one group (Base 2.3, 8.1.11)
   ```
 
   The Initially Isolated handle collects into its open unit and adds
-  nothing. One namespace is checked against the whole pool because nothing
-  else can draw on it: FDP takes a single namespace and a single controller,
-  and namespace management is refused with it. A 1 MiB namespace on 64 KiB superblocks with four Persistently
+  nothing. The namespaces are checked against the whole pool together:
+  every namespace of the controller places into the one FTL, FDP takes a
+  single controller, and namespace management is refused with it. A 1 MiB namespace on 64 KiB superblocks with four Persistently
   Isolated handles needs 16 + 4 + 4 + 1 = 25 units; with 19 or 23 lines,
   both accepted before, random writes over all four handles failed nearly
   all of them. A partly exposed last page counts as a whole one. bbssd
   refuses a namespace that does not fit rather than shrink
   it, as it does without placement and with `op_pcent`.
+
+## Several namespaces
+
+Reclaim units and handles belong to the endurance group (Base 2.3,
+8.1.11). Each namespace reaches the handles through its own placement
+handle list (PHL), and namespaces may share a handle. FEMU follows that
+model: every bbssd namespace of an FDP controller places into one FTL, the
+one namespace 1 builds.
+
+```text
+ namespace_phls=0:1,,1:2            endurance group 1, one struct ssd
+ ns 1  PH 0 -> RUH 0  ------------>  RUH 0  units ...
+       PH 1 -> RUH 1  --+--------->  RUH 1  units ...   (shared)
+ ns 2  PH 0 -> RUH 1  --+
+       PH 1 -> RUH 2  ------------>  RUH 2  units ...
+                                     RUH 3  units ...   (unused: RUHA 0)
+ LPN = (backend_offset of the namespace + LBA * block size) / page size
+       [ ns 1 slice      | ns 2 slice      ]   no page holds two namespaces
+```
+
+| Part | How it works | Code |
+| --- | --- | --- |
+| FTL | namespace 1 builds it; later namespaces point at it (`ssd_shared`); the owner's exit clears their pointers | `bb_init()`, `bb_ns_exit()` |
+| Address | each namespace keeps its slice of the logical pages: `ssd_ns_byte_base()` adds its backend offset | `ssd_lpn_range()` |
+| Handles | the FTL builds every handle `0 .. fdp.nruh - 1`; a handle no list names holds its open unit too | `femu_fdp_ssd_init_ru_handles()` |
+| Placement | a write's PID selects a placement handle of its namespace's list | `fdp_place()` |
+| RUAMW | counts blocks of the format of the namespaces that use the handle (`NvmeRuHandle.lbads`) | `fdp_ru_ruamw()` |
+| Format, Sanitize | drop the pages of the slice of the namespace only | `ssd_deallocate_fdp_ns()` |
+| SMART, C0h, log 09h, thermal | count the shared FTL once | `nvme_collect_media_stats()` |
+| Release | a handle no remaining namespace lists is unused again; its byte counters stay | `nvme_ns_detach_fdp()` |
+
+Rules at realize (`nvme_check_phls()`, `nvme_check_fdp_namespaces()`):
+
+- `namespace_phls` needs `fdp=on`, one entry per namespace, 1 to
+  `MIN(fdp.nruh, 128)` handles per entry, each below `fdp.nruh`, none twice.
+  Unset gives every namespace every handle. That list can be longer than
+  128 when `fdp.nruh` is, as it always could.
+- With more than one namespace, every namespace runs bbssd, or every one
+  NoSSD. A bbssd namespace size is a whole number of NAND pages, so no page
+  holds blocks of two namespaces. `fdp_trim_erase_all` is refused, since it
+  erases every namespace.
+- The sum of the namespace sizes must fit in the units left after the
+  reserve, as one namespace does.
+
+Namespaces that share a handle share the format (NVM Command Set 1.2,
+5.2.5 and 5.2.21). A Format of one of them to another index fails with
+Invalid Format. A Format of every namespace (NSID FFFFFFFFh) takes the
+bitmaps of all of them first, so it changes all or none.
+
+Events from the FTL name a namespace by the data:
+
+```text
+ move of page lpn  --> namespace whose slice holds it
+ 80h  NSID and LBA of that namespace; PID from its list
+      a run of another namespace's pages ends the event: one 80h per run
+ 81h  the namespace of the move that changed the handle
+ 01h, 81h of an open-unit refresh   no data: the first namespace that
+                                    lists the handle
+ a namespace that does not list the handle --> the first one that does
+ no namespace lists it               --> no NSID, no PID
+```
+
+The write buffer is part of the shared FTL. A Flush of one namespace writes
+back the held pages of all of them, which Flush allows.
+
+Statistics stay per endurance group and per handle: a shared handle adds
+the writes of every namespace that uses it. query-femu reports the PHL of
+each namespace (`placement-handles`) and the namespace whose FTL holds the
+units (`ftl-nsid`).
+
+NoSSD namespaces have no FTL. They report their lists in RUH Status and
+count their writes as [NoSSD namespaces](#nossd-namespaces) says.
+
+## Reclaim groups
+
+A reclaim group is a set of dies. Base 2.3 (3.2.4) gives each handle a
+reclaim unit in each group and keeps collection inside a group (Figure
+288). It does not say which media a group holds. FEMU follows physical FDP
+SSDs: a group is a set of dies that work in parallel, and a unit is a
+superblock of those dies.
+
+```text
+ dies d = ch * luns_per_ch + lun, D = nchs * luns_per_ch
+ group of d = d / (D / nrg)
+   nrg divides nchs            --> nchs / nrg whole channels per group
+   nchs divides nrg, and
+   nrg / nchs divides luns_per_ch --> luns_per_ch * nchs / nrg LUNs of one
+                                     channel per group
+   anything else               --> refused at realize (bb_check_fdp_groups())
+
+ unit (g, j) = block index b_j on every plane of every die of group g
+ write pointer of a unit: steps over the window ch0..ch0+nch-1,
+                          lun0..lun0+nlun-1 of its group (ssd_wp_step())
+```
+
+| Part | How it works | Code |
+| --- | --- | --- |
+| Lines | with more than one group, each group has its own line per block index; `get_line()` takes the group of the die; with one group the lines are those of line mode | `femu_fdp_ssd_init_reclaim_group()` |
+| Frontiers | each handle has an active unit and a collection unit in each group | `FemuRuHandle.rus[]`, `gc_rus[]`, `fdp_set_active()` |
+| Placement | a valid PID names the group; a write without one goes to the group with the most free units, in turn on a tie | `fdp_place()`, `fdp_select_rg()` |
+| Collection | runs per group: foreground in the group of the write, background in every group under its watermark; victims and destinations stay in the group | `fdp_gc_until_clear()`, `bb_ftl_process_req()` |
+| Erase, pad, copyback | walk the dies of the unit's group only | `fdp_collect_ru()`, `ssd_pad_line()`, `fdp_reclaim_ru_copyback()` |
+| Write buffer | each held page keeps its group; a write-back skips a group with no room; a write at the watermark whose buffer holds only such pages goes to its own unit at once | `fdp_buffer_destage_some()`, `fdp_buffered_write()` |
+| RUH Update | writes back the held pages of the named pairs only | `fdp_buffer_destage_update()` |
+| Refresh | the unit's group must have room; with more than one group a queued refresh that cannot run is dropped, and the next read queues it again | `fdp_do_read_reclaim()` |
+| Check | `x-fdp-check` adds, for each unit, the valid pages of its blocks on the dies of its group, and compares them with its valid count | `fdp_check_dies()` |
+
+A logical block must be whole NAND pages with more than one group
+(`bb_check_fdp_block()`). The FTL maps whole pages. A write of part of a
+page would program the whole page into the group of the write. The other
+blocks of the page would then change group with it. With one group the
+FDP-2 rule stays: the handle of the last write to a page takes the page.
+
+## NoSSD namespaces
+
+A NoSSD namespace has no NAND model. The backend stores each byte of data
+once and no controller write exists. `nvme_fdp_host_write()` counts on the
+poller, under `stats_lock` of the endurance group, since several pollers
+write at once:
+
+```text
+ Write, Copy, Write Zeroes (DEAC 0)  --> HBMW += bytes, MBMW += bytes,
+                                         RUAMW of rus[g] of the handle -= blocks
+ Write Zeroes (DEAC 1), Write Uncorrectable --> HBMW += bytes only
+ unit full (RUAMW would reach 0)     --> fresh unit: RUAMW = full - rest
+ RUH Update: unit part written       --> event 00h, fresh unit
+             unit empty              --> stays, no event (Base 2.3, 7.4.1.1)
+ invalid PID                         --> placement handle 0, group in turn,
+                                         event 03h
+```
+
+MBE stays 0. Realize refuses a logical block larger than `fdp.runs`. A
+Format to such a block fails with Invalid Format. So a unit holds at least
+one block. RUH Update holds `stats_lock` across its whole list, and RUH
+Status and the FDP Statistics log read under it.
 
 ## Placement of writes
 
@@ -141,11 +288,11 @@ namespace as for a bbssd one, since CSD runs the same FTL
  Write: CDW12 bits 23:20 DTYPE, CDW13 bits 31:16 DSPEC
    |
    | DTYPE == 2 (data placement) and DSPEC is a valid placement identifier?
-   |   no  -> placement handle 0, reclaim group 0
+   |   no  -> placement handle 0, in the group with the most free units
    |          (if DTYPE was 2: host event "Invalid Placement Identifier")
    |   yes -> PID = (RG << (16 - RGIF)) | PH ;  with RGIF 0, PID = PH
    v
- PH --ns->fdp.phs[]--> RUH --curr_ru--> active RU --wptr--> next page
+ PH --ns->fdp.phs[]--> RUH --rus[RG]--> active RU --wptr--> next page
    |
    | per FTL page (secsz * secs_per_pg, 4 KiB by default): invalidate the old copy, map LPN -> new page,
    | RUAMW -= logical blocks written, advance the write pointer,
@@ -174,9 +321,10 @@ The order inside `ssd_stream_write_lpns()` is:
    part way, the command completes with Capacity Exceeded and only the pages
    already placed count.
 
-Writes of different handles never share an RU, but they share the NAND:
-every RU spans all channels, so concurrent handles compete for the same
-planes and channel buses.
+Writes of different handles never share an RU, but they share the NAND of
+their group. Every RU of a group spans the dies of the group. So
+concurrent handles of one group compete for the same planes and channel
+buses.
 
 ### Reclaim units over NAND
 
@@ -210,14 +358,17 @@ namespace `ssd_fdp_update_ruhs()` then, for each handle:
 
 - skips a handle that has no current unit (device full); the command still
   succeeds;
-- keeps the current unit if nothing was written to it yet;
-- otherwise takes a fresh unit (running one GC pass if none is free) and
-  retires the old one as if it had filled, or fails the command with
-  Capacity Exceeded if no unit can be freed;
-- in both cases records a host event "Reclaim Unit Not Fully Written" when
-  the unit still had room (RUAMW not zero) and that event is enabled on the
-  handle, so an update of a handle whose unit is still empty records one
-  too.
+- keeps the current unit if nothing was written to it yet. The handle does
+  not move, so no event follows (Base 2.3, 7.4.1.1 lets an empty unit
+  stay);
+- otherwise takes a fresh unit, with one GC pass if none is free, and
+  retires the old one as if it had filled. If no unit can be freed, the
+  command fails with Capacity Exceeded;
+- when the handle moves off a unit that still had room (RUAMW not zero),
+  records host event "Reclaim Unit Not Fully Written". The handle must
+  have that event enabled.
+
+Each identifier names a handle and a group, and moves that pair only.
 
 I/O Management Receive with operation 1 (RUH Status) returns one descriptor
 per placement handle and reclaim group: PID, RUHID, EARUTR (always 0) and
@@ -265,19 +416,20 @@ whose RUAMW differs from the room they leave.
 
 ### When it runs
 
-- Background: after every request the FTL thread handles, if a reclaim
-  group's free units are at or below
-  `(1 - gc_thres_pcent / 100) * units`, it runs one pass. A background pass
+- Background: after every request the FTL thread handles, each reclaim
+  group whose free units are at or below
+  `(1 - gc_thres_pcent / 100) * units` runs one pass. A background pass
   puts its victim back, whatever the policy, unless the victim is empty or
   an erase would give back at least 1/8 of its pages. Those pages are the
   invalid ones plus, for a unit that RUH Update retired part written, the
   ones it never wrote. Cost-benefit skips units that fail this check and
   takes the best-scoring unit that passes, so an old unit with little to
   free does not stall the pass.
-- Foreground: before a placed write and before each of its pages, while
-  free units are at or below `(1 - gc_thres_pcent_high / 100) * units` (at
-  least one unless `gc_thres_pcent_high` is 100), it
-  runs passes until the pressure clears or no victim is left. The host write waits for them.
+- Foreground: before a placed write and before each of its pages, it
+  checks the free units of the write's group. While they are at or below
+  `(1 - gc_thres_pcent_high / 100) * units` (at least one unless
+  `gc_thres_pcent_high` is 100), it runs passes in that group. It stops
+  when the pressure clears or no victim is left. The host write waits for them.
   Foreground passes, and the pass RUH Update may run, always collect their
   victim.
 
@@ -294,7 +446,7 @@ the choice to `gc_strategy`.
 | 2 | `random` | random among the victims |
 | - | `fifo` | the unit retired first; an empty unit goes before it, and a background pass takes the oldest unit it accepts |
 | - | `d-choice` | the fewest valid pages among 4 random draws from the victims, with replacement; the first of equal counts wins; an empty unit goes first |
-| 4 | - | per handle: the unit with the fewest valid pages among the per-handle queues of Persistently Isolated handles, falling back to greedy |
+| 4 | - | per handle: the unit with the fewest valid pages among the per-handle queues, in the group, of Persistently Isolated handles that hold units there, falling back to greedy |
 
 ### Where relocated data goes
 
@@ -303,11 +455,12 @@ The handle type decides the destination of the valid pages, which is what
 
 ```text
  victim from a Persistently Isolated handle h
-     -> h's own GC unit (gc_ru, taken from the free list on demand)
+     -> h's own GC unit in the victim's group (gc_rus[g], taken from the
+        free list of the group on demand)
         data of h stays apart from every other handle, before and after GC
 
  victim from an Initially Isolated handle
-     -> the current unit of the last handle (RUH nruh-1)
+     -> the current unit of the last handle (RUH nruh-1) in the group
         data may be mixed with other relocated data after GC
 ```
 
@@ -358,8 +511,8 @@ list them.
 | Log | Content | Code |
 | --- | --- | --- |
 | 20h FDP Configurations | header with NUMFDPC 0 (one configuration), then one descriptor: FDPA (valid, RGIF), NRG, NRUH, MAXPIDS, NNSS 256, RUNS, and NRUH handle descriptors with the RUHT of each handle | `nvme_fdp_confs()` |
-| 21h Reclaim Unit Handle Usage | header with NRUH, then one descriptor per handle with its RUHA (1 = host-specified for every handle the namespace was given) | `nvme_fdp_ruh_usage()` |
-| 22h FDP Statistics | HBMW, MBMW and MBE as 128-bit counters; FEMU fills the low 64 bits | `nvme_fdp_stats()` |
+| 21h Reclaim Unit Handle Usage | header with NRUH, then one descriptor per handle with its RUHA (1 = host-specified for a handle some namespace lists, 0 for one no list names) | `nvme_fdp_ruh_usage()` |
+| 22h FDP Statistics | HBMW, MBMW and MBE as 128-bit counters, which stop at the 128-bit maximum | `nvme_fdp_stats()` |
 | 23h FDP Events | number of events, then the events of the ring selected by LSP bit 0 (1 = host events, 0 = controller events) | `nvme_fdp_events()` |
 
 ### The 21h layout
@@ -385,11 +538,13 @@ in 22h.
 
 | Counter | Grows by | Where |
 | --- | --- | --- |
-| HBMW (host bytes with metadata written) | bytes a Write, Copy or Write Zeroes without Deallocate actually programmed | `fdp_count_write()` |
-| MBMW (media bytes with metadata written) | the same host bytes, plus bytes relocated by GC, plus pad bytes (`pd_open_close_sec`) | `fdp_count_write()`, `do_gc_fdp_style()`, `fdp_pd_leave_ru()` |
+| HBMW (host bytes with metadata written) | bytes of the logical blocks a Write, Copy or Write Zeroes without Deallocate wrote, in the pages it actually programmed or the buffer took (`fdp_host_bytes()`); and the bytes of the blocks of a Write Zeroes with Deallocate or a Write Uncorrectable, which NVM Command Set 1.2, 4.1.4.6 counts too, though they program no page | `fdp_count_write()`, `fdp_buffered_write()`, `ssd_fdp_count_unprogrammed()` |
+| MBMW (media bytes with metadata written) | the bytes of the pages programmed for the host, plus bytes relocated by GC, plus pad bytes (`pd_open_close_sec`) | `fdp_count_write()`, `do_gc_fdp_style()`, `fdp_pd_leave_ru()` |
 | MBE (media bytes erased) | bytes of every block erased by GC | `do_gc_fdp_style()` |
 
 The ratio MBMW / HBMW is the write amplification of the endurance group.
+A write smaller than a page programs the whole page, so it raises the
+ratio above 1, as it does on a real device.
 The counters are charged after the write, from the pages it placed, so a
 write that ran out of space adds only what it wrote. They are reset by a
 deallocate with `fdp_trim_erase_all` set.
@@ -402,8 +557,8 @@ Each event carries the Timestamp feature's current value.
 
 | Type | Ring | Generated when |
 | --- | --- | --- |
-| 0h Reclaim Unit Not Fully Written | host | RUH Update moves a handle off a unit that still had room |
-| 3h Invalid Placement Identifier | host | a placed write (Write, Copy, Write Zeroes) on a bbssd namespace has DTYPE 2 and a DSPEC that is not a valid PID; checked against the event filter of placement handle 0; other modes never raise it |
+| 0h Reclaim Unit Not Fully Written | host | RUH Update moves a handle off a unit that still had room; an empty unit stays and logs nothing |
+| 3h Invalid Placement Identifier | host | a placed write (Write, Copy, Write Zeroes, Write Uncorrectable) on a bbssd or NoSSD namespace has DTYPE 2 and a DSPEC that is not a valid PID; PIV with that DSPEC, NSIDV, and LV with the group and handle the controller selected (Base 2.3, Figure 296); checked against the event filter of placement handle 0 |
 | 80h Media Reallocated | controller | a collection or refresh pass moved pages of a unit of the Initially Isolated handle; one event per pass, split around each 81h the pass causes, also for a pass that stops part way; checked against that handle's filter |
 | 81h Implicitly Modified Reclaim Unit Handle | controller | a move, not the host, gave the Initially Isolated handle a new unit: the moves filled its active unit and a free unit follows, or the pass takes a unit for a handle left with none; checked against that handle's filter |
 | 1h Reclaim Unit Active Time Limit Exceeded | host | `pd_open_close_sec`: the controller padded a handle's active unit and gave the handle a fresh one; LV, NSIDV and PIV as for 81h |
@@ -459,6 +614,7 @@ no namespaces and FEMU builds the namespace at realize.
 | Parsing DTYPE and DSPEC, validating RUH Update identifiers, I/O Management Receive | poller | data copy to the DRAM backend happens here too |
 | Placement, RU rotation, GC, deallocate, RUH Update on bbssd | FTL thread | sole owner of the FTL structures |
 | Event append | poller or FTL thread | `events_lock` in the endurance group |
+| Counters of log 22h; NoSSD RUAMW | FTL thread, poller | `stats_lock` in the endurance group, taken before `events_lock` |
 | Log pages 20h to 23h, Features 1Dh and 1Eh | admin path | 23h reads under `events_lock` |
 
 A placed write is charged the largest NAND program latency of its pages,
@@ -478,14 +634,14 @@ of the property reference; the controller-side ones are under
 | `fdp` | `femu-subsys` | Turns FDP on. Refused together with `ns_mgmt=on`. |
 | `fdp.nruh` | `femu-subsys` | Handles and placement handles. Required. Raises the units the geometry must supply. |
 | `fdp.nru` | `femu-subsys` | Units per group; the FTL uses at most one per line. |
-| `fdp.nrg` | `femu-subsys` | Must be 1. |
-| `fdp.runs` | `femu-subsys` | Unset, or the superblock size. |
+| `fdp.nrg` | `femu-subsys` | Groups; with bbssd a set of dies each, see [Reclaim groups](#reclaim-groups). |
+| `fdp.runs` | `femu-subsys` | Unset, or the superblock size of a group. |
 | `fdp.isolation_mode` | `femu-subsys` | Non-zero makes the last handle Initially Isolated. |
 | `gc_strategy` | `femu` | Victim policy, above. No effect without FDP. |
 | `fdp_trim_erase_all` | `femu` | Whole-device reset on deallocate. No effect without FDP. |
 | `gc_thres_pcent`, `gc_thres_pcent_high` | `femu` | Background and foreground watermarks, as fractions of the units. |
 | `gc_copyback` | `femu` | Moves collected pages on their die; off by default. A copyback skips ECC (timing only in FEMU). |
-| BlackBox geometry (`nchs`, `luns_per_ch`, `pls_per_lun`, `blks_per_pl`, `pgs_per_blk`, `secs_per_pg`, `secsz`) | `femu` | Sets RUNS (one superblock) and the number of lines, hence units. |
+| BlackBox geometry (`nchs`, `luns_per_ch`, `pls_per_lun`, `blks_per_pl`, `pgs_per_blk`, `secs_per_pg`, `secsz`) | `femu` | Sets RUNS (one superblock of a group) and the number of lines, hence units. |
 
 Refused under FDP on a bbssd controller:
 
@@ -507,8 +663,9 @@ its valid pages to where collection would move them, then erases the unit.
 ```
  read of unit U: read count >= read_reclaim_limit, or age >= retention_limit_sec
    --> U queued (one at a time)
- next write: no group at the high watermark, 2 or more free units
-   --> U active (curr_ru or gc_ru)   --> request dropped
+ next write: U's group not at the high watermark, 2 or more free units
+   (with more than one group, else the request is dropped)
+   --> U active (rus[g] or gc_rus[g]) --> request dropped
    --> U full or a victim            --> taken off its list
    --> move every valid page, no copyback --> erase U, free U
    --> C0h read_reclaims or retention_refreshes + 1, MBMW + moved bytes
@@ -520,18 +677,20 @@ The refresh logs the same FDP events as a collection pass (see
 `buffer_size` puts the write buffer in front of placed writes. The buffer
 models time only: it holds page numbers, and the backend holds the data.
 Each held page keeps the handle and group of its last write. A write-back
-programs each page into the active unit of its own handle, so a unit takes
-only the pages of its handle.
+programs each page into the active unit of its own handle in its own
+group, so a unit takes only the pages of its handle.
 
 ```
  Write or Copy, no FUA, cache on
    --> each page: held?  no, and buffer at the watermark
          --> write back the oldest (buffer_size - watermark) pages
-         --> still at the watermark: Capacity Exceeded
+         --> still at the watermark: the page goes to its own unit at
+             once if its group has room, else Capacity Exceeded
    --> entry {lpn, handle, group, written 512-byte pieces} := this write
-   --> HBMW += pages x page size; C0h host pages, 72 and 80 count
+   --> HBMW += bytes of the blocks written; C0h host pages, 72 and 80 count
  write-back of entry e
-   --> collect for e.handle; e.handle has no unit and none is free: stop
+   --> collect in e.group; e.handle has no unit there and none is free:
+       e stays, and so do the later pages of e.group; go on with the rest
    --> program into e.handle's active unit, RUAMW of that unit drops
    --> MBMW of the group and of e.handle += page size; e leaves the buffer
 ```
@@ -546,11 +705,11 @@ different blocks of it. The other commands:
 | Write with FUA, Write Zeroes without Deallocate | program at once; a held copy of a page goes when this command programs that page |
 | Volatile Write Cache off (feature 06h) | writes every held page back first; if one finds no room, the command fails and the cache stays on |
 | DSM Deallocate, Write Zeroes with Deallocate, Format | drop the held copy, which never reaches the media |
-| I/O Management Send, RUH Update | writes every held page back first, so the pages land in the units the handles named before the update; if one finds no room, no handle moves and the command returns Capacity Exceeded |
+| I/O Management Send, RUH Update | writes back the held pages of the named (handle, group) pairs first, so they land in the units the handles named before the update; if one of them finds no room, no handle moves and the command returns Capacity Exceeded |
 | Read | a held page is served from the buffer |
 
-HBMW counts pages a write accepts, and MBMW pages that reach the media,
-so MBMW can be below HBMW when the buffer absorbs rewrites. RUAMW drops
+HBMW counts the blocks a write accepts, and MBMW pages that reach the
+media, so MBMW can be below HBMW when the buffer absorbs rewrites. RUAMW drops
 when a page reaches its unit, for written back and direct pages alike
 (see RUAMW above). The
 admin commands above charge no modelled time for their write-back.
@@ -581,8 +740,8 @@ first program, so an empty unit is never padded.
 Collection that frees a queued unit first drops the request, and the
 counters do not move. A collection of a queued unit does not use copyback.
 
-Refused on any controller with FDP: more than one namespace, a
-second controller in the subsystem, `meta`, `streams`, a KV namespace.
+Refused on any controller with FDP: a second controller in the
+subsystem, `meta`, `streams`, a KV namespace.
 Each message is listed in the [feature guide](../features/fdp.md#limits-and-refusals).
 
 A device with eight handles, every one Persistently Isolated except the
@@ -605,7 +764,7 @@ last:
 
 | Check | What it covers |
 | --- | --- |
-| qtest cases in `hw/femu/tests/qtest/femu-test.c` | `fdp-events`, `fdp-features`, `fdp-report-length`, `fdp-ruh-usage`, `fdp-write-zeroes`, `fdp-write-zeroes-placed`, `fdp-ruh-update`, `fdp-ruh-update-full`, `fdp-background-gc`, `fdp-cb-unwritten-age`, `fdp-cb-utilization`, `fdp-cb-background`, `wide-lba-fdp`, `io-fuzz-fdp`, `copy-fdp`, `log-contents-fdp`, `ns-mgmt-unavailable-fdp`, `fdp-csd-knobs`, `fdp-knobs-refused`, `fdp-policy-fifo`, `fdp-policy-fifo-greedy`, `fdp-policy-fifo-empty`, `fdp-policy-fifo-csd`, `fdp-policy-fifo-background`, `fdp-policy-cb`, `fdp-policy-cb-strategy`, `fdp-policy-cb-greedy`, `fdp-policy-refused`, `fdp-dftl`, `fdp-dftl-page`, `fdp-dftl-csd`, `fdp-buffer-isolation`, `fdp-buffer-isolation-csd`, `fdp-buffer-rehandle`, `fdp-buffer-dealloc`, `fdp-buffer-fua`, `fdp-buffer-vwc`, `fdp-buffer-update`, `fdp-buffer-full`, `fdp-buffer-copy`, `fdp-events-gc-ii-part-buffer`, `fdp-events-gc-ii-mix-buffer`, `fdp-events-gc-ii-fua-buffer`, `fdp-events-gc-ii-redo-buffer`, `fdp-csd-runs`, `fdp-gc-strategy-refused`, `fdp-events-gc-pi`, `fdp-events-gc-ii`, `fdp-events-gc-ii-cb`, `fdp-events-gc-ii-4k`, `fdp-events-gc-ii-part`, `fdp-events-gc-ii-rot`, `fdp-events-gc-ii-mask`, `fdp-events-gc-ii-no80`, `fdp-events-gc-ii-no81`, `fdp-events-gc-ii-other`, `fdp-events-gc-ii-empty`, `fdp-events-rf-pi`, `fdp-events-rf-ii`, `fdp-events-rf-ii-part` |
+| qtest cases in `hw/femu/tests/qtest/femu-test.c` | `fdp-ns-phl`, `fdp-ns-cmds`, `fdp-ns-format-shared`, `fdp-ns-format-apart`, `fdp-ns-events`, `fdp-ns-knobs`, `fdp-ns-nossd`, `fdp-ns-refused`, `fdp-ns-replace`, `fdp-replace-full` (several namespaces, and a replaced controller whose handle had no unit; `x-fdp-ns-mapped` gives each namespace's mapped pages), `fdp-events`, `fdp-features`, `fdp-report-length`, `fdp-ruh-usage`, `fdp-write-zeroes`, `fdp-write-zeroes-placed`, `fdp-ruh-update`, `fdp-ruh-update-full`, `fdp-background-gc`, `fdp-cb-unwritten-age`, `fdp-cb-utilization`, `fdp-cb-background`, `wide-lba-fdp`, `io-fuzz-fdp`, `copy-fdp`, `log-contents-fdp`, `ns-mgmt-unavailable-fdp`, `fdp-csd-knobs`, `fdp-knobs-refused`, `fdp-policy-fifo`, `fdp-policy-fifo-greedy`, `fdp-policy-fifo-empty`, `fdp-policy-fifo-csd`, `fdp-policy-fifo-background`, `fdp-policy-cb`, `fdp-policy-cb-strategy`, `fdp-policy-cb-greedy`, `fdp-policy-refused`, `fdp-dftl`, `fdp-dftl-page`, `fdp-dftl-csd`, `fdp-buffer-isolation`, `fdp-buffer-isolation-csd`, `fdp-buffer-rehandle`, `fdp-buffer-dealloc`, `fdp-buffer-fua`, `fdp-buffer-vwc`, `fdp-buffer-update`, `fdp-buffer-full`, `fdp-buffer-copy`, `fdp-events-gc-ii-part-buffer`, `fdp-events-gc-ii-mix-buffer`, `fdp-events-gc-ii-fua-buffer`, `fdp-events-gc-ii-redo-buffer`, `fdp-csd-runs`, `fdp-gc-strategy-refused`, `fdp-events-gc-pi`, `fdp-events-gc-ii`, `fdp-events-gc-ii-cb`, `fdp-events-gc-ii-4k`, `fdp-events-gc-ii-part`, `fdp-events-gc-ii-rot`, `fdp-events-gc-ii-mask`, `fdp-events-gc-ii-no80`, `fdp-events-gc-ii-no81`, `fdp-events-gc-ii-other`, `fdp-events-gc-ii-empty`, `fdp-events-rf-pi`, `fdp-events-rf-ii`, `fdp-events-rf-ii-part`, `fdp-confs` (log 20h), `fdp-invalid-pid` and `fdp-invalid-pid-nossd` (event 03h), `fdp-unprogrammed`, `fdp-nossd-counts`, `fdp-runs-block`; reclaim groups: `fdp-confs-rg2`, `fdp-rg2-place`, `fdp-rg3-place`, `fdp-rg4-place` (PIDs, RUH Status, placement by group from query-femu, group selection, RUH Update of one pair), `fdp-rg2-gc`, `fdp-rg2-gc-cb`, `fdp-rg2-gc-ii`, `fdp-rg4-gc` (the whole namespace through one group, collection in it, no page and no erase in another), `fdp-rg2-buffer` (a full group does not stop another) |
 | Exact traces and victim-order digests (qtest-only `x-ftl-trace`) | `ftl-trace-fdp` and `ftl-trace-fdp-reread` (greedy), `ftl-trace-fdp-random` (`gc_strategy=2`), `ftl-trace-fdp-policy-random` (`gc_policy=random`, the same trace), `ftl-trace-fdp-fifo` and `ftl-trace-fdp-d-choice` (`gc_policy`), `ftl-trace-fdp-knobs-off` (`gc_policy=greedy`, `mapping=page` and `buffer_size=0` given: the `ftl-trace-fdp` trace), `ftl-trace-fdp-noisy` and `ftl-trace-fdp-noisy-ii` (`gc_strategy=4` on two handles, the second one Initially Isolated in `-ii`), `ftl-trace-fdp-trim-erase-all` (`fdp_trim_erase_all=1` while both kinds of heap hold victims; afterwards the mapping holds exactly the pages written since) |
 | Documentation examples | each tagged FDP example starts under qtest and moves one block |
 | `hw/femu/scripts/fdp-test-nvme-admin.sh` | in-guest nvme-cli checks against the `run-blackbox-fdp.sh` configuration; manual |
@@ -613,28 +772,33 @@ last:
 
 ## Limits
 
-- One reclaim group, one FDP configuration, one namespace and one
-  controller per FDP subsystem.
-- An RU is exactly one line; RUNS cannot be smaller or larger than a
-  superblock.
-- Only bbssd places data. A NoSSD, ZNS or OCSSD controller in an FDP
-  subsystem answers the log pages and features, and RUH Update resets
-  the handle's RUAMW and records event 0h if the unit still had room; no
-  data is placed. CSD uses the bbssd path, with the same refused knobs and
-  RUNS. KV is refused.
+- One FDP configuration and one controller per FDP subsystem.
+- An RU is exactly one block index on the dies of its group; RUNS cannot
+  be smaller or larger than that superblock.
+- Only bbssd places data. A NoSSD controller counts the host side
+  ([NoSSD namespaces](#nossd-namespaces)). CSD uses the bbssd path, with
+  the same refused knobs and RUNS, and without its memory and compute
+  namespaces. ZNS, OCSSD and KV are refused (Base 2.3, 8.1.11).
+- With more than one group, each group holds the whole exposed capacity,
+  and a logical block is whole NAND pages.
+- query-femu shows the FDP state of bbssd namespaces only.
+- The FTL thread writes the RUAMW of bbssd units, and pollers read it for
+  RUH Status with no lock, as before. The counters of log 22h change and
+  are read under `stats_lock`.
+- A bbssd write that runs out of room counts the pages it programmed or
+  the buffer took before the failure. A NoSSD command that fails counts
+  nothing, except a two-page write whose second transfer fails: the whole
+  blocks of its first page count.
 - Page or DFTL mapping only.
 - The CSD NVM-to-AFDM transfer reads the mapping only, without FDP as
   well: a page the write buffer holds and never wrote back costs no read.
-- EARUTR is always 0; there is no active reclaim unit time limit, so event
-  1h is never raised.
-- The 128-bit statistics carry only their low 64 bits.
+- EARUTR is always 0; ERUTL is not reported.
+- The handle counters of query-femu are 64-bit and stop at their largest
+  value.
 - Metadata, Streams and Namespace Management do not combine with FDP.
 
 ## How to extend it
 
-- More reclaim groups: the FTL keeps one active unit per handle; a group
-  other than 0 needs a current unit per (handle, group) before `fdp.nrg`
-  can be lifted in `nvme_subsys_setup_fdp()`.
 - Larger reclaim units: `lines_per_ru` in `ssd_init_fdp_params()` is the
   hook, but `fdp_advance_ru_pointer()` retires a unit after its first line;
   it must walk `ru->lines[]` first.
@@ -653,7 +817,7 @@ last:
 
 | File | What is there |
 | --- | --- |
-| `hw/femu/femu.c` | `femu-subsys` properties, `nvme_subsys_setup_fdp()`, `nvme_ns_init_fdp()`, `nvme_ns_refresh_fdp()`, single-controller and single-namespace checks, CTRATT |
+| `hw/femu/femu.c` | `femu-subsys` properties, `nvme_subsys_setup_fdp()`, `nvme_ns_init_fdp()`, `nvme_ns_refresh_fdp()`, `namespace_phls`, single-controller and multi-namespace checks, CTRATT |
 | `hw/femu/nvme.h` | FDP wire structures (configuration, usage, statistics, events, RUH status), endurance group and handle state, event tables |
 | `hw/femu/nvme-io.c` | DTYPE and DSPEC parsing, PID helpers, event recording, I/O Management Send and Receive |
 | `hw/femu/nvme-admin.c` | log pages 20h to 23h, Features 1Dh and 1Eh, supported logs, effects log |

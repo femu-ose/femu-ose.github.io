@@ -3,12 +3,12 @@ title: "QMP query-femu"
 description: "query-femu is a QMP command that reports the FTL state of a FEMU NVMe controller to the host. It needs no guest tools. The schema is in qapi/femu.json, and..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/query-femu.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/reference/query-femu.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/query-femu.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/reference/query-femu.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -19,7 +19,8 @@ controller to the host. It needs no guest tools. The schema is in
 
 This release supports BlackBox (`bbssd`) namespaces, also with flexible
 data placement (FDP), and zoned (`znssd`) namespaces. For a `csd`,
-`kvssd` or `ocssd` namespace the reply has the NAND bus timing only. A
+`kvssd` or `ocssd` namespace the reply has the NAND bus timing. A `kvssd`
+namespace with `kv_index=lsm` also reports its LSM-tree index. A
 selected `nossd` namespace, or one backed by a `femu-cxl-ssd` medium,
 returns an error that names the mode.
 A controller in an unsupported mode returns that error even when the
@@ -41,6 +42,10 @@ guest has not enabled it.
 ```
 
 ## Start a device with a QMP socket
+
+To watch the counters change, run
+[`femu-stat.py`](../guides/measuring.md#live-counters-on-the-host-femu-stat)
+on the QMP socket. It polls this command and `query-femu-stages`.
 
 ```
 -device femu,id=femu0,devsz_mb=1024,femu_mode=1 -qmp unix:/tmp/femu-qmp.sock,server=on,wait=off
@@ -66,7 +71,7 @@ listing kind fits one namespace type:
 
 ```
  kind            bbssd   bbssd + FDP   znssd   csd, kvssd, ocssd
- summary         yes     yes           yes     yes (media only)
+ summary         yes     yes           yes     yes (media, KV index)
  lines           yes     error         error   error
  reclaim-units   error   yes           error   error
  zones           error   error         yes     error
@@ -127,28 +132,46 @@ has these members:
 | Member | Content |
 | --- | --- |
 | `reclaim-groups`, `units-per-group` | reclaim groups, and reclaim units in each group |
+| `groups` | each reclaim group: `id`, its dies (`first-channel` and `channels`, `first-lun` and `luns` in each of its channels) and its `free-units` |
 | `pages-per-unit` | NAND pages in each reclaim unit |
 | `handles` | each reclaim unit handle: `id`, `type` (`initially-isolated` or `persistently-isolated`), `host-bytes` and `media-bytes` |
 | `unit-counts` | reclaim units that are `free`, `open`, `full` and `victim`, and the `total` |
+| `placement-handles` | the placement handle list of the namespace: the reclaim unit handle of placement handle 0, 1, ... |
+| `ftl-nsid` | the namespace whose FTL holds the units |
 | `reclaim-units` | with `kind` `reclaim-units`: `group`, `unit`, `handle`, `state`, `vpc`, `ipc`, `erase-min` and `erase-max` of each unit, by group and then by unit |
 
-`host-bytes` counts the NAND pages that the host wrote through the
-handle, in bytes, so a 512-byte write on a 4 KiB page adds 4096.
-`media-bytes` adds the data that garbage collection moved out of the
+`host-bytes` counts the bytes of the logical blocks that the host wrote
+through the handle, so a 512-byte write on a 4 KiB page adds 512.
+`media-bytes` counts the whole page, 4096, when the page is programmed.
+`media-bytes` also adds the data that garbage collection moved out of the
 handle's units, and the pad pages that closed its units
 (`pd_open_close_sec`). Both keep their values when a controller replaces another
 on the same subsystem.
 The FDP Statistics log (log page 22h) reports the sum of each counter over
 the handles. Its fields are Host Bytes with Metadata Written (HBMW) and
-Media Bytes with Metadata Written (MBMW). The counters stop at the largest 64-bit value.
+Media Bytes with Metadata Written (MBMW). The log keeps 128-bit sums. The
+handle counters stop at the largest 64-bit value.
 
 ```
- host write via handle h  --> host-bytes[h] += n   media-bytes[h] += n
+ host write of n bytes via handle h, on p pages
+                          --> host-bytes[h] += n
+ the p pages programmed   -->                      media-bytes[h] += p * page
+     (at once, or when the write buffer writes them back)
  GC moves m bytes out of
  a unit that h wrote      -->                      media-bytes[h] += m
  p pad bytes close a unit
  that h owns              -->                      media-bytes[h] += p
  log page 22h: HBMW = sum(host-bytes)   MBMW = sum(media-bytes)
+```
+
+With more than one FDP namespace, every namespace places into the FTL of
+`ftl-nsid`. Each namespace then reports the same `handles`, units and
+`counters`; only `placement-handles` differ. Add them once, not once per
+namespace.
+
+```
+ query nsid 1: placement-handles [0, 1]  ftl-nsid 1  handles, units, counters
+ query nsid 2: placement-handles [1, 2]  ftl-nsid 1  the same as nsid 1
 ```
 
 The `state` of a unit is `free`, `open`, `full`, `victim` or `unlisted`.
@@ -254,6 +277,47 @@ With `kv_timing=model`, a KV namespace still charges its NAND ops, so
 `media` is correct for the media timelines. The time a Store or Retrieve
 command takes comes from the model instead.
 
+### KV LSM index
+
+A `kvssd` entry has an `lsm` member when the device runs `kv_index=lsm`
+([LSM-tree key index](../features/kv-lsm-index.md)). With the hash index
+the entry keeps its three members: `nsid`, `mode` and `media`.
+
+| Member | Meaning |
+| --- | --- |
+| `memtable-keys`, `memtable-capacity` | records in the memtable, and the records it holds before a flush |
+| `size-ratio`, `pinned-levels` | the `kv_lsm_size_ratio` and `kv_lsm_pinned_levels` knobs |
+| `records-per-page` | records of one meta page: the page size / 32 |
+| `device-dram-bytes` | modelled controller DRAM: 32 bytes per memtable or pinned record, 24 per meta page of an unpinned level; a pinned level needs no level list |
+| `meta-flash-bytes` | the meta pages of the unpinned levels, in bytes; they are real NAND pages |
+| `levels` | levels 1 to the deepest one that holds a record: `level`, `records` (tombstones and older versions too), `capacity` (18446744073709551615 for level 24), `pages`, `pinned` |
+| `flushes`, `compactions` | memtable merges into level 1; level merges into the next one |
+| `dropped-records`, `reinserted-keys` | records merges dropped; keys that value GC put back in the memtable |
+| `probe-read-pages`, `scan-read-pages` | meta page reads of lookups and of List |
+| `compaction-read-pages`, `compaction-program-pages` | meta page reads and programs of merges |
+| `gc-read-pages` | meta page reads that check values before value GC moves them |
+| `gc-meta-pages` | meta pages that value GC moved out of a victim line |
+| `gc-stale-value-pages` | value pages that value GC found stale (the tree had a newer record) and released with no move |
+| `valid-value-pages` | value pages valid on flash, with the pages of old values whose records the tree has not dropped yet |
+| `versions` | table slots in use: one for each live key, and one for each old value whose record the tree still holds |
+
+The command copies these under the lock of the namespace, so they agree
+with each other. It needs no enabled controller.
+
+```json
+"lsm": {"memtable-keys": 12, "memtable-capacity": 16, "size-ratio": 2,
+        "pinned-levels": 1, "records-per-page": 128,
+        "device-dram-bytes": 1456, "meta-flash-bytes": 8192,
+        "levels": [{"level": 1, "records": 32, "capacity": 32, "pages": 1, "pinned": true},
+                   {"level": 2, "records": 48, "capacity": 64, "pages": 1, "pinned": false},
+                   {"level": 3, "records": 96, "capacity": 128, "pages": 1, "pinned": false}],
+        "flushes": 11, "compactions": 4, "dropped-records": 0,
+        "reinserted-keys": 0, "probe-read-pages": 37, "scan-read-pages": 2,
+        "compaction-read-pages": 6, "compaction-program-pages": 5,
+        "gc-read-pages": 0, "gc-meta-pages": 0, "gc-stale-value-pages": 0,
+        "valid-value-pages": 180, "versions": 180}
+```
+
 ## Example
 
 ```json
@@ -317,7 +381,10 @@ Each handle has one unit open:
             "cache-read": false, "read-cache-busy-ns": 0, "cache-step-ns": 0,
             "cache-select-ns": 0, "onfi-order": false,
             "page-register-hold": false, "status-per-plane": false},
-  "fdp": {"reclaim-groups": 1, "units-per-group": 25, "pages-per-unit": 16,
+  "fdp": {"reclaim-groups": 1,
+          "groups": [{"id": 0, "first-channel": 0, "channels": 2,
+                      "first-lun": 0, "luns": 2, "free-units": 21}],
+          "units-per-group": 25, "pages-per-unit": 16,
           "handles": [{"id": 0, "type": "persistently-isolated",
                        "host-bytes": 0, "media-bytes": 0},
                       {"id": 1, "type": "persistently-isolated",
@@ -328,6 +395,7 @@ Each handle has one unit open:
                        "host-bytes": 0, "media-bytes": 0}],
           "unit-counts": {"free": 21, "open": 4, "full": 0, "victim": 0,
                           "total": 25},
+          "placement-handles": [0, 1, 2, 3], "ftl-nsid": 1,
           "reclaim-units": [{"group": 0, "unit": 0, "handle": 0,
                              "state": "open", "vpc": 0, "ipc": 0,
                              "erase-min": 0, "erase-max": 0}]},

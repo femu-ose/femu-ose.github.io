@@ -3,12 +3,12 @@ title: "Timing model"
 description: "FEMU makes an emulated SSD take as long as a real one would. This page explains how it computes that time, how it makes the guest wait for it, which..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/concepts/timing-model.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/concepts/timing-model.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/timing-model.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/concepts/timing-model.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/timing-model.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/concepts/timing-model.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -54,7 +54,7 @@ the media time itself before the access completes (see
 | BBSSD | NAND reads, programs and erases; write buffer and read cache hits; DFTL mapping misses; GC; deallocate (`trim_lat_ns`) | `FEMU-FTL-Thread` |
 | CSD | as BBSSD, plus program run time on a compute unit and copies into device memory | FTL thread; compute units on the `femu-csd-cu` threads; copies in the poller |
 | ZNS | NAND reads, programs and erases; write cache accesses | `FEMU-FTL-Thread` |
-| KV | NAND reads and programs for values, erases on reclaim, and a fixed per-command cost of one page read | poller |
+| KV | NAND reads and programs for values, value GC and erases; the hash index adds one page read per command, the LSM index its meta page reads | poller |
 | OCSSD | NAND reads, programs and erases, optional channel transfer | poller |
 
 Optional host-link and firmware-CPU models apply on top of any NVMe mode (see
@@ -204,15 +204,20 @@ Properties: [OCSSD](../reference/properties.md#ocssd-open-channel).
 
 ## KV and CSD
 
-KV computes its latency in the poller with the BBSSD NAND model: value
-pages are read and programmed, reclaim erases are charged to the command that
-triggers them, and every command pays one page read for the index lookup,
-on a LUN chosen by the key's hash. A command completes when its last NAND
-operation does.
+KV computes its latency in the poller with the BBSSD NAND model. It reads
+and programs value pages. The Store that triggers value GC and reclaim
+erases pays for them. With the default hash index, every command
+pays one page read for the index lookup, on a LUN chosen by the key's hash.
+A command completes when its last NAND operation does.
 
 With `kv_timing=model`, Store and Retrieve take their time from a fitted
 workload-mix model instead
 ([KV mode](../modes/kvssd.md#workload-mix-timing-kv_timingmodel)).
+
+With `kv_index=lsm`, the index is an LSM tree. A lookup reads one meta
+page per unpinned level, in sequence, before the value, and pays no hash
+base read. Merges load the LUNs in the background
+([LSM-tree key index](../features/kv-lsm-index.md#what-each-command-costs)).
 
 CSD runs a program on the compute unit that frees up first. A program holds
 its unit for its declared run time, or for its measured host run time

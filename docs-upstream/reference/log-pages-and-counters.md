@@ -3,12 +3,12 @@ title: "Log pages and counters"
 description: "How to read FEMU's own counters from the guest. Device properties are in properties.md, and the counters of femu-cxl-ssd are QOM properties listed in..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/log-pages-and-counters.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/reference/log-pages-and-counters.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -68,6 +68,10 @@ stays zero until the host has written a page.
 Bytes 8 and 24 are equal when no write buffer is configured; a buffer that
 absorbs repeated writes to one page makes the factor drop below 1.
 
+A KV namespace with `kv_index=lsm` adds its merge programs to offset 24. It
+adds the meta pages that value GC moves to offset 16. Thus its factor
+includes the index.
+
 They were previously written into the SMART log from byte 192, which NVMe Base
 2.0 assigned to the composite temperature times, the temperature sensors and
 the thermal transition counts.
@@ -85,6 +89,21 @@ never holds data, because the controller does not capture on its own.
 `nvme get-log /dev/nvme0 --log-id=0 --log-len=1024 -b` lists every log page the
 controller answers, four bytes per identifier with bit 0 set for the ones it
 supports, so this page can be discovered rather than assumed.
+
+## Computational programs and reachability
+
+A CSD controller with `csd_slm_size` or `csd_cp` answers these pages
+([CP and SLM](../features/cp-slm.md)):
+
+| LID | Page | CSI | NSID | Content |
+| --- | --- | --- | --- | --- |
+| 1Ah | Reachability Groups | any | any | one group, RGID 1, with every namespace; LSP bit 0 (RGO) leaves out the NSIDs |
+| 1Bh | Reachability Associations | any | any | one association, RASID 1, RAC 01h, holding RGID 1; LSP bit 0 (RAO) leaves out the RGIDs |
+| 82h | Program List | 04h | the compute namespace | 16 descriptors, one per PIND |
+| 83h | Downloadable Program Types List | 04h | the compute namespace | C3h with `csd_program_dir`; C1h also with uBPF |
+| 84h | Memory Range Set List | 04h | the compute namespace | RSID 0h, then every set by RSID; LSP bit 0 (RIO) leaves out the ranges |
+
+Both change counts of 1Ah and 1Bh stay 0h, because the groups never change.
 
 ## Asynchronous events
 

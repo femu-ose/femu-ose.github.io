@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/CHANGELOG.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/CHANGELOG.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -60,12 +60,22 @@ listed one by one.
 - FDP accepts `mapping=dftl`. A placed write charges the translation page of each page it programs, as a write without FDP does.
 - FDP accepts `buffer_size`. Each held page keeps the placement handle of its last write and goes to that handle's reclaim unit when it is written back. RUH Update, Flush and disabling the volatile write cache write the buffer back first, and fail with Capacity Exceeded if a page finds no room.
 - FDP still refuses `hot_cold_sep` and the `hybrid` and `fast` mappings, and the message now says why: they write host data through pointers of their own, past the unit the placement handle names.
+- New `namespace_phls` property: a placement handle list for each FDP namespace. Placement handle `i` selects entry `i`. A handle no list names is reported unused in log 21h. Unset, every namespace gets every handle, as before.
+- FDP takes more than one namespace. The reclaim units of an endurance group are shared, so every bbssd namespace of the controller places into one FTL; NoSSD namespaces report their lists only. Namespaces that share a handle keep one format, and events from collection name the namespace of the data they moved.
+- query-femu reports the placement handle list of each FDP namespace (`placement-handles`). It also reports the namespace whose FTL holds the units (`ftl-nsid`). `femu-stat.py` and `femu-config-check.py` show both, and the latter counts over-provisioning over the namespaces that share one FTL.
+- FDP HBMW and the host bytes of each handle count the logical blocks the host wrote, as Base 2.3 Figure 293 defines HBMW. A 512-byte write on a 4 KiB page now adds 512, not 4096; MBMW still counts the programmed page.
+- FDP takes more than one reclaim group (`fdp.nrg` up to 128). On bbssd and CSD a group is a set of dies: whole channels, or LUNs of one channel. A reclaim unit is one block of each plane of each die of its group, so RUNS is a line divided by the group count. Each handle has an active unit and a collection unit in every group. Collection, pads and refreshes stay in their group.
+- With more than one reclaim group, a write without placement goes to the group with the most free units. Each group must hold the whole namespace, since a host may place all of its data in one. A logical block must be whole NAND pages.
+- Under FDP, a buffered write that finds the write buffer full of pages with no room programs its page at once when its own handle has room, instead of failing with Capacity Exceeded. RUH Update writes back only the held pages of the handles it names.
+- query-femu lists the reclaim groups of an FDP namespace (`groups`) with their dies and free units; `femu-stat.py` and `femu-config-check.py` show them.
 - Computational Storage Drive mode (`femu_mode=4`) with program load and execute commands, routed through the bbssd FTL ([eb01bb73b](https://github.com/MoatLab/FEMU/commit/eb01bb73b), [50b65ca91](https://github.com/MoatLab/FEMU/commit/50b65ca91)).
 - CSD `nr_cu` and `csf_runtime_scale` now take effect ([202ab7afb](https://github.com/MoatLab/FEMU/commit/202ab7afb)).
 - A CSD runtime shorter than the program's own run on the host cannot be reached, since the completion carries the result; QEMU now warns once when that happens ([b8e8d6b45](https://github.com/MoatLab/FEMU/commit/b8e8d6b45)).
 - Key-value SSD mode (`femu_mode=5`) with store, retrieve, list, delete and exist commands ([e72465909](https://github.com/MoatLab/FEMU/commit/e72465909)).
 - Every KV namespace has its own command set and key space, the KV command set is advertised to the host, and the KV Configuration feature is served ([39664d242](https://github.com/MoatLab/FEMU/commit/39664d242), [e62db84f2](https://github.com/MoatLab/FEMU/commit/e62db84f2), [e4949509c](https://github.com/MoatLab/FEMU/commit/e4949509c)).
 - Opt-in KV workload-mix timing (`kv_timing=model`): Store and Retrieve take their time from the Samsung KVSSD emulator fit over the last 16 of them, or from coefficients in `kv_model_coeffs`. A device with no KV namespace refuses both.
+- Opt-in LSM-tree key index for KV namespaces (`kv_index=lsm`), after PinK (ATC '20): a DRAM memtable, levels by `kv_lsm_size_ratio`, `kv_lsm_pinned_levels` held in DRAM. Lookups read a meta page per unpinned level, and merges load the NAND in the background. Value GC puts moved keys back in the memtable, and List returns keys in byte order. The default hash index is unchanged. LSM knobs without `kv_index=lsm`, and `kv_index=lsm` with no KV namespace, are refused.
+- `query-femu` reports the LSM-tree key index of a KV namespace with `kv_index=lsm` in an `lsm` member: the memtable, each level, merges and meta page I/O. `femu-stat.py` and `femu-config-check.py` show it.
 
 #### Namespaces
 
@@ -85,6 +95,10 @@ listed one by one.
 
 #### NVMe commands, features and log pages
 
+- With `csd_slm_size`, CSD mode adds an NVMe Subsystem Local Memory 1.2 namespace. It takes Memory Read, Write, Fill and Copy. With `csd_cp=on`, CSD mode also adds an NVMe Computational Programs 1.2 namespace. It takes Load Program, Program Activation Management, Memory Range Set Management and Execute Program. Two device-defined programs (copy and a 64-bit FNV-1a hash) and the CEMU shared-library and eBPF programs run on it.
+- The memory and compute namespaces of `csd_slm_size` and `csd_cp` work in a `femu-subsys`, so FDP and these namespaces can run together. The controller must be alone in its subsystem, because Reachability Reporting on one controller needs it on all of them.
+- A Copy with descriptor format 4h moves memory namespace bytes to a block namespace. The CEMU commands stay on ([guide](features/cp-slm.md)).
+- With those namespaces the controller reports Reachability Reporting: the Reachability Groups (1Ah) and Reachability Associations (1Bh) log pages, CRCAP and RGRPID ([log pages](reference/log-pages-and-counters.md#computational-programs-and-reachability)).
 - SGL data transfers (`sgl`), now honoured on every I/O command that carries data ([1fa43530d](https://github.com/MoatLab/FEMU/commit/1fa43530d), [d24705851](https://github.com/MoatLab/FEMU/commit/d24705851)).
 - DULBE and Write Zeroes with Deallocate report deallocated blocks ([98247b96f](https://github.com/MoatLab/FEMU/commit/98247b96f)).
 - TRIM (Dataset Management deallocate) on bbssd ([d749928e9](https://github.com/MoatLab/FEMU/commit/d749928e9)).
@@ -179,6 +193,7 @@ listed one by one.
 
 - Poller threads decoupled from queues (`poller_ratio`), and I/O counters kept per poller ([0b192893b](https://github.com/MoatLab/FEMU/commit/0b192893b), [6b1592746](https://github.com/MoatLab/FEMU/commit/6b1592746)).
 - The backend memory can be bound to or interleaved across NUMA nodes with `FEMU_MBE_INTERLEAVE` ([3594d27c6](https://github.com/MoatLab/FEMU/commit/3594d27c6)).
+- Under FDP a NoSSD namespace counts its writes: HBMW, MBMW and the RUAMW of its reclaim units, per handle and per endurance group. It logs event 03h for an invalid placement identifier. Write Zeroes with Deallocate and Write Uncorrectable count in HBMW only. A unit fills by the blocks written, and RUH Update logs event 00h only for a part-written unit. A logical block larger than `fdp.runs` is refused.
 
 ### Configuration changes and new refusals
 
@@ -215,6 +230,8 @@ was not doing anything.
 - Unknown `mapping` or `gc_policy` names, and a negative suspend overhead ([29c397f38](https://github.com/MoatLab/FEMU/commit/29c397f38), [2ae58aa55](https://github.com/MoatLab/FEMU/commit/2ae58aa55)).
 - A CSD controller with more than one namespace ([b425007c2](https://github.com/MoatLab/FEMU/commit/b425007c2)).
 - FDP with more than one reclaim group, and other placement configurations the device cannot serve ([f08762450](https://github.com/MoatLab/FEMU/commit/f08762450), [8ed17a495](https://github.com/MoatLab/FEMU/commit/8ed17a495)).
+- ZNS and OCSSD namespaces in an FDP subsystem, and the memory and compute namespaces of CSD. An FDP endurance group holds NVM command set namespaces only (Base 2.3, 8.1.10). They were accepted, and placement had no effect.
+- `fdp.nrg` above 128, and `fdp.nruh` above 16366, whose configuration descriptor would not fit the 16-bit size field of log 20h.
 - An FDP namespace larger than what is left once each handle has a reclaim unit open, each Persistently Isolated handle one to collect into, and forced GC its free units. Such a namespace was accepted and then failed most random writes. A partly exposed last page now counts as a whole one in this check, with or without placement ([89f34939f](https://github.com/MoatLab/FEMU/commit/89f34939f)).
 - Open-Channel namespaces on a controller in another mode, and OCSSD geometries the timing model cannot index ([8cd92eec5](https://github.com/MoatLab/FEMU/commit/8cd92eec5), [598498e93](https://github.com/MoatLab/FEMU/commit/598498e93), [f4e85634a](https://github.com/MoatLab/FEMU/commit/f4e85634a), [707d8c8c1](https://github.com/MoatLab/FEMU/commit/707d8c8c1)).
 - Controller memory buffer settings that do not fit, including any CMB BAR other than 2 ([1c3a5a2a2](https://github.com/MoatLab/FEMU/commit/1c3a5a2a2), [9d6e13cd3](https://github.com/MoatLab/FEMU/commit/9d6e13cd3)).
@@ -229,11 +246,19 @@ was not doing anything.
 
 #### Behaviour changes (still boots, numbers move)
 
+- KV value GC collects one victim line at a time when the free lines fall to the GC threshold, with both key indexes. It replaces the old compaction, which rewrote every live value when the value arena filled: emulator memory set that trigger, not the NAND. The arena now packs its bytes with no NAND time. A Store leaves free a reserve for GC, so a full device returns Capacity Exceeded sooner. `FEMU_KV_CHECK` checks the owner of every page.
+- With `kv_index=lsm`, meta pages are real NAND pages in lines of their own. Merges program them and value GC moves them. The health log and log C0h count them, so the WAF includes the index. An old value stays valid on flash until a merge drops its record or value GC finds it stale (PinK, section 4.5). Commands pay only the flash the tree reads, with no hash base read. Thus a memtable hit takes no NAND time.
+- With `kv_index=lsm`, a Store keeps room for a merge of every record. When it finds no room, the device merges every level down, so Deletes give back their space. `query-femu` adds `gc-meta-pages`, `gc-stale-value-pages`, `valid-value-pages` and `versions`.
 - Compare, Write Zeroes, Verify and Copy are on by default: the `oncs` default is now 0x19d instead of 0x14. A guest that sees Write Zeroes in ONCS can send it, and on bbssd the FTL programs the range unless Deallocate is set. `oncs=0x14` gives the old set. Write Uncorrectable still needs bit 0x2.
 - Compare and Verify take the NAND read time of a Read on bbssd, CSD and ZNS namespaces, also after a miscompare. Before, both completed with no media read.
 - A Copy on bbssd issues its destination write when its source reads end. On one LUN, a one-page Copy took the read time twice: 600 ms instead of 500 ms with a 100 ms read and a 400 ms program.
 - A zone write cache holds one program unit for each die of its zone. A cache sized from the whole device made a narrow zone (`zns_chnls_per_zone` below `zns_num_ch`) program each of its dies several times in series per flush. Full-width zones keep their timing.
 - A zoned namespace counts the block erases of Zone Reset. SMART Percentage Used (and the Endurance Group log) now reports them against `pe_cycles_rated`, or the rating of `zns_flash_type`; it used to stay 0. Each block passes its erase count to the media layer.
+- Log 20h reports MAXPIDS as MIN(128, NRG x NRUH) - 1, below NRG x NRUH as Base 2.3 Figure 287 asks. It was 127 for every configuration; four handles in one group now report 3, and RUH Update still takes that many identifiers.
+- A RUH Update of a handle whose reclaim unit is empty keeps the unit and logs no event 00h. It used to log one, which says that the handle moved.
+- The FDP Statistics log keeps 128-bit sums, which stop at the 128-bit maximum, instead of 64-bit ones.
+- FDP HBMW also counts Write Zeroes with the Deallocate bit and Write Uncorrectable (NVM Command Set 1.2, 4.1.4.6). MBMW does not, since no page is programmed.
+- The default placement handle list of an FDP namespace holds the first 128 handles when `fdp.nruh` is larger: a list holds at most 128 (NVM Command Set 1.2, Figure 125).
 - A CSD namespace now goes through its FTL, so reads and writes take NAND time
   instead of completing instantly. A pure-CSD device previously timed out on
   its first I/O and the kernel disabled the controller ([50b65ca91](https://github.com/MoatLab/FEMU/commit/50b65ca91)).
@@ -256,6 +281,7 @@ was not doing anything.
 - FDP RUAMW counts down in LBAs, so it drains at the documented rate and
   reaches zero; cost-benefit victim selection now orders by age and utilisation
   rather than insertion ([9a66fe52d](https://github.com/MoatLab/FEMU/commit/9a66fe52d)).
+- The CEMU admin commands of CSD mode moved to vendor specific opcodes: 0x21 to 0xc9, 0x22 to 0xc5, 0x23 to 0xc8 and 0x25 to 0xcd. NVMe Base 2.3 gives 0x21, 0x22 and 0x25 to fabrics commands and reserves 0x23, and 0x22 declared the wrong data direction. The old opcodes now fail with Invalid Command Opcode; `csd_legacy_opcodes=on` restores them for old tools.
 - The data plane starts when the host enables the controller rather than on Doorbell Buffer Config, so hosts that never send that command (SPDK, FreeBSD, Windows, older Linux) now work ([04f04b86e](https://github.com/MoatLab/FEMU/commit/04f04b86e)).
 - Failure to lock the backend memory is a warning instead of a fatal error ([847864637](https://github.com/MoatLab/FEMU/commit/847864637)).
 - The media counters moved from the SMART log's temperature fields to vendor log page C0h ([4cb1f9ba7](https://github.com/MoatLab/FEMU/commit/4cb1f9ba7)).
@@ -289,6 +315,7 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - Controller DMA from device threads is restricted to directly reachable memory, which avoids a VM hang on data pointers into device registers ([fbfe674c2](https://github.com/MoatLab/FEMU/commit/fbfe674c2), [60e4b2d5d](https://github.com/MoatLab/FEMU/commit/60e4b2d5d)).
 - Report and log buffers are bounded and their lengths checked before transfer ([608749b8d](https://github.com/MoatLab/FEMU/commit/608749b8d), [40656e5a1](https://github.com/MoatLab/FEMU/commit/40656e5a1), [062bcdb02](https://github.com/MoatLab/FEMU/commit/062bcdb02), [0ddcc33bd](https://github.com/MoatLab/FEMU/commit/0ddcc33bd), [3106c1205](https://github.com/MoatLab/FEMU/commit/3106c1205)).
 - CSD program loads are bounded and confined to `csd_program_dir` ([f1d5f3736](https://github.com/MoatLab/FEMU/commit/f1d5f3736)).
+- A CSD controller with no CSD namespace (`femu_mode=4,namespace_modes=nossd`) no longer crashes QEMU on a CEMU admin command with valid fields. It has no program tables, so it now refuses the commands with Invalid Command Opcode and log 05h does not list them.
 - CSD programs run on `nr_cu` compute unit threads (`femu-csd-cu`) instead of the poller, so a long program no longer stalls I/O on every queue or the vCPU that sends a CSD admin command; a loaded program can no longer be reloaded in place while it runs, and deleting a queue or resetting the controller under a running program drops its result safely ([4596ba498](https://github.com/MoatLab/FEMU/commit/4596ba498)).
 - Running out of lines refuses the write instead of aborting, and FDP reports device full instead of asserting or following a null reclaim unit ([49ada8834](https://github.com/MoatLab/FEMU/commit/49ada8834), [e1c4e9174](https://github.com/MoatLab/FEMU/commit/e1c4e9174), [59128ab66](https://github.com/MoatLab/FEMU/commit/59128ab66), [e7913d89c](https://github.com/MoatLab/FEMU/commit/e7913d89c), [c0ae29cb4](https://github.com/MoatLab/FEMU/commit/c0ae29cb4), [cbda78bf6](https://github.com/MoatLab/FEMU/commit/cbda78bf6), [37b9b84f9](https://github.com/MoatLab/FEMU/commit/37b9b84f9), [f05f128a9](https://github.com/MoatLab/FEMU/commit/f05f128a9)).
 - Zone state is locked, reset zones are erased on the media thread, and asynchronous events are raised from the main loop ([fe8e931e3](https://github.com/MoatLab/FEMU/commit/fe8e931e3), [5001ae15c](https://github.com/MoatLab/FEMU/commit/5001ae15c), [89e1c4b04](https://github.com/MoatLab/FEMU/commit/89e1c4b04)).
@@ -317,6 +344,7 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - The write buffer no longer resurrects deallocated pages and is bounded ([d4d03f127](https://github.com/MoatLab/FEMU/commit/d4d03f127), [0ee6d211b](https://github.com/MoatLab/FEMU/commit/0ee6d211b)).
 - A Format rebuilds per-block state ([a79474e73](https://github.com/MoatLab/FEMU/commit/a79474e73), [7e7e36161](https://github.com/MoatLab/FEMU/commit/7e7e36161)).
 - Writes clear the invalid status set by Write Uncorrectable ([026eb0ef0](https://github.com/MoatLab/FEMU/commit/026eb0ef0)).
+- A KV Retrieve or List that returns less than the host buffer holds follows the PRP layout of the whole buffer. A transfer of 4 to 8 KiB into a larger buffer took PRP2, a list pointer, as a data pointer, and wrote the data over the host's PRP list.
 - CSD and KV commands address the namespace they name, and each namespace gets its own mode state ([a93de9d54](https://github.com/MoatLab/FEMU/commit/a93de9d54), [aa6a5a8f7](https://github.com/MoatLab/FEMU/commit/aa6a5a8f7), [d2a770601](https://github.com/MoatLab/FEMU/commit/d2a770601), [ce5ad913f](https://github.com/MoatLab/FEMU/commit/ce5ad913f)).
 - A KV command completes when its last NAND operation does: a Store that compacts no longer counts the compaction wait twice, and still pays for it when it then fails. The per-command index read is charged on a LUN chosen by the key's hash instead of always on the LUN at address 0, which had every KV command queue on one LUN ([4ca11c2a0](https://github.com/MoatLab/FEMU/commit/4ca11c2a0), [1e5385ae4](https://github.com/MoatLab/FEMU/commit/1e5385ae4)).
 - Vendor admin command 0xEE sets an Open-Channel controller's read, program, erase and channel times; it used to write fields nothing read. Other modes refuse it with Invalid Field ([949d01eb9](https://github.com/MoatLab/FEMU/commit/949d01eb9), [cdbd5bb36](https://github.com/MoatLab/FEMU/commit/cdbd5bb36)).
@@ -336,6 +364,10 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 
 #### Spec conformance and host compatibility
 
+- A KV namespace runs its I/O commands only when the host enables the controller with CC.CSS 110b. Under 000b, which selects only the NVM command set, they fail with Invalid Command Opcode (Base 2.3, Figure 41). Linux selects 110b. Set Features I/O Command Set Profile (19h) now succeeds with no effect when CC.CSS is not 110b (Base 2.3, 5.2.26.1.17).
+- Write Zeroes reads its directive type from CDW12 bits 22:20 (NVM Command Set 1.2, Figure 82). Bit 23 is NSZ: with it set, a Write Zeroes failed with Invalid Field once the Data Placement Directive was enabled, or lost its placement.
+- FDP event 03h sets LV, with the reclaim group and handle that the controller selected for the write (Base 2.3, Figure 296).
+- The placement handle of a placement identifier is bits 15 - RGIF to 0 (Base 2.3, Figure 290). FEMU read one bit less, which did not matter with one group. RGIF is now the fewest bits that hold `fdp.nrg` - 1.
 - A Copy descriptor format 2 range that names the command's own namespace is accepted in every mode that accepts Copy. A CSD namespace refused it with Invalid Namespace, although the controller advertised format 2.
 - Identify CNS 19h (Endurance Group List) lists endurance group 1 on a controller in a subsystem, from a starting identifier of 0 or 1, as `nvme list-endgrp` asks. Without a subsystem it is refused.
 - Commands complete on the completion queue they were bound to, and submission queues that share a completion queue are served ([7a3f1d9fa](https://github.com/MoatLab/FEMU/commit/7a3f1d9fa), [dc4289f91](https://github.com/MoatLab/FEMU/commit/dc4289f91)).
@@ -393,6 +425,10 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - `ssd-config.sh` expands an INI-style config file into the device arguments, checking keys against the binary ([7f605016e](https://github.com/MoatLab/FEMU/commit/7f605016e)).
 - `femu-test.sh` checks a device from inside the guest for block, zoned, KV and CSD namespaces ([9fee8190c](https://github.com/MoatLab/FEMU/commit/9fee8190c), [2244a1b9c](https://github.com/MoatLab/FEMU/commit/2244a1b9c), [c17a31ea9](https://github.com/MoatLab/FEMU/commit/c17a31ea9)).
 - `guest-conformance.sh` boots a guest for each conformance suite and runs blktests (the `block` and `zbd` groups) or the nvme-cli end-to-end suite against FEMU. The guest scripts `blktests-guest.sh` and `nvme-cli-e2e-guest.sh` also run on their own inside a guest. CI does not run them.
+- `guest-conformance.sh` runs a `zenfs-crash` suite: `zenfs-crash-guest.sh` builds RocksDB with ZenFS in the guest and runs a crash test on a ZNS namespace. The new `--device`, `--smp` and `--mem` options serve control runs and larger guests.
+- `kv-bench.c` drives a KV namespace with the NVMe-KV commands and checks each answer against a model of the keys. The `kv-bench` suite of `guest-conformance.sh` runs it and `kv-probe` in a guest.
+- `femu-config-check.py` starts QEMU under qtest with no guest and reports either the refusal or the configuration FEMU builds: capacity, geometry, over-provisioning, line, reclaim unit and zone sizes, mode and NAND timing per namespace, and warnings. The documentation example check runs its documented commands.
+- `femu-stat.py` shows the FTL counters of a running VM from the host, like `top`: pages, WAF since start and over the interval, line, reclaim unit and zone counts, and I/O stage times, from QMP `query-femu` and `query-femu-stages`.
 - `make-guest-image.sh` builds an Ubuntu 24.04 guest image, and the run scripts accept `IMGDIR`, `OSIMGF` and another SSH port ([e877f2dc0](https://github.com/MoatLab/FEMU/commit/e877f2dc0), [e74535012](https://github.com/MoatLab/FEMU/commit/e74535012), [66bb3068e](https://github.com/MoatLab/FEMU/commit/66bb3068e)).
 - The build script fails on a compile error, and the config self-test fails when FEMU does not survive ([a1bf37caf](https://github.com/MoatLab/FEMU/commit/a1bf37caf), [da7c1fcfe](https://github.com/MoatLab/FEMU/commit/da7c1fcfe)).
 - The config self-test requires each device to come up, not only its property names to be accepted. That caught `zns.conf`, which asked for more active zones than it has and was refused at every size ([b509a23a5](https://github.com/MoatLab/FEMU/commit/b509a23a5)).

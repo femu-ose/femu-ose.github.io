@@ -3,12 +3,12 @@ title: "Key-value SSD (KV)"
 description: "KV mode (femu_mode=5) emulates an SSD with the NVMe Key Value command set. The namespace stores values under keys instead of blocks at addresses: the host..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/modes/kvssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/modes/kvssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/kvssd.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/modes/kvssd.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/kvssd.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/modes/kvssd.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -39,6 +39,10 @@ key-value devices, without key-value hardware.
   command sets"). Linux 5.10 to 5.19 log `unknown csi 1 for nsid N` (5.9:
   `unknown csi:1 ns:N`) and skip the namespace, so passthrough on
   `/dev/nvme0` fails too.
+- The host must enable the controller with CC.CSS set to 110b (all
+  supported I/O command sets). Under 000b (NVM only), every I/O command
+  to a KV namespace fails with Invalid Command Opcode (Base 2.3, Figure
+  41). Linux sets 110b when CAP.CSS bit 6 is set, and FEMU sets that bit.
 - Guest tools: `nvme-cli` (`io-passthru`), and a C compiler to build
   `kv-probe.c`. The image from `make-guest-image.sh` has no compiler; add one
   with `./make-guest-image.sh --packages build-essential`, or run
@@ -90,6 +94,19 @@ The FTL, mapping, cache and write buffer properties do not apply. Each
 command pays one page read for the index lookup, overlapped with the NAND
 reads or programs of its value; reclaiming space charges erases to the command that
 triggers it ([timing model](../concepts/timing-model.md#kv-and-csd)).
+
+### Key index (kv_index)
+
+The device index from key to value is an open-addressed hash in DRAM by
+default. `kv_index=lsm` makes it an LSM tree after PinK. Lookups then
+read meta pages of the unpinned levels, merges load the NAND in the
+background, and List returns keys in byte order. See
+[LSM-tree key index](../features/kv-lsm-index.md) for the knobs and the
+cost model.
+
+```
+-device femu,femu_mode=5,devsz_mb=64,kv_index=lsm,kv_lsm_pinned_levels=2
+```
 
 ### Workload-mix timing (kv_timing=model)
 
@@ -262,6 +279,23 @@ scp -P 8080 -i ~/images/femu-guest-key ../femu-scripts/kv-probe.c femu@localhost
 ./run-guest-ssh.sh sudo ./kv-probe /dev/nvme0
 ```
 
+### With kv-bench
+
+`hw/femu/scripts/kv-bench.c` is a key-value workload with the knobs of
+Samsung's kvbench. It checks each Retrieve, Exist and List answer against
+a model of the keys, and prints the rate and latency of each command. It
+needs the generic node and an empty namespace:
+
+```sh
+scp -P 8080 -i ~/images/femu-guest-key ../femu-scripts/kv-bench.c femu@localhost:
+./run-guest-ssh.sh gcc -O2 -pthread -o kv-bench kv-bench.c
+./run-guest-ssh.sh sudo ./kv-bench --keys 20000 /dev/ng0n1
+```
+
+The `kv-bench` suite of `guest-conformance.sh` runs `kv-probe` and two
+`kv-bench` runs in a fresh guest. See
+[KV benchmark](../guides/testing.md#kv-benchmark).
+
 ### Status codes
 
 | Status | Meaning |
@@ -272,6 +306,7 @@ scp -P 8080 -i ~/images/femu-guest-key ../femu-scripts/kv-probe.c femu@localhost
 | 0x89 | Key Exists: a Store with bit 9 (only if the key is absent) found the key. |
 | Capacity Exceeded | The value space or the key index is full. |
 | Invalid Field | A key longer than 16 bytes, a List buffer smaller than 4 bytes, or the broadcast namespace ID. |
+| Invalid Command Opcode | The controller runs with CC.CSS 000b, which selects only the NVM command set. Enable it with 110b. |
 
 By default, Delete of a missing key succeeds. Setting the EDNEK bit (bit 0)
 of the Key Value Configuration feature (20h) makes it fail with 0x87:
@@ -301,6 +336,11 @@ sudo nvme get-log /dev/nvme0 --log-id=0xc0 --log-len=512 -b | od -An -t u8 -j 8 
 | `FEMU kvssd: kv_model_coeffs: ...; give the intercept and 35 coefficients` | Give 36 finite numbers, separated by commas. |
 | `kv_timing=model and kv_model_coeffs need a key-value namespace (femu_mode=5 or kvssd in namespace_modes)` | The device has no KV namespace, so the knobs would do nothing. |
 | `kv_timing=model and kv_model_coeffs need a key-value namespace; shared namespaces are NoSSD or bbssd` | A controller on shared namespaces (`ns_mgmt=on` subsystem) has no KV namespace. |
+| `kv_index=X is not hash or lsm` | Use `hash` or `lsm`. |
+| `kv_lsm_memtable_keys, kv_lsm_size_ratio and kv_lsm_pinned_levels need kv_index=lsm` | An LSM knob other than its default with the hash index. |
+| `kv_lsm_size_ratio=N is not 2 to 64` (and the other knob ranges) | See the [LSM index properties](../features/kv-lsm-index.md#properties). |
+| `kv_index=lsm and the kv_lsm_* knobs need a key-value namespace ...` | The device has no KV namespace, or its namespaces are shared. |
+| `FEMU kvssd: kv_index=lsm needs a page of at least 32 bytes; the page is N` | A meta page must hold one 32-byte record. |
 
 ## Verify
 
@@ -308,6 +348,7 @@ sudo nvme get-log /dev/nvme0 --log-id=0xc0 --log-len=512 -b | od -An -t u8 -j 8 
 2. The store, retrieve and `cmp` above succeed, and Exist after Delete
    returns 0x87.
 3. `kv-probe` prints no failures.
+4. `kv-bench` prints `KVBENCH_RESULT=PASS`.
 
 ## Troubleshooting
 
@@ -332,3 +373,4 @@ Related issues: #68.
 - [Timing model: KV and CSD](../concepts/timing-model.md#kv-and-csd)
 - [Architecture: other FTLs](../concepts/architecture.md#other-ftls)
 - [Multiple namespaces](../features/multi-namespace.md)
+- [LSM-tree key index](../features/kv-lsm-index.md)

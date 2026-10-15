@@ -3,12 +3,12 @@ title: "Choosing a mode"
 description: "An NVMe femu device emulates one kind of SSD, chosen with femu_mode. Features such as Flexible Data Placement or several namespaces are added on top of a..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/concepts/choosing-a-mode.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/concepts/choosing-a-mode.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/choosing-a-mode.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/concepts/choosing-a-mode.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/choosing-a-mode.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/concepts/choosing-a-mode.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -69,10 +69,14 @@ The checks below are made at realize; a combination they refuse stops QEMU
 with an error naming the rule.
 
 **Flexible Data Placement.** `fdp=on` is a property of `femu-subsys`. Only
-BBSSD has an FDP write path; other modes accept a subsystem with FDP, but
-placement then has no effect on where data goes. FDP requires a single
-controller in the subsystem, a single namespace (`namespaces=1`), `fdp.nrg=1`
-and `fdp.nruh` from 1 to `fdp.nru`. It cannot be combined with a KV namespace,
+BBSSD has an FDP write path. NoSSD counts the host bytes of FDP but has no
+media to place on. ZNS, OCSSD and KV namespaces are refused: an FDP
+endurance group holds NVM command set namespaces only. FDP requires a single
+controller in the subsystem. It also requires `fdp.nruh` from 1 to
+`fdp.nru`. With BBSSD, `fdp.nrg` above 1 makes each group a set of dies.
+More than one namespace needs every namespace in BBSSD mode, in whole NAND
+pages, or every one in NoSSD mode. `namespace_phls` gives each namespace its
+placement handle list. It cannot be combined with a KV namespace,
 `meta`, Streams or a subsystem with `ns_mgmt=on`. A BBSSD controller under FDP
 also refuses `hot_cold_sep` and the `hybrid` and `fast` mappings.
 
@@ -124,7 +128,7 @@ medium's size.
 
 *Figure: Modes against layers: the interface each mode offers, where its FTL runs, which timing model it uses, where its data lives and which thread charges its time; below, the features each mode supports (CUs are CSD compute units).*
 
-Generated from [`modes.py`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/modes.py): how to turn each mode or feature
+Generated from [`modes.py`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/modes.py): how to turn each mode or feature
 on, the guest kernel and tools it needs, what the host needs, and what CI
 checks. [requirements.md](../getting-started/requirements.md#kernel-per-mode)
 has the guest kernel configuration in more detail.

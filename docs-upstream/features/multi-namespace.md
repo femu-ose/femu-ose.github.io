@@ -3,12 +3,12 @@ title: "Several namespaces and devices"
 description: "One FEMU controller can expose several namespaces, and each namespace can run its own mode. A controller can, for example, offer a BlackBox namespace for..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/features/multi-namespace.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/features/multi-namespace.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/multi-namespace.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/features/multi-namespace.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/multi-namespace.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/features/multi-namespace.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -146,7 +146,8 @@ A second controller is `/dev/nvme1` with its own namespaces.
 | `csd supports at most one namespace per controller` | Only one CSD namespace. Its neighbours may use other modes. |
 | `meta: namespace 2 runs a mode without metadata support (block or no-SSD only)` | `meta` needs every namespace to be NoSSD or BlackBox. |
 | `streams requires NVM namespaces` | Streams needs every namespace to be NoSSD or BlackBox. |
-| `FDP supports a single namespace; set namespaces=1 or disable FDP on the subsystem` | FDP takes one namespace. |
+| `FDP with more than one namespace needs every namespace in bbssd mode or every one in nossd mode` | FDP namespaces share the endurance group's units, which only these modes place into. See [FDP](fdp.md#several-namespaces). |
+| `FDP with more than one namespace needs namespace sizes in whole NAND pages (4096 bytes); namespace 1 has 526336 bytes` | Set `namespace_sizes` to multiples of the page size. |
 | `FEMU bbssd: namespace 1 exposes 4096 MiB of the 2048 MiB this geometry has, ...` | A BlackBox namespace is larger than the NAND geometry allows. Each namespace is checked against the full geometry. |
 
 ## Verify

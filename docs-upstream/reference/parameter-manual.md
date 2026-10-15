@@ -3,12 +3,12 @@ title: "Parameter manual"
 description: "This manual explains how to configure an emulated device: the ways a parameter reaches FEMU, then every group of parameters by component, with what each one..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/parameter-manual.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/reference/parameter-manual.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/parameter-manual.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/reference/parameter-manual.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -241,9 +241,10 @@ Design: [subsystems, controllers and namespaces](../design/namespaces.md).
 | --- | --- | --- | --- |
 | `femu_mode` | mode number | 0 OCSSD, 1 bbssd, 2 NoSSD, 3 ZNS, 4 CSD, 5 KV | mode of every namespace unless `namespace_modes` is set |
 | `devsz_mb` | MiB | 32-bit | host memory backend, split across the namespaces; ignored with `op_pcent` |
-| `namespaces` | count | 1 to 256; OCSSD and FDP 1 | namespaces present from boot |
+| `namespaces` | count | 1 to 256; OCSSD 1 | namespaces present from boot |
 | `namespace_sizes` | bytes, QEMU sizes | one entry per namespace, each >= 512 bytes, sum <= backend | size of each namespace; unset splits the backend evenly |
 | `namespace_modes` | list | `nossd`, `bbssd`, `znssd`, `ocssd`, `csd`, `kvssd`, one per namespace | mode of each namespace |
+| `namespace_phls` | list of lists | FDP only; one entry per namespace, each 1 to `MIN(fdp.nruh, 128)` handle IDs below `fdp.nruh`, joined with `:`, none twice | placement handle list of each namespace; unset gives every handle |
 | `op_pcent` | percent | bbssd; not with `cxl_ssd` | back the device with the full NAND and expose NAND / (1 + `op_pcent`/100) |
 | `ns_mgmt` (`femu`) | bool | standalone NoSSD or bbssd controller | Namespace Management and Attachment from the guest |
 | `bbssd_ns_limit` | count | 1 to 256, >= `namespaces` | most bbssd namespaces `ns_mgmt` may allocate, each with its own FTL |
@@ -510,10 +511,10 @@ Design: [FDP](../design/fdp.md).
 | Parameter | Unit | Valid values | Meaning |
 | --- | --- | --- | --- |
 | `fdp` | bool | | FDP in endurance group 1 for the joining controller |
-| `fdp.nruh` | handles | 1 to `fdp.nru`; required with `fdp=on` | reclaim unit handles, the placement identifiers the host can name |
-| `fdp.nru` | reclaim units | `fdp.nruh` to 65536 | reclaim units per group; bbssd uses at most one per line and needs `2 x fdp.nruh + 1` |
-| `fdp.nrg` | groups | 1 only | reclaim groups |
-| `fdp.runs` | bytes | 0, or one line's size with bbssd | reclaim unit size; 0 lets FEMU choose |
+| `fdp.nruh` | handles | 1 to `fdp.nru`, at most 16366; required with `fdp=on` | reclaim unit handles, the placement identifiers the host can name |
+| `fdp.nru` | reclaim units | `fdp.nruh` to 65536 | reclaim units per group; bbssd uses at most one per block index and needs `2 x fdp.nruh + 1` in each group |
+| `fdp.nrg` | groups | 1 to 128; with bbssd, a divisor of `nchs`, or a multiple of `nchs` that divides `nchs x luns_per_ch` | reclaim groups; with bbssd each group is a set of dies ([reclaim groups](../features/fdp.md#reclaim-groups)) |
+| `fdp.runs` | bytes | 0, or with bbssd one line's size divided by `fdp.nrg` | reclaim unit size; 0 lets FEMU choose |
 | `fdp.isolation_mode` | number | 0, or any other value | 0: every handle Persistently Isolated; otherwise the last one Initially Isolated |
 
 Interactions:
@@ -560,16 +561,40 @@ bbssd FTL, so sections 5 to 9 apply.
 | `nr_cu` | compute units | 1 to 64 | programs run on the first free unit |
 | `csf_runtime_scale` | multiplier | > 0 | host run time multiplier for programs that declare no run time |
 | `csd_program_dir` | host directory | | where shared-object and uBPF programs load from; unset allows only the built-in program type |
+| `csd_slm_size` | MiB | 0 to 1024; 0 adds none | adds a memory namespace (SLM 1.2) of this size |
+| `csd_cp` | bool | needs `csd_slm_size` | adds a compute namespace (CP 1.2) |
+| `csd_legacy_opcodes` | bool | needs a CSD namespace | old CEMU admin opcodes 21h to 25h instead of C5h to CDh |
+
+`csd_slm_size` and `csd_cp` refuse `ns_mgmt`, `power_loss` and a CXL link.
+With `subsys`, the controller must be the only one in its subsystem. Guide: [CP and SLM](../features/cp-slm.md).
 
 ### KV
 
 KV uses the geometry (section 5), the NAND timing (section 6), and
-`gc_thres_pcent` as the share of the NAND usable for values. The FTL,
+`gc_thres_pcent` as the share of the NAND usable for values. The rest of
+the NAND is free space: value GC starts when the free lines fall to it. The FTL,
 mapping, cache, write buffer and other GC properties have no effect on KV,
 but KV runs the same validation as bbssd, so an out-of-range or unknown
 value is still refused. The GC
 capacity check of bbssd is not made: a namespace larger than the NAND
 starts, with its value space clamped. Design: [KV](../design/kvssd.md).
+
+| Parameter | Unit | Valid values | Meaning |
+| --- | --- | --- | --- |
+| `kv_timing` | name | `media`, `model` | NAND time for every command, or the workload-mix model for Store and Retrieve |
+| `kv_model_coeffs` | 36 numbers | finite | the model fit, intercept first |
+| `kv_index` | name | `hash`, `lsm` | the key index: a DRAM hash, or an LSM tree with flash meta pages |
+| `kv_lsm_memtable_keys` | records | 16 to 65536, `kv_index=lsm` | memtable size before a flush |
+| `kv_lsm_size_ratio` | ratio | 2 to 64, `kv_index=lsm` | capacity of a level over the one above |
+| `kv_lsm_pinned_levels` | levels | 0 to 24, `kv_index=lsm` | top levels held in DRAM, with no flash I/O |
+
+Interactions:
+
+- An LSM knob other than its default needs `kv_index=lsm`, and `kv_index=lsm`
+  needs a KV namespace.
+- With `kv_timing=model`, the tree still loads the NAND; only the Store and
+  Retrieve times come from the model
+  ([LSM-tree key index](../features/kv-lsm-index.md#with-kv_timingmodel)).
 
 ## 14. CXL SSD
 

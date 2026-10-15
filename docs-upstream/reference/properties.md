@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/properties.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/reference/properties.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,7 +28,7 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 191 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 199 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
@@ -36,9 +36,10 @@ Devices:
 | --- | --- | --- | --- |
 | `femu_mode` | `uint8` | `2` | Emulated SSD type: 0 OCSSD (Open-Channel), 1 bbssd (black-box FTL), 2 NoSSD (no media timing), 3 ZNS, 4 CSD (computational), 5 KV; other values fail realize |
 | `devsz_mb` | `uint32` | `1024` | Size of the host memory backend in MiB, split across namespaces unless namespace_sizes is set; bbssd with op_pcent sizes from the NAND geometry instead |
-| `namespaces` | `uint32` | `1` | Number of namespaces created at boot, 1 to 256; OCSSD and FDP support only 1 |
+| `namespaces` | `uint32` | `1` | Number of namespaces created at boot, 1 to 256; OCSSD supports only 1, and FDP more than 1 only when all are bbssd or all nossd |
 | `namespace_sizes` | `str` | unset | Comma-separated size in bytes of each namespace (QEMU size syntax such as 4G,2G), one non-empty entry per namespace, summing to at most the backend; unset splits the backend evenly |
 | `namespace_modes` | `str` | unset | Comma-separated mode of each namespace from nossd, bbssd, znssd, ocssd, csd and kvssd, one entry per namespace; unset gives every namespace femu_mode |
+| `namespace_phls` | `str` | unset | FDP placement handle list of each namespace: comma-separated entries, one per namespace, each a ':'-separated list of reclaim unit handle IDs such as 0:1,,2 (placement handle i selects entry i); needs fdp=on, and unset gives every namespace every handle |
 | `op_pcent` | `uint32` | `0` | Over-provisioning in percent for bbssd: back the device with the full NAND capacity and expose capacity/(1 + op_pcent/100); 0 keeps devsz_mb sizing, not with cxl_ssd |
 | `subsys` | `link<femu-subsys>` | unset | ID of a femu-subsys device to join, created before this controller; needed for FDP, shared namespaces and the Endurance Group log |
 | `cxl_ssd` | `link<femu-cxl-ssd>` | unset | ID of a femu-cxl-ssd, listed before this controller, whose memory and FTL this bbssd controller serves as its one namespace |
@@ -283,6 +284,9 @@ Devices:
 | `context_switch_time` | `uint64` | `200` | No effect, kept for CEMU compatibility. A value other than the default warns at realize |
 | `csf_runtime_scale` | `uint16` | `3` | CSD: non-zero multiplier applied to the host run time of a program that sets neither a runtime nor its own scale |
 | `csd_program_dir` | `str` | unset | CSD: host directory that shared-object and uBPF programs are loaded from, named by a file name with no slash that must resolve inside it; unset allows only the built-in phantom program type |
+| `csd_slm_size` | `uint32` | `0` | CSD: MiB of a memory namespace (NVMe SLM 1.2, CSI 03h) added after the configured namespaces, 1 to 1024; 0 adds none |
+| `csd_cp` | `bool` | `off` | CSD: add a compute namespace (NVMe CP 1.2, CSI 04h) after the memory namespace; needs csd_slm_size |
+| `csd_legacy_opcodes` | `bool` | `off` | CSD: take the old CEMU admin opcodes 21h, 22h, 23h and 25h instead of the vendor specific C5h, C8h, C9h and CDh; needs a CSD namespace |
 
 ### KV timing
 
@@ -290,6 +294,10 @@ Devices:
 | --- | --- | --- | --- |
 | `kv_timing` | `str` | unset | KV: media (default) times every command on the NAND model; model times Store and Retrieve from the workload mix of the last 16 of them, with the Samsung KVSSD emulator fit |
 | `kv_model_coeffs` | `str` | unset | KV with kv_timing=model: 36 comma-separated numbers, the intercept then the 35 polynomial coefficients; unset uses the Samsung fit |
+| `kv_index` | `str` | unset | KV: the key index; hash (default) is an open-addressed hash in device DRAM, lsm a PinK-style LSM tree whose unpinned levels cost flash reads on lookup and flash reads and programs on compaction |
+| `kv_lsm_memtable_keys` | `uint32` | `1024` | KV with kv_index=lsm: keys the DRAM memtable holds before it flushes to level 1, 16 to 65536 |
+| `kv_lsm_size_ratio` | `uint32` | `10` | KV with kv_index=lsm: how many times more entries a level holds than the one above, 2 to 64; level i holds memtable keys times ratio^i entries |
+| `kv_lsm_pinned_levels` | `uint32` | `1` | KV with kv_index=lsm: top levels held whole in DRAM, with no flash I/O, 0 to 24 |
 
 ### Generic PCI device properties
 
@@ -312,9 +320,9 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `fdp` | `bool` | `off` | Enable Flexible Data Placement in endurance group 1 for controllers that join this subsystem; only bbssd places data by reclaim unit |
-| `fdp.runs` | `size` | `0` | Reclaim unit size in bytes; 0 means 96 MiB, and a bbssd controller accepts only 0 or the size of one superblock, which it then uses |
-| `fdp.nrg` | `uint32` | `1` | Number of FDP reclaim groups; must be 1, placement into other groups is not implemented |
-| `fdp.nruh` | `uint16` | `0` | Number of FDP reclaim unit handles (placement handles), from 1 to fdp.nru; must be set when fdp=on |
+| `fdp.runs` | `size` | `0` | Reclaim unit size in bytes; 0 means 96 MiB, and a bbssd controller accepts only 0 or the size of one superblock of the dies of a reclaim group, which it then uses |
+| `fdp.nrg` | `uint32` | `1` | Number of FDP reclaim groups, from 1 to 128; with bbssd a group is a set of dies (whole channels, or LUNs of one channel), nrg must divide nchs or be a multiple of it that divides nchs * luns_per_ch, a logical block must be whole NAND pages, and each group must hold the whole namespace |
+| `fdp.nruh` | `uint16` | `0` | Number of FDP reclaim unit handles (placement handles), from 1 to fdp.nru and at most 16366; must be set when fdp=on |
 | `fdp.nru` | `uint64` | `128` | Number of reclaim units in each reclaim group, from fdp.nruh to 65536; bbssd uses at most one per superblock and needs at least 2 * fdp.nruh + 1 of them, and the namespace must fit in the units left once each handle has one open, each Persistently Isolated handle one to collect into, and forced collection its free ones |
 | `fdp.isolation_mode` | `uint32` | `0` | 0 makes every reclaim unit handle Persistently Isolated; any other value makes the last handle Initially Isolated |
 
@@ -396,7 +404,7 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 
 These exist only when QEMU runs under qtest (`-accel qtest`) and serve FEMU's own tests. They are not part of the user interface.
 
-- `femu`: `x-copy-held`, `x-copy-hold`, `x-fdp-check`, `x-ftl-check`, `x-ftl-trace`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-query-delay-ms`, `x-range-waits`, `x-stream-test`, `x-zone-lock-hold-ms`
+- `femu`: `x-copy-held`, `x-copy-hold`, `x-fdp-check`, `x-fdp-ns-mapped`, `x-ftl-check`, `x-ftl-trace`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-query-delay-ms`, `x-range-waits`, `x-stream-test`, `x-zone-lock-hold-ms`
 - `femu-cxl-ssd`: `test-change-dpa`, `test-fault`, `test-fault-decode`, `test-fault-delivery`, `test-fault-fill`, `test-fault-repeats`, `test-fault-version`, `test-fault-walk`, `test-fill`, `test-fill-race`, `test-ftl-delay`, `test-ftl-hold`, `test-ftl-holding`, `test-guarded-write`, `test-lock-mutex`, `test-lock-wanted`, `test-map`, `test-media-disabled`, `test-nvme-after-posted`, `test-owner`, `test-posted-done`, `test-prefetch-race`, `test-prefetch-race-end`, `test-protect`, `test-protect-window`, `test-revoke-ahead`, `test-revoke-ahead-keep`, `test-rip`, `test-slot-reservation`, `test-storm`, `test-storm-ns`, `test-storm-served`, `test-storm-stops`, `test-storm-wait`, `test-thread-read`, `test-unprotect`
 
 ## Environment variables
@@ -414,3 +422,4 @@ debugging and host-placement aids, not device configuration, so they have no
 | `FEMU_SECRET` | bbssd FTL (`hw/femu/bbssd/ftl-exp.c`) | A non-empty marker string that selects the pages `FEMU_EXP_LOG` traces. |
 | `FEMU_DUMP_LPN` | bbssd FTL (`hw/femu/bbssd/ftl-exp.c`) | A logical page number (decimal or 0x hex) whose backend page is hex-dumped to stderr on every read not served from the write buffer, independent of `FEMU_EXP_LOG`. |
 | `FEMU_KV_SELFTEST` | KV FTL (`hw/femu/kvssd/kvssd-ftl.c`) | Any value runs the KV FTL self-test once at realize and logs the result. |
+| `FEMU_KV_CHECK` | KV FTL (`hw/femu/kvssd/kvssd-ftl.c`) | Any value checks the owner of every NAND page after each value GC and every 64 commands, and stops QEMU on a broken invariant. The qtests set it. It is slow on a large device. |

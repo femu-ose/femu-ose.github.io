@@ -3,12 +3,12 @@ title: "Keeping the documentation correct"
 description: "Four checks keep the documentation in step with the code. CI runs all of them, and so does"
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/development/docs-maintenance.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/development/docs-maintenance.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/development/docs-maintenance.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/development/docs-maintenance.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/development/docs-maintenance.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/development/docs-maintenance.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -39,7 +39,7 @@ also needs an entry in [CHANGELOG.md](../changelog.md).
 
 ## Per-mode facts: `modes.py`
 
-[`hw/femu/docs/modes.py`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/modes.py) holds one entry per mode or feature:
+[`hw/femu/docs/modes.py`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/modes.py) holds one entry per mode or feature:
 how to turn it on, a minimal example, the guest kernel and tools it needs,
 host requirements, its launcher and the page that documents it. Change a
 fact there, never in a table, then run
@@ -66,7 +66,7 @@ these classes:
 
 | Block | Meaning | Checked |
 | --- | --- | --- |
-| preceded by `` | a QEMU command line, `-device` options or a `run-*.sh` launcher | run under qtest |
+| preceded by `` | a QEMU command line, `-device` options, a `run-*.sh` launcher or a `femu-config-check.py` command | run under qtest |
 | preceded by `` | a command that cannot run in CI | the reason must have at least three words |
 | ```` ```sh ```` | shell commands that do not start FEMU: git, apt, configure, commands inside the guest | must not start FEMU |
 | ```` ```bash ````, ```` ```shell ````, ```` ```console ````, ```` ```zsh ```` | not allowed untagged | fails |
@@ -100,6 +100,10 @@ the fence. GitHub does not show it and still highlights the block.
 - `allow-warning: TEXT` allows one expected warning, for example
   `allow-warning: FEMU CXL DER unavailable` for `der=cylon`, which falls back
   to MMIO without a Cylon host.
+- A `femu-config-check.py` command is run as written, with `--qemu` added.
+  It must exit with status 0, or with the status that `exit: 1` names for
+  a configuration the documentation shows as refused. A warning in its
+  report fails the example unless `allow-warning` allows it.
 
 ### What the example check does
 

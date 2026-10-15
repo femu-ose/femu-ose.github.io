@@ -3,12 +3,12 @@ title: "Scripts and tools"
 description: "Every script and tool shipped under hw/femu/scripts/ and hw/femu/tools/: what it does, its arguments and the environment variables it reads. The top-level..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/scripts.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/reference/scripts.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/scripts.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/reference/scripts.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/scripts.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/reference/scripts.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -187,17 +187,30 @@ Copy these into the guest and run them there. The C programs build with
 | --- | --- | --- |
 | `femu-test.sh` | `--yes [DEVICE]`, default `/dev/nvme0n1` | Data integrity, counters, deallocate, and zone or key-value commands, chosen by what the namespace reports. **It overwrites the whole namespace**, so `--yes` is required, and it refuses a mounted device. See [testing](../guides/testing.md#guest-side-tests). |
 | `kv-probe.c` | `[CONTROLLER]`, default `/dev/nvme0` | A key-value Store, Exist, Retrieve, Delete and a Retrieve of the deleted key ([KV](../modes/kvssd.md)) |
+| `kv-bench.c` | `[OPTIONS] NODE`, the generic node such as `/dev/ng0n1`; build with `gcc -O2 -pthread` | A key-value workload of Store, Retrieve, Delete, Exist and List with the kvbench knobs (`--keys`, `--key-len`, `--values`, `--ratio`, `--mix`, `--threads`). It checks each answer against a model of the keys and prints the rate and latency of each command. `--control legacy-opcodes` or `corrupt-model` makes it fail on purpose. Needs an empty namespace and deletes its keys at the end. Exits 1 on an error or a mismatch. See [KV benchmark](../guides/testing.md#kv-benchmark). |
 | `aer-probe.c` | `[CONTROLLER]`, default `/dev/nvme0` | That crossing the temperature threshold completes an Asynchronous Event Request, and that the event is re-armed after the log is read |
 | `zone-aen-probe.c` | `[CONTROLLER] [NAMESPACE]`, defaults `/dev/nvme0` `/dev/nvme0n1` | That a zone taken read only raises the Zone Descriptor Changed notice; needs a ZNS device with `err_write_fail_ppm` set ([ZNS](../modes/zns.md)) |
 | `fdp-test-nvme-admin.sh` | none; uses `/dev/nvme0`, `/dev/nvme0n1` and `/dev/ng0n1` | The FDP admin commands of nvme-cli against the configuration `run-blackbox-fdp.sh` creates (4 handles, 1 reclaim group); written for a Linux 6.12 guest |
 | `blktests-guest.sh` | `GROUP [DEVICE]`, default device `/dev/nvme0n1`; reads `BLKTESTS_REPO`, `BLKTESTS_REF` and `WORKDIR` (parent of a new scratch directory, default `/tmp`) | Clones, builds and runs one blktests group against the namespace, and prints the counts of passed, failed and not run tests. Exits 1 when a test that ran on the namespace failed or the run stopped early, and 2 when the setup failed. Needs network access and writes to the namespace. See [conformance suites](../guides/testing.md#conformance-suites). |
 | `nvme-cli-e2e-guest.sh` | `[CONTROLLER [NAMESPACE]]`, defaults `/dev/nvme0` `/dev/nvme0n1`; reads `NVMECLI_REPO`, `NVMECLI_REF` (default `v3.1`), `E2E_TIMEOUT` and `WORKDIR` (parent of a new scratch directory, default `/tmp`) | Builds nvme-cli and runs its end-to-end suite. Exits 1 when a test failed or the suite ended abnormally, and 2 when the setup failed. A failure of `test_get_lba_status` counts as a known nvme-cli defect only when the same command passes with the numeric namespace ID. Needs network access, writes to the namespace and can format it. |
+| `zenfs-crash-guest.sh` | `[NAMESPACE]`, default the first host-managed zoned namespace; reads `ROCKSDB_REPO`, `ROCKSDB_REF` (default `v9.10.0`), `ZENFS_REPO`, `ZENFS_REF` (default `919c2eb`), `ZENFS_PREFIX`, `ZENFS_JOBS`, `ZENFS_ROUNDS`, `ZENFS_INTERVAL`, `ZENFS_THREADS`, `ZENFS_KEYS`, `ZENFS_CONTROL` and `WORKDIR` | Builds RocksDB with ZenFS and runs the RocksDB blackbox crash test on the namespace: rounds of `db_stress` killed with SIGKILL, then a final check of every key. Exits 1 when a round or the final check failed, and 2 when the setup failed. `ZENFS_CONTROL=reset-zones` makes it fail on purpose. Needs network access and formats the namespace with ZenFS. See [ZenFS crash test](../guides/testing.md#zenfs-crash-test). |
+| `kv-bench-guest.sh` | `[NODE]`, default the one `/dev/ngXnY` without a block device; reads `KVBENCH_KEYS`, `KVBENCH_OPS`, `KVBENCH_THREADS`, `KVBENCH_SEED`, `KVBENCH_CONTROL` and `WORKDIR` | Builds `kv-probe.c` and `kv-bench.c` from its own directory, runs `kv-probe`, then a small-value and a large-value `kv-bench` run. Exits 1 when a check failed and 2 when the setup failed. See [KV benchmark](../guides/testing.md#kv-benchmark). |
 
 Run this one on the host:
 
 | Script | What it does | Arguments and environment |
 | --- | --- | --- |
-| `guest-conformance.sh` | Boots a guest for each suite with a fresh overlay of the guest image, runs `blktests-guest.sh` or `nvme-cli-e2e-guest.sh` in it over SSH, stops the guest and prints `RESULT SUITE PASS`, `FAIL` or `SETUP-ERROR`. An SMBIOS string checks that the SSH port reaches this guest. It refuses an overlay or PID file that an earlier run left in the result directory. CI does not run it. See [conformance suites](../guides/testing.md#conformance-suites). | Suites `blktests-block`, `blktests-zbd`, `nvme-cli` or `all`. Options `--qemu PATH` (default `./qemu-system-x86_64`), `--image FILE`, `--key FILE`, `--port N` (default 8090), `--outdir DIR`, `--timeout SEC` (default 3600), `--boot-timeout SEC` (default 300), `--sudo`, `--keep`. Reads `QEMU`, `IMGDIR`, `OSIMGF`, `SSH_KEY` and `SSH_PORT`, and passes `BLKTESTS_REPO`, `BLKTESTS_REF`, `NVMECLI_REPO` and `NVMECLI_REF` to the guest. Exits 0 when every suite passed, 1 when a suite failed, and 2 when a suite could not run and no suite failed. |
+| `guest-conformance.sh` | Boots a guest for each suite with a fresh overlay of the guest image, runs the suite's guest script in it over SSH, stops the guest and prints `RESULT SUITE PASS`, `FAIL` or `SETUP-ERROR`. An SMBIOS string checks that the SSH port reaches this guest. It refuses an overlay or PID file that an earlier run left in the result directory. CI does not run it. See [conformance suites](../guides/testing.md#conformance-suites). | Suites `blktests-block`, `blktests-zbd`, `nvme-cli`, `zenfs-crash`, `kv-bench` or `all`. Options `--qemu PATH` (default `./qemu-system-x86_64`), `--image FILE`, `--key FILE`, `--port N` (default 8090), `--outdir DIR`, `--timeout SEC` (default 7200 for `zenfs-crash`, else 3600), `--boot-timeout SEC` (default 300), `--device PROPS` (the FEMU properties for a control run), `--smp N` and `--mem SIZE` (default 16 and `16G` for `zenfs-crash`, else 4 and `4G`), `--sudo`, `--keep`. Reads `QEMU`, `IMGDIR`, `OSIMGF`, `SSH_KEY` and `SSH_PORT`, and passes the `BLKTESTS_*`, `NVMECLI_*`, `ROCKSDB_*`, `ZENFS_*` and `KVBENCH_*` variables that `--help` lists to the guest. Exits 0 when every suite passed, 1 when a suite failed, and 2 when a suite could not run and no suite failed. |
+
+## Host monitoring tools
+
+Run these on the host, against a running or a dry-run QEMU. They need
+Python 3 and no other package.
+
+| Script | What it does | Arguments |
+| --- | --- | --- |
+| `femu-config-check.py` | Starts QEMU under qtest with the given options and no guest, then reports either FEMU's refusal or the configuration it builds: capacity, geometry, over-provisioning, line or reclaim unit size, zones, mode and NAND timing per namespace, and QEMU's warnings. See [check a configuration](../guides/debugging.md#check-a-configuration-without-a-guest). | `[--json] [--qemu BINARY] [--timeout SEC] [--] QEMU-OPTIONS`, or the value of one `-device` option; `--self-test` checks the tool. Exits 0 accepted, 1 refused, 2 when the check failed. It loads `femu-stat.py` from its own directory. |
+| `femu-stat.py` | Shows the FTL counters of each `femu` device of a running VM, like `top`: pages, WAF since start and over the interval, rates, line, reclaim unit and zone counts, and I/O stage times. It polls QMP `query-femu` and `query-femu-stages` and never resets the counts. See [live counters](../guides/measuring.md#live-counters-on-the-host-femu-stat). | `SOCKET` (a Unix socket path or `HOST:PORT`), `--interval SEC`, `--count N`, `--once`, `--json`, `--ns LIST`, `--path QOMPATH`; `--self-test --qemu BINARY` checks the tool under qtest. Exits 2 on a connection error. |
 
 ## Host tuning helpers
 
@@ -228,7 +241,7 @@ guest builds `libcca.a`, the `ccactl` command and the `cca-test` self-test.
 runs the self-test as root, logging to `cca-guest-YYYYMMDD-HHMMSS.log` by
 default.
 See [the caching API guide](../features/cxl-cca.md) and the
-[tool README](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/tools/cca/README.md).
+[tool README](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/tools/cca/README.md).
 
 ## Legacy scripts
 

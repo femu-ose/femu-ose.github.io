@@ -153,6 +153,14 @@ const sidebars = {
         {
           "type": "doc",
           "id": "features/cxl-nvme-link"
+        },
+        {
+          "type": "doc",
+          "id": "features/cp-slm"
+        },
+        {
+          "type": "doc",
+          "id": "features/kv-lsm-index"
         }
       ]
     },

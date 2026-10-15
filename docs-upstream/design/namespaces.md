@@ -3,12 +3,12 @@ title: "Subsystems, controllers and namespaces"
 description: "This chapter describes how FEMU arranges NVMe subsystems, controllers and namespaces: how a controller's memory backend is split between namespaces, how..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/design/namespaces.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/design/namespaces.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/namespaces.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/design/namespaces.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/namespaces.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/design/namespaces.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -170,7 +170,7 @@ key space.
 | at most one `csd` namespace per controller | CSD keeps controller-wide state | `nvme_init_namespaces()` |
 | no `kvssd` with FDP | placement takes every line, leaving the KV store none | `nvme_init_namespaces()` |
 | `meta` and `streams` need every namespace to be `nossd` or `bbssd` | only the block data path carries them | `nvme_init_namespaces()` |
-| one namespace with FDP | the FDP write path addresses the FTL by command LBA, not slice | `nvme_init_namespaces()` |
+| with FDP and more than one namespace: all `bbssd` in whole NAND pages, or all `nossd`; no `fdp_trim_erase_all` | the namespaces share one FTL, one slice each, and the endurance group's handles ([FDP](fdp.md#several-namespaces)) | `nvme_check_fdp_namespaces()` |
 
 ## Namespace management
 

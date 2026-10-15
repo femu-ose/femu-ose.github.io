@@ -3,12 +3,12 @@ title: "CSD: the computational storage extension"
 description: "This chapter describes how FEMU emulates a computational storage drive (femu_mode=4): the device memory, how programs are loaded and run, how compute time..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/design/csd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/design/csd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/csd.md`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/docs/design/csd.md) at FEMU `8aad09b11` (2026-10-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/csd.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/design/csd.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -57,9 +57,9 @@ collection.
    | poller thread               |    | vCPU thread               |
    | nvme_io_cmd() -> csd_io_cmd |    | nvme_admin_cmd()          |
    +----+-------------+----------+    |  -> csd_admin_cmd()       |
-        |             |               |  memory range sets 0x21   |
-   Read, Write   CSD commands         |  program load 0x22, 0x25  |
-        |        0xb0 .. 0xf8         |  activate 0x23            |
+        |             |               |  memory range sets 0xc9   |
+   Read, Write   CSD commands         |  program load 0xc5, 0xcd  |
+        |        0xb0 .. 0xf8         |  activate 0xc8            |
         |             |               +-------------+-------------+
    nvme_rw()     +----v-----------------------------v----+
    copy data     | FemuCsdState (one per controller)     |
@@ -87,12 +87,14 @@ collection.
 black-box FTL for the namespace (`ns->ssd`), and allocates `FemuCsdState`.
 The state is controller-wide (`n->csd_ctrl_state`), which is why a controller
 may have only one CSD namespace. Its other namespaces may run other modes,
-but the CSD admin commands (0x21, 0x22, 0x23, 0x25) reach `csd_admin_cmd()`
+but the CSD admin commands (0xc5, 0xc8, 0xc9, 0xcd) reach `csd_admin_cmd()`
 only through the controller's own handler table. On a controller whose
 `femu_mode` is not 4, for example `femu_mode=2` with
 `namespace_modes=nossd,,csd`, those commands fail with Invalid Opcode, so
 programs cannot be loaded. Set `femu_mode=4` on a controller that should run
-programs. A CSD namespace makes the controller start its FTL thread.
+programs. A `femu_mode=4` controller with no CSD namespace has no
+`FemuCsdState` either, so it refuses them the same way, and log 05h does
+not list them. A CSD namespace makes the controller start its FTL thread.
 
 ## Data structures
 
@@ -164,9 +166,21 @@ Admin commands (`csd_admin_cmd()`):
 
 | Opcode | Command |
 | --- | --- |
-| 0x21 | Memory range set management: `sel` 0 creates a set from `numr` ranges in the data buffer (Dword 0 = `rsid`), `sel` 1 deletes one |
-| 0x22, 0x25 | Load program, or load more of its bytes; `sel` 1 unloads |
-| 0x23 | Activate (`sel` 1) or deactivate (`sel` 0) a program |
+| 0xc9 | Memory range set management: `sel` 0 creates a set from `numr` ranges in the data buffer (Dword 0 = `rsid`), `sel` 1 deletes one |
+| 0xc5, 0xcd | Load program, or load more of its bytes; `sel` 1 unloads |
+| 0xc8 | Activate (`sel` 1) or deactivate (`sel` 0) a program |
+
+Every opcode is vendor specific, and bits 1:0 give the data direction of a
+command that moves data (Base 2.3 Figure 91). `csd_admin_opcode()` maps the
+old CEMU admin opcodes onto these handlers when `csd_legacy_opcodes=on`,
+and refuses the layout that is not in use:
+
+```text
+ legacy off:  admin c5h c8h c9h cdh  --> handlers
+              admin 21h 22h 23h 25h  --> Invalid Command Opcode
+ legacy on:   the reverse
+ both layouts refuse 24h
+```
 
 `hw/femu/tests/csd/csd-passthru.c` builds every one of these commands and is
 the reference for their layouts; `hw/femu/csd/csd.h` declares them.
@@ -448,15 +462,89 @@ Refusal messages are listed in the
   slice, which CEMU's `time_slice` and `context_switch_time` describe, would
   need programs that yield.
 
+## CP and SLM command sets
+
+`csd_slm_size` and `csd_cp` add the ratified NVMe Subsystem Local Memory
+(SLM 1.2) and Computational Programs (CP 1.2) command sets. The guide is
+[CP and SLM](../features/cp-slm.md).
+
+### Namespaces
+
+`femu_csd_add_namespaces()` appends the memory namespace, then the compute
+namespace, after the configured ones. They keep `femu_mode` 4, so they share
+the CSD handler table, and their CSI tells them apart. They have no backend
+slice and no FTL. `NS_CSD()` is true only for the block namespace, so no FTL
+code sees them. `csd_init()` copies its handler table to them.
+
+```
+ nvme_io_cmd(): NS_SLM / NS_CP --> csd_io_cmd() before the NVM opcodes
+ csd_io_cmd():  NS_SLM --> csd_slm_io_cmd()   NS_CP --> csd_cp_io_cmd()
+                else   --> the CEMU switch (unchanged)
+ csd_admin_cmd(): 85h 88h 89h --> csd_cp_admin_cmd() with csd_cp only
+```
+
+The early hook is necessary. SLM uses 04h and 05h, which the NVM switch
+takes as Write Uncorrectable and Compare.
+
+### State
+
+```
+ FemuCsdState
+   slm, slm_size, slm_lock     the memory; slm_lock nests inside lock
+   cp_prog[16]                 PIND 0, 1 device-defined; 2..15 downloaded
+   cp_mrs                      RSID -> FemuCsdCpMrs
+   lock, workers, job queue    shared with the CEMU commands
+```
+
+### Execute and its lifetime
+
+Three counts keep a program and its range set alive and in use:
+
+```
+ fetch      csd_cp_exec():   program->refs++, program->use++, mrs->use++,
+                             req->csd_use = {PIND, RSID}
+ run        csd_worker():    copy ranges to scratch (slm_lock), run unlocked,
+                             write back changed bytes if job->req is set
+ job freed  worker:          program->refs--   (the job's own reference)
+ CQE posted nvme_post_cqe(): femu_csd_post_cqe(): under lock, write the
+                             CQE, then program->use--, mrs->use--
+ dropped    nvme_free_sq():  femu_csd_req_done()
+```
+
+- `use` is the protocol state: Program In Use and Memory Range Set In Use
+  while a command is outstanding.
+- `refs` is the object lifetime: a program dropped while it runs stays alive
+  until the worker frees its job.
+- `femu_csd_drain_sq()` clears `job->req` under `lock`, and the write-back
+  checks it under the same lock. A command dropped while its program runs
+  therefore writes nothing. A command dropped later, while it waits for its
+  modeled time or for room in its completion queue, keeps what it wrote.
+
+### Memory access
+
+Every access to the memory takes the lock `slm_lock`. Host transfers go
+through a buffer. Thus no DMA runs under the lock, and a failed DMA changes
+nothing. Programs never see an address in the memory. They work on scratch
+copies.
+
+### Timing
+
+Memory Copy, format 2h, puts its block ranges in `req->dsm_ranges` for the
+FTL thread. There, `femu_ftl_process_req()` sends such a request to
+`bb_ftl_read_ranges()`, the read loop that `ssd_copy()` also uses. Copy,
+format 4h, gives the FTL no source range, so only the write is charged.
+
 ## Source map
 
 | File | Contents |
 | --- | --- |
-| [`hw/femu/csd/csd.c`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/csd/csd.c) | state, every CSD command, program loading, compute unit threads, execution |
-| [`hw/femu/csd/csd.h`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/csd/csd.h) | command layouts, opcodes, program types |
-| [`hw/femu/tests/csd/`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/tests/csd/README.md) | guest tool, example programs, program ABI |
-| [`hw/femu/bbssd/`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/bbssd/ftl.c) | the black-box FTL under the namespace |
-| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/8aad09b1154fceaa69c2aeb38ee47ba85a3ddb69/hw/femu/femu.c) | the one-CSD-namespace check, FTL thread start |
+| [`hw/femu/csd/csd.c`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/csd/csd.c) | state, every CSD command, program loading, compute unit threads, execution |
+| [`hw/femu/csd/csd-int.h`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/csd/csd-int.h) | state shared by the CEMU and the CP and SLM code |
+| [`hw/femu/csd/cp-slm.c`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/csd/cp-slm.c) | the SLM and CP command sets, their namespaces, Identify and logs |
+| [`hw/femu/csd/csd.h`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/csd/csd.h) | command layouts, opcodes, program types |
+| [`hw/femu/tests/csd/`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/tests/csd/README.md) | guest tool, example programs, program ABI |
+| [`hw/femu/bbssd/`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/bbssd/ftl.c) | the black-box FTL under the namespace |
+| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/femu.c) | the one-CSD-namespace check, FTL thread start |
 
 ## Related pages
 
