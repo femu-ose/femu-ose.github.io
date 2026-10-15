@@ -3,12 +3,12 @@ title: "Parameter manual"
 description: "This manual explains how to configure an emulated device: the ways a parameter reaches FEMU, then every group of parameters by component, with what each one..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/reference/parameter-manual.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/reference/parameter-manual.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/reference/parameter-manual.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/reference/parameter-manual.md) at FEMU `8c80dbd1d` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -423,10 +423,11 @@ Applies to bbssd, CSD and KV unless noted. Reference:
 | `pd_open_close_sec` | seconds of device time (`age_scale`) | 0 disables; bbssd and CSD, also FDP | a frontier line or unit open this long after its first program is padded and closed at the next request; under FDP the handle gets a fresh unit and event 1h |
 | `pe_cycles_rated` | P/E cycles | 0 takes the rating of `nand_cell_type` | denominator of SMART Percentage Used |
 | `nand_bad_blocks` | blocks | capped at the block count | blocks bad from the start; lowers SMART Available Spare |
-| `blk_pe_limit` | P/E cycles | 0 disables; bbssd and CSD, one namespace, page or dftl mapping, one plane per LUN, no buffer, Streams, hot/cold separation, FDP or `nand_bad_blocks` | erases a block survives; its line then retires while enough lines remain, else the block stays in service and sets SMART critical warning bit 2 |
+| `blk_pe_limit` | P/E cycles | 0 disables; bbssd and CSD, one namespace, page or dftl mapping, one plane per LUN, no buffer, Streams, hot/cold separation, FDP or `nand_bad_blocks` | erases a block survives; its line then retires while enough lines remain; else the media goes read-only (`eol_read_only`), or the block stays in service and sets SMART critical warning bit 2 (`eol_read_only=off`) |
 | `blk_pe_spread` | percent | 0 to 90 | each block's limit varies by up to this much from `blk_pe_limit` |
 | `blk_pe_seed` | | any | seed of the per-block limits; one seed gives the same limits on every run |
 | `spare_lines` | lines | below `blks_per_pl`; needs `blk_pe_limit` | lines held back; their blocks replace worn-out blocks of the same plane; they hold no data, so the namespace must fit without them |
+| `eol_read_only` | on/off | on (default); has an effect only with `blk_pe_limit`; on needs `mdts` 1 or more and `queues` x (`entries` + 1) of at most 65535 | on: the media goes read-only when no block can replace a worn-out one, and writes then fail with status 182h; reserve lines stay erased for the writes in flight then, a write waits in its queue until the pages it may program fit in the reserve, Write Zeroes (WZSL) is limited to `mdts`, and Copy (MCL) to `mdts` or one block of the largest format; off: the version 1 wear model |
 | `err_read_unc_ppm` | per million | 0 disables; bbssd and CSD | reads that fail as Unrecovered Read Error, at a fixed period |
 | `err_write_fail_ppm` | per million | 0 disables; bbssd, CSD and ZNS | writes that fail; a ZNS zone then becomes read only |
 | `read_reclaim_limit` | reads | 0 disables; bbssd and CSD; under FDP a whole reclaim unit | a block read this often since its erase gets its line rewritten on a following write |
@@ -474,6 +475,8 @@ Reference: [ZNS](properties.md#zns). Design: [ZNS](../design/zns.md).
 | `zns_pe_suspend`, `zns_tsusp_ns` | flag, ns | | reads suspend a program or erase on their plane |
 | `zns_lun_contention` | flag | 0 = off, non-zero = on | the planes of one LUN take turns |
 | `zns_reset_by_fill` | flag | 0 = off, non-zero = on | a zone reset erases only programmed blocks |
+| `zns_fzr_sec` | seconds | 0 = off | a written zone not finished this long gets Finish Zone Recommended |
+| `zns_frl_sec` | seconds | 0 = no excursion; needs `zns_fzr_sec` | FRL: after it the controller finishes an FZR zone (Zone Active Excursion, ZFC) |
 | `zns_max_open`, `zns_max_active` | zones | <= zone count, open <= active; 0 = no limit | Maximum Open and Active Resources |
 | `zns_num_wc` | write caches | <= zone count; 0 picks from `zns_max_open` | zone write caches |
 | `zns_zasl_bs` | bytes | power-of-two multiple of 4 KiB; 0 follows `mdts` | Zone Append size limit |
@@ -587,6 +590,7 @@ starts, with its value space clamped. Design: [KV](../design/kvssd.md).
 | `kv_lsm_memtable_keys` | records | 16 to 65536, `kv_index=lsm` | memtable size before a flush |
 | `kv_lsm_size_ratio` | ratio | 2 to 64, `kv_index=lsm` | capacity of a level over the one above |
 | `kv_lsm_pinned_levels` | levels | 0 to 24, `kv_index=lsm` | top levels held in DRAM, with no flash I/O |
+| `kv_pack` | bool | `on` (default), `off` | values whose record fits a page share pages through an open page in DRAM; `off`: each value takes whole pages |
 
 Interactions:
 
@@ -595,6 +599,9 @@ Interactions:
 - With `kv_timing=model`, the tree still loads the NAND; only the Store and
   Retrieve times come from the model
   ([LSM-tree key index](../features/kv-lsm-index.md#with-kv_timingmodel)).
+- `kv_pack=off` needs a KV namespace. With `vwc=1`, Flush programs the open
+  page of packed values; with WCE cleared, each Store programs it
+  ([KV value packing](../features/kv-value-packing.md#durability)).
 
 ## 14. CXL SSD
 

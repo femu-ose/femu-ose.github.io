@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/CHANGELOG.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/CHANGELOG.md) at FEMU `8c80dbd1d` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -76,6 +76,7 @@ listed one by one.
 - Opt-in KV workload-mix timing (`kv_timing=model`): Store and Retrieve take their time from the Samsung KVSSD emulator fit over the last 16 of them, or from coefficients in `kv_model_coeffs`. A device with no KV namespace refuses both.
 - Opt-in LSM-tree key index for KV namespaces (`kv_index=lsm`), after PinK (ATC '20): a DRAM memtable, levels by `kv_lsm_size_ratio`, `kv_lsm_pinned_levels` held in DRAM. Lookups read a meta page per unpinned level, and merges load the NAND in the background. Value GC puts moved keys back in the memtable, and List returns keys in byte order. The default hash index is unchanged. LSM knobs without `kv_index=lsm`, and `kv_index=lsm` with no KV namespace, are refused.
 - `query-femu` reports the LSM-tree key index of a KV namespace with `kv_index=lsm` in an `lsm` member: the memtable, each level, merges and meta page I/O. `femu-stat.py` and `femu-config-check.py` show it.
+- `query-femu` reports KV value packing in a `pack` member: the open page, packed pages, pad bytes, GC moves of values and the host bytes. `femu-stat.py` prints it, and `femu-config-check.py` shows whether packing is on.
 
 #### Namespaces
 
@@ -178,6 +179,8 @@ listed one by one.
 - Opt-in `plane_first` makes bbssd and CSD write pointers fill the planes of a LUN before the next channel. With `mp_program`, pages in a row then form one multi-plane program.
 - Optional debug logging to study whether deleted data remains on the device ([18ba6557c](https://github.com/MoatLab/FEMU/commit/18ba6557c), [45e61ae41](https://github.com/MoatLab/FEMU/commit/45e61ae41)).
 - Opt-in block erase limits (`blk_pe_limit`, `blk_pe_spread`, `blk_pe_seed`): a block past its limit stays in service, is counted in log page C0h and sets SMART critical warning bit 2 ([12f1c582c](https://github.com/MoatLab/FEMU/commit/12f1c582c)). The block's line leaves service while enough lines remain ([af99ecb21](https://github.com/MoatLab/FEMU/commit/af99ecb21)). `spare_lines` holds lines back whose blocks replace worn-out ones, and SMART Available Spare follows what is left ([ee6afccd4](https://github.com/MoatLab/FEMU/commit/ee6afccd4)). Crossing into either warning raises a SMART asynchronous event when the host enabled it ([c9b3d3ad8](https://github.com/MoatLab/FEMU/commit/c9b3d3ad8)). SMART Percentage Used then counts against the blocks' limits, and `query-femu` reports retired and spare lines ([b6af86af1](https://github.com/MoatLab/FEMU/commit/b6af86af1)).
+- With `blk_pe_limit`, the new `eol_read_only` (on by default) keeps erased reserve lines for the writes in flight at the end of life. Each write takes credits for the NAND pages it may program before it changes data, and waits in its queue while the reserve is full. `query-femu` reports the reserve lines and the credits.
+- With `eol_read_only`, the media goes read-only when no block can replace a worn-out one, as on a real SSD. Writes, Write Zeroes, Write Uncorrectable, Copy and a deallocating Dataset Management fail with Attempted Write to Read Only Range (182h) and change nothing. Reads, Flush, Format NVM and Sanitize still run, and the writes in flight finish from the reserve. SMART shows critical warning bit 3 and Available Spare 0, the Endurance Group log bit 3, and Identify Namespace NSATTR bit 0. A SMART event with information 00h follows when the host enabled bit 3. Format NVM fails with Command Sequence Error while admitted writes wait for the FTL.
 
 #### Timing and fault models
 
@@ -194,6 +197,7 @@ listed one by one.
 - Poller threads decoupled from queues (`poller_ratio`), and I/O counters kept per poller ([0b192893b](https://github.com/MoatLab/FEMU/commit/0b192893b), [6b1592746](https://github.com/MoatLab/FEMU/commit/6b1592746)).
 - The backend memory can be bound to or interleaved across NUMA nodes with `FEMU_MBE_INTERLEAVE` ([3594d27c6](https://github.com/MoatLab/FEMU/commit/3594d27c6)).
 - Under FDP a NoSSD namespace counts its writes: HBMW, MBMW and the RUAMW of its reclaim units, per handle and per endurance group. It logs event 03h for an invalid placement identifier. Write Zeroes with Deallocate and Write Uncorrectable count in HBMW only. A unit fills by the blocks written, and RUH Update logs event 00h only for a part-written unit. A logical block larger than `fdp.runs` is refused.
+- ZNS Finish Zone Recommended and Zone Active Excursions (`zns_fzr_sec`, `zns_frl_sec`, off by default). A zone written but not finished gets FZR after `zns_fzr_sec` seconds of guest time. FRL seconds later the controller finishes it and sets ZFC. Both changes enter the Changed Zone List.
 
 ### Configuration changes and new refusals
 
@@ -246,6 +250,11 @@ was not doing anything.
 
 #### Behaviour changes (still boots, numbers move)
 
+- Small KV values share NAND pages, as real KV-SSDs pack them (`kv_pack=on`, the default). A Store goes to an open page in controller DRAM and costs the DRAM time. The Store that does not fit, or that fills the page, programs it and waits for it. Flush with a volatile write cache, clearing WCE and shutdown program the open page (Base 2.3, 5.2.26.1.4 and 7.2). A packed Retrieve reads one page, GC moves values one by one, and log C0h counts host pages from value bytes. `kv_pack=off` gives the old model, one value or more per page ([KV value packing](features/kv-value-packing.md)).
+- A device with `blk_pe_limit` keeps reserve lines out of service, so it needs one or more lines more. It also refuses `mdts=0`, reports WZSL equal to MDTS with ONCS bit 3 (NVMWZSV) clear, and limits MCL so a Copy writes no more than MDTS. `eol_read_only=off` gives the old model.
+- With `blk_pe_limit`, the Persistent Event log records the spare, reliability and read-only warnings when the FTL sees them start. The event carries the warning byte of that moment. Before, the log recorded them only when the host next read the SMART log.
+- With `blk_pe_limit`, the media goes read-only at the end of life by default. A worn-out block with no replacement no longer stays in service with critical warning bit 2. With spare lines, a line no longer retires while the media stays writable. The worn line retires only as the media goes read-only. `eol_read_only=off` gives the old behaviour.
+- A device with `blk_pe_limit` keeps reserve lines out of service, so it needs one or more lines more. It also refuses `mdts=0` and reports WZSL equal to MDTS with ONCS bit 3 (NVMWZSV) clear. MCL keeps a Copy within MDTS, or within one block of the largest LBA format when that is larger. `eol_read_only=off` gives the old model.
 - KV value GC collects one victim line at a time when the free lines fall to the GC threshold, with both key indexes. It replaces the old compaction, which rewrote every live value when the value arena filled: emulator memory set that trigger, not the NAND. The arena now packs its bytes with no NAND time. A Store leaves free a reserve for GC, so a full device returns Capacity Exceeded sooner. `FEMU_KV_CHECK` checks the owner of every page.
 - With `kv_index=lsm`, meta pages are real NAND pages in lines of their own. Merges program them and value GC moves them. The health log and log C0h count them, so the WAF includes the index. An old value stays valid on flash until a merge drops its record or value GC finds it stale (PinK, section 4.5). Commands pay only the flash the tree reads, with no hash base read. Thus a memtable hit takes no NAND time.
 - With `kv_index=lsm`, a Store keeps room for a merge of every record. When it finds no room, the device merges every level down, so Deletes give back their space. `query-femu` adds `gc-meta-pages`, `gc-stale-value-pages`, `valid-value-pages` and `versions`.
@@ -364,6 +373,7 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 
 #### Spec conformance and host compatibility
 
+- With a `femu-subsys`, SMART byte 6 (Endurance Group Critical Warning Summary) repeats bits 0, 2 and 3 of the endurance group's warning. It read 0.
 - A KV namespace runs its I/O commands only when the host enables the controller with CC.CSS 110b. Under 000b, which selects only the NVM command set, they fail with Invalid Command Opcode (Base 2.3, Figure 41). Linux selects 110b. Set Features I/O Command Set Profile (19h) now succeeds with no effect when CC.CSS is not 110b (Base 2.3, 5.2.26.1.17).
 - Write Zeroes reads its directive type from CDW12 bits 22:20 (NVM Command Set 1.2, Figure 82). Bit 23 is NSZ: with it set, a Write Zeroes failed with Invalid Field once the Data Placement Directive was enabled, or lost its placement.
 - FDP event 03h sets LV, with the reclaim group and handle that the controller selected for the write (Base 2.3, Figure 296).
@@ -410,9 +420,12 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - CAP.AMS no longer claims weighted round robin, which nothing arbitrated by, and enabling with another CC.AMS fails ([409db7bb3](https://github.com/MoatLab/FEMU/commit/409db7bb3)).
 - A controller in a subsystem reports its endurance group (CTRATT bit 4, ENDGIDMAX, each namespace's ENDGID, the Key Value Identify structure included) whether or not FDP is on, as log 09h already did ([409db7bb3](https://github.com/MoatLab/FEMU/commit/409db7bb3)).
 - The spare critical warning in the SMART and Endurance Group logs is set when the available spare falls below the threshold, not when it equals it ([4faaff90a](https://github.com/MoatLab/FEMU/commit/4faaff90a)).
+- A memory backend that the host cannot allocate now refuses the device with a message that names its size. Before, QEMU aborted in the allocator.
+- An asynchronous event identical to one already queued (type, information, log page, namespace) is not queued again. Copies used to fill the 16-entry queue and push out other namespaces' events.
 
 ### Documentation and tooling
 
+- `femu-stat.py` prints the end-of-life state of a namespace with `eol_read_only`: read-only or writable, and the reserve pages that admitted writes hold.
 - Documentation moved under `hw/femu/docs/` with getting-started, concepts, mode and feature guides, an FAQ, security notes and a doc map ([e00c70f99](https://github.com/MoatLab/FEMU/commit/e00c70f99), [034670c4c](https://github.com/MoatLab/FEMU/commit/034670c4c), [62a565ae0](https://github.com/MoatLab/FEMU/commit/62a565ae0), [fb1cf3ce6](https://github.com/MoatLab/FEMU/commit/fb1cf3ce6), [28aa224b7](https://github.com/MoatLab/FEMU/commit/28aa224b7), [0bcb5cae2](https://github.com/MoatLab/FEMU/commit/0bcb5cae2)).
 - CXL SSD, caching API and NVMe link guides, and a reference for every `femu-cxl-ssd` property and counter ([41b318ef2](https://github.com/MoatLab/FEMU/commit/41b318ef2), [9ec16a701](https://github.com/MoatLab/FEMU/commit/9ec16a701), [93bfbf5c9](https://github.com/MoatLab/FEMU/commit/93bfbf5c9), [ccaa5d190](https://github.com/MoatLab/FEMU/commit/ccaa5d190), [dcea2b9a8](https://github.com/MoatLab/FEMU/commit/dcea2b9a8)).
 - A property reference generated from the binary and checked in CI, with every device property described in its help text ([a6118d051](https://github.com/MoatLab/FEMU/commit/a6118d051), [9489cf692](https://github.com/MoatLab/FEMU/commit/9489cf692), [37aaccf27](https://github.com/MoatLab/FEMU/commit/37aaccf27), [c2a12a2eb](https://github.com/MoatLab/FEMU/commit/c2a12a2eb)).

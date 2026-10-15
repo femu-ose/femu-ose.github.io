@@ -3,12 +3,12 @@ title: "Zoned Namespace SSD (ZNS)"
 description: "ZNS mode (femu_mode=3) emulates an NVMe SSD with the Zoned Namespace command set. The namespace is divided into zones. The host writes each zone..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/modes/zns.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/modes/zns.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/zns.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/modes/zns.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/zns.md`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/modes/zns.md) at FEMU `8c80dbd1d` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -234,6 +234,28 @@ All of these are off by default.
 - **Write failures.** `err_write_fail_ppm` fails a fixed share of writes. The
   zone of a failed write becomes read only and is added to the Changed Zone
   List log page.
+- **Finish Zone Recommended and Zone Active Excursions.** A zone that is
+  written but not finished holds part-programmed blocks, which a real device
+  does not keep open for long. `zns_fzr_sec=N` sets Finish Zone Recommended
+  (FZR) on a zone N seconds of guest time after its first write. `zns_frl_sec=M`
+  reports FRL M in Identify and sets ZOC.ZAE. M seconds after FZR, the
+  controller finishes the zone itself and sets Zone Finished by Controller
+  (ZFC). Both changes enter the Changed Zone List (ZNS 1.4, 5.5 and 5.6).
+
+```text
+ first write --(zns_fzr_sec)--> FZR, FZRTL 00b, changed zone
+   host finishes, fills or resets the zone --> FZR cleared, no event
+   else --(zns_frl_sec)--> zone Full, ZFC, FZR cleared, changed zone
+ checks run once a second of guest time; a paused VM does not age zones
+```
+
+A finish moves the write pointer and the zone state only. Pages still in
+the zone's write cache are programmed later, by eviction, as for a host
+Finish. A zone with a write still in flight waits for the next check.
+
+```
+-device femu,devsz_mb=1024,femu_mode=3,zns_fzr_sec=60,zns_frl_sec=300
+```
 
 ## Use it from the guest
 
@@ -310,8 +332,8 @@ that follow a Zone Management Send command, writes that open or fill a
 zone, and the controller closing a zone to free a resource. Reading it
 without `--rae` clears both the list and the event behind it.
 
-With `err_write_fail_ppm` unset nothing adds to the list, and it stays
-empty. With it set, one write in every 1,000,000 / `err_write_fail_ppm`
+With `err_write_fail_ppm` and `zns_fzr_sec` unset nothing adds to the
+list, and it stays empty. With it set, one write in every 1,000,000 / `err_write_fail_ppm`
 fails and makes its zone read only, the way a controller does when it can
 no longer program the zone. The failing write completes with Write Fault,
 later writes to that zone are refused as read only, the zone is added to
@@ -345,6 +367,7 @@ applications.
 | `zns_zone_order must be ch or lun, not 'die'` | An unknown fill order. |
 | `zns_flash_type 2 has no built-in timing; set zns_pg_rd_lat, zns_pg_wr_lat and zns_blk_er_lat` | MLC or PLC without the three latencies. |
 | `zns_flash_type must be in [1, 5]` | A cell type outside SLC to PLC. |
+| `zns_frl_sec needs zns_fzr_sec: an excursion follows Finish Zone Recommended` | Set `zns_fzr_sec` too, or drop `zns_frl_sec`. |
 | `zoned namespaces need a logical block of 4 KiB or less; lba_index selects 8192 bytes` | `lba_index` picks a block larger than 4 KiB. |
 | `zns geometry gives N pages per block; must be in [1, 65536]` | The namespace is too small or too large for `zns_num_ch * zns_num_lun * zns_num_blk`. |
 | `FEMU zns: N zones exceed M blocks per plane ...` | Raise `zns_num_blk` or the namespace size. |

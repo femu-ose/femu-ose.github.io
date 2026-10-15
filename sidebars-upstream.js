@@ -161,6 +161,10 @@ const sidebars = {
         {
           "type": "doc",
           "id": "features/kv-lsm-index"
+        },
+        {
+          "type": "doc",
+          "id": "features/kv-value-packing"
         }
       ]
     },

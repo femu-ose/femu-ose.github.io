@@ -3,12 +3,12 @@ title: "Timing model"
 description: "FEMU makes an emulated SSD take as long as a real one would. This page explains how it computes that time, how it makes the guest wait for it, which..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/concepts/timing-model.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/concepts/timing-model.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/timing-model.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/concepts/timing-model.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/timing-model.md`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/concepts/timing-model.md) at FEMU `8c80dbd1d` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -218,6 +218,12 @@ With `kv_index=lsm`, the index is an LSM tree. A lookup reads one meta
 page per unpinned level, in sequence, before the value, and pays no hash
 base read. Merges load the LUNs in the background
 ([LSM-tree key index](../features/kv-lsm-index.md#what-each-command-costs)).
+
+Small values share pages (`kv_pack=on`, the default). A Store goes to an
+open page in DRAM and costs `pg_rd_lat / 16`; the Store that does not fit,
+or that fills the page, programs it. A Retrieve reads the one page of its value, or
+nothing while the value is still in DRAM
+([KV value packing](../features/kv-value-packing.md#what-each-command-costs)).
 
 CSD runs a program on the compute unit that frees up first. A program holds
 its unit for its declared run time, or for its measured host run time

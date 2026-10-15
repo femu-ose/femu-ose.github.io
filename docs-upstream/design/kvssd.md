@@ -3,12 +3,12 @@ title: "KV: the key-value extension"
 description: "This chapter describes how FEMU emulates a key-value SSD (femu_mode=5): the NVMe Key Value command set as implemented, the device-side index and value..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/design/kvssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/design/kvssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/kvssd.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/design/kvssd.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/kvssd.md`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/design/kvssd.md) at FEMU `8c80dbd1d` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -127,6 +127,49 @@ The two views are separate. The arena is the emulator's store of the host
 bytes: when its frontier is full, `kv_arena_pack()` moves the live bytes
 to the front, with no NAND time. The NAND model is the device: value GC
 collects its lines one victim at a time ([value GC](#value-gc)).
+
+## Value packing
+
+With `kv_pack=on` (the default), a value whose record fits a page shares
+the page with other values. A record is the value and a 32 byte header
+(`KV_PACK_HDR`): the key, the length, a version and the offset. The user
+view is in [KV value packing](../features/kv-value-packing.md).
+
+```text
+  s->open (KvPackPage, DRAM)             s->packed: ppa -> KvPackPage
+  +-------------------------------+      +-------------------------------+
+  | items: owner slot, off, len,  |      | the same header, for a page   |
+  |        live                   |      | on NAND; rmap = KV_OWNER_PACK |
+  | fill, live, live_bytes        |      +-------------------------------+
+  +-------------------------------+
+  entry of a packed value: packed = true, nr_ppas = 1,
+    ppas[0] = KV_PPA_OPEN (in DRAM) or the page, pack_off = record offset
+  s->line_live[line]: live bytes; a page for a whole or meta page,
+    the live records of a packed page
+```
+
+- `kv_place_value()` puts a value in the open page. A value whose record
+  does not fit a page goes to whole pages, as before. When the record
+  does not fit the open page, the dead records go first
+  (`kv_pack_compact()`, DRAM only). Then `kv_pack_program()` programs the
+  page. A page full of live records is programmed with the value that
+  fills it. `kv-pack.c` holds the page header; the unit test
+  `test-femu-kv-pack` checks it.
+- `kv_pack_hold()` says whether the open page may stay in DRAM: not with
+  `vwc=1` and WCE cleared. Then the page is programmed with the value in
+  it, before the index takes the value, so a failed program changes
+  nothing.
+- The owner of a packed value is its item, found by the offset. Owner
+  moves (`kv_move_owner()`) and releases (`kv_release_value()`) take the
+  entry, so a hash backshift and an LSM reinsertion move the item too.
+- `kv_pack_kill()` ends a record. A programmed page with no live record
+  goes invalid and its header is freed.
+- `kvssd_ftl_flush()` programs the open page and waits for
+  `pack_persist`, the end of the last packed program. Flush with WCE set,
+  Set Features 06h that clears WCE and CC.SHN call it
+  (`kvssd_flush()`, `kvssd_flush_all()`).
+- `kv_room()` keeps one page for the open page while it holds a live
+  record, so that a Flush finds its page.
 
 ## Key index
 
@@ -286,15 +329,20 @@ read and write EDNEK.
         else dead bytes exist?  -> kv_arena_pack() (memory only), retry
         else                    -> Capacity Exceeded
    6. copy the value from the host into the arena
-   7. kv_program_ppas(): for each value page
-        kv_wp_line()   (a free line when the pointer has none)
-        mark valid; charge a NAND program
-        kv_wp_step()   (channel, LUN, plane, then page)
-   8. index upsert; the new pages take the slot as owner
-        hash: release the old value's pages now
-        lsm:  the old version goes stale; its pages wait for the tree
+   7. kv_place_value()
+        record fits a page (kv_pack=on): the open page
+          no room: drop dead records, then program the open page
+          WCE cleared: program the page with the value in it
+        else kv_program_ppas(): for each value page
+          kv_wp_line()   (a free line when the pointer has none)
+          mark valid; charge a NAND program
+          kv_wp_step()   (channel, LUN, plane, then page)
+   8. index upsert; the new pages or item take the slot as owner
+        hash: release the old value's pages or record now
+        lsm:  the old version goes stale; its flash waits for the tree
    9. latency: whichever ends last of the GC in step 3, the index cost,
-      the page programs and the reclaim erases
+      the page programs, the reclaim erases, and the DRAM time of a
+      record that stays in the open page
 ```
 
 The write pointer walks a line the way the black-box FTL does: across
@@ -314,6 +362,8 @@ below `gc_thres_lines`, or while a Store has too little room:
 
 ```text
   victim = the line with the fewest valid pages (victim queue)
+           kv_pack: the closed line with the fewest live bytes, from the
+           victim queue and the full list, each once per run
            lsm, no such line, a Store with no room:
            the next full value line of the run, oldest first
   value line:
@@ -321,6 +371,9 @@ below `gc_thres_lines`, or while a Store has too little room:
      lsm    look up each version's key (meta reads, level by level)
               the newest record names it -> move; record on flash -> reinsert
               else                       -> release the page, no move
+     packed page: read it once; each live record goes to the GC page
+              (lsm: a stale version is released); the GC page is
+              programmed when full and before the erase
   meta line: read and program each valid meta page; the level list follows
   reinsert the keys (lsm), then erase the victim, one erase per LUN
 ```
@@ -354,8 +407,9 @@ error paths after the index lookup, are charged nothing.
 
 | Command | Charged |
 | --- | --- |
-| Store | whichever ends last of any value GC it runs, the base cost, its page programs and any reclaim erases |
-| Retrieve | the reads of the value pages that are transferred, and the base cost; the longest of them |
+| Store | whichever ends last of any value GC it runs, the base cost, its page programs and any reclaim erases; a packed value costs the DRAM time, or the program of the open page it forces |
+| Flush (`vwc=1`, WCE set) | the program of the open page, and every earlier program of packed values |
+| Retrieve | the reads of the value pages that are transferred, and the base cost; the longest of them; a packed value reads its one page, or costs the DRAM time while it is in the open page |
 | Exist | the base cost |
 | Delete, List | the longer of the base cost and the index cost, which is 0 for the hash index |
 | any command with `kv_index=lsm` | the meta page reads of the [key index](#key-index) in place of the base cost |
@@ -382,6 +436,8 @@ KV reads only part of the black-box properties:
 | [NAND geometry](../reference/properties.md#nand-geometry-bbssd-csd-kv) | `nchs`, `luns_per_ch`, `pls_per_lun`, `blks_per_pl`, `pgs_per_blk`, `secs_per_pg`, `secsz` | layout of the value pages; NAND size |
 | [NAND timing](../reference/properties.md#nand-timing-bbssd-csd-kv) | `pg_rd_lat`, `pg_wr_lat`, `blk_er_lat`, cell type and channel properties | cost of each operation |
 | [Garbage collection](../reference/properties.md#garbage-collection-mapping-and-caches) | `gc_thres_pcent` | usable share of the NAND |
+| [KV timing](../reference/properties.md#kv-timing) | `kv_pack` | small values share pages (default on) |
+| [Controller identity and capabilities](../reference/properties.md#controller-identity-and-capabilities) | `vwc` | with WCE set, the open page waits for Flush |
 | [Mode, capacity and namespaces](../reference/properties.md#mode-capacity-and-namespaces) | `devsz_mb`, `namespaces`, `namespace_sizes`, `namespace_modes` | namespace size, KV next to other modes |
 | [Queues, pollers and interrupts](../reference/properties.md#queues-pollers-and-interrupts) | `mdts` | largest value, retrieve or list one command moves |
 
@@ -404,11 +460,12 @@ black-box mode splits them, and the vendor log page C0h sums them over the
 controller's black-box, CSD and KV namespaces
 ([log pages and counters](../reference/log-pages-and-counters.md#vendor-log-page-c0h)):
 
-- pages the host asked to program: value pages written by Store;
+- pages the host asked to program: value pages written by Store; with
+  `kv_pack=on`, the value bytes of the Stores in whole pages, rounded down;
 - pages relocated by garbage collection: value pages and meta pages that
   value GC moved;
-- pages programmed: the value pages of the first item, and the meta pages
-  that merges program (LSM index only);
+- pages programmed: the value pages of the first item, each packed page,
+  and the meta pages that merges program (LSM index only);
 - reads of the most-read block: value page reads count against their block.
 
 The SMART log counts Store and Retrieve as host writes and reads, with the
@@ -425,12 +482,18 @@ bytes actually moved.
   `namespace-kv-byte-capacity`, `kv-mdts` and
   `kv-list-mdts0` (transfer limits), `kv-identify-reserved` (Identify
   layout), `sgl-kv`, and `kv-fuzz`, a fuzzer over the command fields.
+- The `kv-pack-*` qtests cover value packing. They check pages and host
+  bytes, the old model and overwrites in the open page. They also check
+  Flush and WCE, a Flush beside a program, the read time, and GC with
+  both indexes.
 - The `kv-lsm-*` qtests cover `kv_index=lsm`: data, List order, probe
   time, background merges, query output, refusals, value GC (also with
   two planes and two-page values), old values on flash, meta page
   programs, Delete, a full device, table growth and random overwrites. The
   unit test `test-femu-kv-lsm` checks the tree against a reference, and
   each page and record callback.
+- The unit test `test-femu-kv-pack` checks the packed page header: fit,
+  exact fill, offsets, drops, compaction and allocation failures.
 - The qtests set `FEMU_KV_CHECK`. After each value GC and every 64
   commands, the FTL checks the owner that `rmap` names for each valid
   page. A broken owner stops QEMU.
@@ -449,8 +512,13 @@ bytes actually moved.
 - Values are held in host memory as well as in the timing model's page
   states, so a KV namespace costs host memory equal to its value capacity.
 - Value GC runs in the Store that needs room, not in the background.
-- A value takes whole pages: small values use more NAND than their bytes,
-  and a Store can get Capacity Exceeded before NUSE reaches NSZE.
+- With `kv_pack=off`, a value takes whole pages. Small values then use
+  more NAND than their bytes. A Store can get Capacity Exceeded before
+  NUSE reaches NSZE. With packing, a record still takes a 32 byte header,
+  and a value whose record does not fit a page takes whole pages.
+- One open page per namespace. Admin commands and the shutdown status do
+  not wait for the program of the open page. FEMU models no power loss
+  for KV, so the index in device DRAM needs no journal.
 - The base cost of a key always falls on the same LUN, so a workload that
   hammers one key queues on that LUN.
 - With the hash index, List order follows the hash table, not key order.
@@ -479,16 +547,18 @@ Refusal messages are listed in the
 
 | File | Contents |
 | --- | --- |
-| [`hw/femu/kvssd/kvssd.c`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/kvssd/kvssd.c) | command parsing, registration, init and exit |
-| [`hw/femu/kvssd/kvssd-ftl.c`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/kvssd/kvssd-ftl.c) | index, value arena, NAND placement, page owners, value GC, timing, owner check, self-test |
-| [`hw/femu/kvssd/kv-lsm.c`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/kvssd/kv-lsm.c) | the LSM tree of `kv_index=lsm`: memtable, levels, merges, scan |
-| [`hw/femu/kvssd/kvssd-admin.c`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/kvssd/kvssd-admin.c) | Identify structures, Key Value Configuration feature |
-| [`hw/femu/kvssd/kvssd.h`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/kvssd/kvssd.h) | `FemuKvssdState`, `FemuKvssdMappingEntry`, `FemuKvIndexOps` |
-| [`hw/femu/bbssd/ftl-media.c`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/bbssd/ftl-media.c) | `ssd_advance_status()`, the media model KV charges through |
-| [`hw/femu/nvme-admin.c`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/nvme-admin.c) | Identify and feature routing to the KV handlers |
+| [`hw/femu/kvssd/kvssd.c`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/kvssd/kvssd.c) | command parsing, registration, init and exit |
+| [`hw/femu/kvssd/kvssd-ftl.c`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/kvssd/kvssd-ftl.c) | index, value arena, NAND placement, value packing, page owners, value GC, timing, owner check, self-test |
+| [`hw/femu/kvssd/kv-lsm.c`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/kvssd/kv-lsm.c) | the LSM tree of `kv_index=lsm`: memtable, levels, merges, scan |
+| [`hw/femu/kvssd/kv-pack.c`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/kvssd/kv-pack.c) | the packed page header of `kv_pack=on`: records, fit, compaction |
+| [`hw/femu/kvssd/kvssd-admin.c`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/kvssd/kvssd-admin.c) | Identify structures, Key Value Configuration feature |
+| [`hw/femu/kvssd/kvssd.h`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/kvssd/kvssd.h) | `FemuKvssdState`, `FemuKvssdMappingEntry`, `FemuKvIndexOps` |
+| [`hw/femu/bbssd/ftl-media.c`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/bbssd/ftl-media.c) | `ssd_advance_status()`, the media model KV charges through |
+| [`hw/femu/nvme-admin.c`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/nvme-admin.c) | Identify and feature routing to the KV handlers |
 
 ## Related pages
 
 - [KV guide](../modes/kvssd.md): command examples, status codes, troubleshooting
 - [Timing model: KV and CSD](../concepts/timing-model.md#kv-and-csd)
 - [Multiple namespaces](../features/multi-namespace.md)
+- [KV value packing](../features/kv-value-packing.md)

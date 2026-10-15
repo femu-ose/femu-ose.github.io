@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/3926f82e34ec59877920f78683eb82e6f2db5126/hw/femu/docs/reference/properties.md) at FEMU `3926f82e3` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/8c80dbd1dd6ceb3deb62ea5b70b76ee258d945c1/hw/femu/docs/reference/properties.md) at FEMU `8c80dbd1d` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,7 +28,7 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 199 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 203 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
@@ -74,7 +74,7 @@ Devices:
 | `did` | `uint16` | `7967` | PCI device ID of the controller function |
 | `acl` | `uint8` | `3` | Abort Command Limit reported in Identify Controller (0's based); an Abort run with more than acl others queued behind it fails |
 | `cqr` | `uint8` | `1` | CAP.CQR: 1 requires physically contiguous queues, 0 allows PRP-list queues |
-| `vwc` | `uint8` | `0` | 1 advertises a volatile write cache, which the host can turn off with feature 06h to stop bbssd buffering writes; 0 advertises none and refuses feature 06h. Flush drains the bbssd write buffer either way; 0 or 1 |
+| `vwc` | `uint8` | `0` | 1 advertises a volatile write cache, which the host can turn off with feature 06h to stop bbssd buffering writes; 0 advertises none and refuses feature 06h. Flush drains the bbssd write buffer either way. On KV with 1, Flush programs the open page of packed values, and with the cache off each Store programs it; 0 or 1 |
 | `temperature` | `uint16` | `323` | Composite temperature in kelvin reported by the SMART log and compared with the temperature threshold feature; default 323 (50 C) |
 | `mpsmin` | `uint8` | `0` | CAP.MPSMIN: smallest host memory page size as 2^(12 + mpsmin) bytes; must not exceed mpsmax |
 | `mpsmax` | `uint8` | `0` | CAP.MPSMAX: largest host memory page size as 2^(12 + mpsmax) bytes, from mpsmin to 15 |
@@ -168,10 +168,11 @@ Devices:
 | `pd_open_close_sec` | `int32` | `0` | bbssd, CSD, FDP: program disturb, seconds of device time (age_scale) a frontier line or reclaim unit may stay open after its first program; the next request pads its free pages and closes it; under FDP the handle gets a fresh unit and event 1h; 0 (default) turns it off |
 | `pe_cycles_rated` | `uint32` | `0` | bbssd, CSD, KV, ZNS: rated program/erase cycles used for SMART Percentage Used; 0 takes the rating of nand_cell_type (ZNS: zns_flash_type), or reports none |
 | `nand_bad_blocks` | `uint32` | `0` | bbssd, CSD, KV: blocks marked bad at start, capped at the block count, which lowers SMART Available Spare |
-| `blk_pe_limit` | `uint32` | `0` | bbssd, CSD: mean program/erase cycles a block survives before it wears out; 0 (default) turns wear-out off. A worn-out block stays in service and sets the SMART reliability warning |
+| `blk_pe_limit` | `uint32` | `0` | bbssd, CSD: mean program/erase cycles a block survives before it wears out; 0 (default) turns wear-out off. When no block can replace a worn-out one, the media goes read-only (eol_read_only) |
 | `blk_pe_spread` | `uint32` | `0` | bbssd, CSD: how far each block's limit varies from blk_pe_limit, in percent, 0 to 90 |
 | `blk_pe_seed` | `uint64` | `0` | bbssd, CSD: seed of the per-block erase limits; one seed gives the same limits on every run |
 | `spare_lines` | `uint32` | `0` | bbssd, CSD: lines held back, needs blk_pe_limit; their blocks replace worn-out blocks of the same plane, and SMART Available Spare is the spare blocks the emptiest plane has left, in percent |
+| `eol_read_only` | `bool` | `on` | bbssd, CSD, with blk_pe_limit: on (default) puts the media in read-only mode when no block can replace a worn-out one, with reserve lines for the writes in flight; needs mdts 1 or more and limits Write Zeroes (WZSL) to mdts and Copy (MCL) to mdts or one block. off keeps a worn-out block in service with the SMART reliability warning |
 | `energy_read_nj` | `uint32` | `0` | bbssd, CSD, KV: energy of one plane read in nJ, for the energy total in log page C0h; 0 (default) gives no figure |
 | `energy_prog_nj` | `uint32` | `0` | bbssd, CSD, KV: energy of one plane program in nJ, for the energy total in log page C0h; 0 (default) gives no figure |
 | `energy_erase_nj` | `uint32` | `0` | bbssd, CSD, KV: energy of one plane erase in nJ, for the energy total in log page C0h; 0 (default) gives no figure |
@@ -237,6 +238,8 @@ Devices:
 | `zns_pe_suspend` | `int32` | `0` | ZNS: non-zero lets a read suspend a program or erase on its plane |
 | `zns_lun_contention` | `int32` | `0` | ZNS: non-zero makes the planes of one LUN share the die, so their operations run one at a time; a zone reset erases each LUN's planes in one multi-plane operation |
 | `zns_reset_by_fill` | `int32` | `0` | ZNS: non-zero makes a zone reset erase only the blocks that hold programmed pages, so its time and wear follow the zone's fill |
+| `zns_fzr_sec` | `uint32` | `0` | ZNS: seconds a zone may stay written but not finished before the controller sets Finish Zone Recommended and reports the zone as changed; 0 disables |
+| `zns_frl_sec` | `uint32` | `0` | ZNS: Finish Recommended Limit in seconds: after it, the controller finishes a zone with Finish Zone Recommended itself (a Zone Active Excursion); 0 means no excursion; needs zns_fzr_sec |
 | `zns_page_types` | `int32` | `0` | ZNS: non-zero gives each read the latency of its page type (lower to upper page), spread around the read latency of the flash type; programs keep one latency per wordline |
 | `zns_ecc_step_ns` | `int64` | `0` | ZNS: ECC read time in ns added per 750 erases of the block, up to 4 steps, as bbssd ecc_step_ns; 0 or more |
 | `zns_tsusp_ns` | `int64` | `0` | ZNS: overhead in ns added to a read that suspends a program or erase, 0 or more |
@@ -298,6 +301,7 @@ Devices:
 | `kv_lsm_memtable_keys` | `uint32` | `1024` | KV with kv_index=lsm: keys the DRAM memtable holds before it flushes to level 1, 16 to 65536 |
 | `kv_lsm_size_ratio` | `uint32` | `10` | KV with kv_index=lsm: how many times more entries a level holds than the one above, 2 to 64; level i holds memtable keys times ratio^i entries |
 | `kv_lsm_pinned_levels` | `uint32` | `1` | KV with kv_index=lsm: top levels held whole in DRAM, with no flash I/O, 0 to 24 |
+| `kv_pack` | `bool` | `on` | KV: on (default) packs values below a page into shared NAND pages through an open page in controller DRAM; off gives each value whole pages, the model before packing |
 
 ### Generic PCI device properties
 
@@ -404,7 +408,7 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 
 These exist only when QEMU runs under qtest (`-accel qtest`) and serve FEMU's own tests. They are not part of the user interface.
 
-- `femu`: `x-copy-held`, `x-copy-hold`, `x-fdp-check`, `x-fdp-ns-mapped`, `x-ftl-check`, `x-ftl-trace`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-query-delay-ms`, `x-range-waits`, `x-stream-test`, `x-zone-lock-hold-ms`
+- `femu`: `x-copy-held`, `x-copy-hold`, `x-fdp-check`, `x-fdp-ns-mapped`, `x-ftl-check`, `x-ftl-hold`, `x-ftl-trace`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-query-delay-ms`, `x-range-waits`, `x-stream-test`, `x-zone-lock-hold-ms`
 - `femu-cxl-ssd`: `test-change-dpa`, `test-fault`, `test-fault-decode`, `test-fault-delivery`, `test-fault-fill`, `test-fault-repeats`, `test-fault-version`, `test-fault-walk`, `test-fill`, `test-fill-race`, `test-ftl-delay`, `test-ftl-hold`, `test-ftl-holding`, `test-guarded-write`, `test-lock-mutex`, `test-lock-wanted`, `test-map`, `test-media-disabled`, `test-nvme-after-posted`, `test-owner`, `test-posted-done`, `test-prefetch-race`, `test-prefetch-race-end`, `test-protect`, `test-protect-window`, `test-revoke-ahead`, `test-revoke-ahead-keep`, `test-rip`, `test-slot-reservation`, `test-storm`, `test-storm-ns`, `test-storm-served`, `test-storm-stops`, `test-storm-wait`, `test-thread-read`, `test-unprotect`
 
 ## Environment variables
