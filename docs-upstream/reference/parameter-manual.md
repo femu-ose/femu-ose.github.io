@@ -3,12 +3,12 @@ title: "Parameter manual"
 description: "This manual explains how to configure an emulated device: the ways a parameter reaches FEMU, then every group of parameters by component, with what each one..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/reference/parameter-manual.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/reference/parameter-manual.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/reference/parameter-manual.md) at FEMU `c752f6498` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/reference/parameter-manual.md) at FEMU `cd2d39de8` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

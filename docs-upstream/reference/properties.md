@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/reference/properties.md) at FEMU `c752f6498` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/reference/properties.md) at FEMU `cd2d39de8` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,7 +28,7 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 203 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 204 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
@@ -302,6 +302,7 @@ Devices:
 | `kv_lsm_size_ratio` | `uint32` | `10` | KV with kv_index=lsm: how many times more entries a level holds than the one above, 2 to 64; level i holds memtable keys times ratio^i entries |
 | `kv_lsm_pinned_levels` | `uint32` | `1` | KV with kv_index=lsm: top levels held whole in DRAM, with no flash I/O, 0 to 24 |
 | `kv_pack` | `bool` | `on` | KV: on (default) packs values below a page into shared NAND pages through an open page in controller DRAM; off gives each value whole pages, the model before packing |
+| `kv_max_keys` | `uint32` | `0` | KV: the key limit of each KV namespace, reported as MNK; 0 (default) sizes it from the flash: with kv_pack the 1-byte values it holds, at most 4194303, else the old two index slots per 4 KiB; 1 to 1610612735 sets it, at 85 bytes of hash index DRAM a key |
 
 ### Generic PCI device properties
 
@@ -408,7 +409,7 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 
 These exist only when QEMU runs under qtest (`-accel qtest`) and serve FEMU's own tests. They are not part of the user interface.
 
-- `femu`: `x-cmt-slots`, `x-copy-held`, `x-copy-hold`, `x-fdp-check`, `x-fdp-ns-mapped`, `x-ftl-check`, `x-ftl-hold`, `x-ftl-trace`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-query-delay-ms`, `x-range-waits`, `x-stream-test`, `x-tp-hold`, `x-zone-draining`, `x-zone-held`, `x-zone-lock-hold-ms`, `x-zone-log-changes`, `x-zone-log-hold-ms`, `x-zone-report-hold-ms`, `x-zone-write-hold-ms`
+- `femu`: `x-cmt-slots`, `x-copy-held`, `x-copy-hold`, `x-eol-enter`, `x-fdp-check`, `x-fdp-ns-mapped`, `x-ftl-check`, `x-ftl-hold`, `x-ftl-trace`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-query-delay-ms`, `x-range-waits`, `x-stream-test`, `x-tp-hold`, `x-zone-draining`, `x-zone-held`, `x-zone-lock-hold-ms`, `x-zone-log-changes`, `x-zone-log-hold-ms`, `x-zone-report-hold-ms`, `x-zone-write-hold-ms`
 - `femu-cxl-ssd`: `test-change-dpa`, `test-fault`, `test-fault-decode`, `test-fault-delivery`, `test-fault-fill`, `test-fault-repeats`, `test-fault-version`, `test-fault-walk`, `test-fill`, `test-fill-race`, `test-ftl-delay`, `test-ftl-hold`, `test-ftl-holding`, `test-guarded-write`, `test-lock-mutex`, `test-lock-wanted`, `test-map`, `test-media-disabled`, `test-nvme-after-posted`, `test-owner`, `test-posted-done`, `test-prefetch-race`, `test-prefetch-race-end`, `test-protect`, `test-protect-window`, `test-revoke-ahead`, `test-revoke-ahead-keep`, `test-rip`, `test-slot-reservation`, `test-storm`, `test-storm-ns`, `test-storm-served`, `test-storm-stops`, `test-storm-wait`, `test-thread-read`, `test-unprotect`
 
 ## Environment variables

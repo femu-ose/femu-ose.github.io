@@ -3,12 +3,12 @@ title: "KV: the key-value extension"
 description: "This chapter describes how FEMU emulates a key-value SSD (femu_mode=5): the NVMe Key Value command set as implemented, the device-side index and value..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/design/kvssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/design/kvssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/kvssd.md`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/design/kvssd.md) at FEMU `c752f6498` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/kvssd.md`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/design/kvssd.md) at FEMU `cd2d39de8` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -109,10 +109,16 @@ namespace. A controller can mix KV namespaces with block namespaces
 
 - **Index.** A hash table with linear probing on a 32-bit FNV-1a hash of the
   key bytes. Deletion shifts following entries back so probe runs stay
-  intact. It has `min(2^22, 2 * (value_capacity / 4096 + 1))` slots, at
-  least 1024, and holds at most `hash_slots - 1` keys; that limit is what the
-  namespace reports as its maximum number of keys. The index lives in host
-  memory and costs no flash reads.
+  intact. The table lives in host memory, 64 bytes a slot, and costs no
+  flash reads.
+- **Key limit.** `kv_index_size()` sets `kv_max_keys`, which the
+  namespace reports as MNK. The property `kv_max_keys` sets it, or else
+  the flash does ([KV mode](../modes/kvssd.md#key-limit-kv_max_keys)).
+  With `kv_pack` it is the number of 1-byte values the usable flash holds,
+  from 1023 to 2^22 - 1. Without `kv_pack` it is the old limit:
+  `hash_slots - 1` of `min(2^22, 2 * (value_capacity / 4096 + 1))` slots,
+  at least 1024. Otherwise a limit of K keys gets `K + K/3 + 1` slots, so
+  a probe always ends at an empty slot.
 - **Value arena.** The value bytes the host stores, appended at
   `value_next`. An overwrite or delete leaves the old bytes behind as dead
   space (`value_reclaimable`).
@@ -547,14 +553,14 @@ Refusal messages are listed in the
 
 | File | Contents |
 | --- | --- |
-| [`hw/femu/kvssd/kvssd.c`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/kvssd/kvssd.c) | command parsing, registration, init and exit |
-| [`hw/femu/kvssd/kvssd-ftl.c`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/kvssd/kvssd-ftl.c) | index, value arena, NAND placement, value packing, page owners, value GC, timing, owner check, self-test |
-| [`hw/femu/kvssd/kv-lsm.c`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/kvssd/kv-lsm.c) | the LSM tree of `kv_index=lsm`: memtable, levels, merges, scan |
-| [`hw/femu/kvssd/kv-pack.c`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/kvssd/kv-pack.c) | the packed page header of `kv_pack=on`: records, fit, compaction |
-| [`hw/femu/kvssd/kvssd-admin.c`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/kvssd/kvssd-admin.c) | Identify structures, Key Value Configuration feature |
-| [`hw/femu/kvssd/kvssd.h`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/kvssd/kvssd.h) | `FemuKvssdState`, `FemuKvssdMappingEntry`, `FemuKvIndexOps` |
-| [`hw/femu/bbssd/ftl-media.c`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/bbssd/ftl-media.c) | `ssd_advance_status()`, the media model KV charges through |
-| [`hw/femu/nvme-admin.c`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/nvme-admin.c) | Identify and feature routing to the KV handlers |
+| [`hw/femu/kvssd/kvssd.c`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/kvssd/kvssd.c) | command parsing, registration, init and exit |
+| [`hw/femu/kvssd/kvssd-ftl.c`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/kvssd/kvssd-ftl.c) | index, value arena, NAND placement, value packing, page owners, value GC, timing, owner check, self-test |
+| [`hw/femu/kvssd/kv-lsm.c`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/kvssd/kv-lsm.c) | the LSM tree of `kv_index=lsm`: memtable, levels, merges, scan |
+| [`hw/femu/kvssd/kv-pack.c`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/kvssd/kv-pack.c) | the packed page header of `kv_pack=on`: records, fit, compaction |
+| [`hw/femu/kvssd/kvssd-admin.c`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/kvssd/kvssd-admin.c) | Identify structures, Key Value Configuration feature |
+| [`hw/femu/kvssd/kvssd.h`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/kvssd/kvssd.h) | `FemuKvssdState`, `FemuKvssdMappingEntry`, `FemuKvIndexOps` |
+| [`hw/femu/bbssd/ftl-media.c`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/bbssd/ftl-media.c) | `ssd_advance_status()`, the media model KV charges through |
+| [`hw/femu/nvme-admin.c`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/nvme-admin.c) | Identify and feature routing to the KV handlers |
 
 ## Related pages
 

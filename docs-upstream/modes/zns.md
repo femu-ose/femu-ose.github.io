@@ -3,12 +3,12 @@ title: "Zoned Namespace SSD (ZNS)"
 description: "ZNS mode (femu_mode=3) emulates an NVMe SSD with the Zoned Namespace command set. The namespace is divided into zones. The host writes each zone..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/modes/zns.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/modes/zns.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/zns.md`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/modes/zns.md) at FEMU `c752f6498` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/zns.md`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/modes/zns.md) at FEMU `cd2d39de8` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -249,9 +249,26 @@ All of these are off by default.
  checks run once a second of guest time; a paused VM does not age zones
 ```
 
-A finish moves the write pointer and the zone state only. Pages still in
-the zone's write cache are programmed later, by eviction, as for a host
-Finish. A zone with a write still in flight waits for the next check.
+A finished zone takes no more writes, so the device programs the pages its
+write cache still holds for the zone:
+
+```
+ host Finish        --> zone Full --> FTL programs the cache --> command completes
+ controller finish  --> zone Full --> next command on the FTL thread programs it,
+                                      from the time of the finish
+ Finish of a Full zone --> completes when those programs end
+```
+
+A host Finish completes after these programs. After a finish by the
+controller, later commands wait for the programs on the planes. Writes that
+reach the FTL thread after the finish of their zone are programmed together,
+by the next command that is not a read and has another target. A deleted
+queue or a controller reset drops a Finish command, but its programs still
+happen. A Reset that it drops before the FTL thread runs it erases nothing,
+as before. That zone's Finish programs resume after the next Reset that
+the FTL thread runs for it; a Reset of an Empty zone does not count. A zone with a write still in flight waits for the
+next check. A zone that writes fill keeps its cache until eviction, as
+before.
 
 ```
 -device femu,devsz_mb=1024,femu_mode=3,zns_fzr_sec=60,zns_frl_sec=300

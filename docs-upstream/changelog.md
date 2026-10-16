@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/c752f6498fe669dcbdcdd2bb9a92beb217f242db/hw/femu/docs/CHANGELOG.md) at FEMU `c752f6498` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/CHANGELOG.md) at FEMU `cd2d39de8` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -251,6 +251,7 @@ was not doing anything.
 #### Behaviour changes (still boots, numbers move)
 
 - Small KV values share NAND pages, as real KV-SSDs pack them (`kv_pack=on`, the default). A Store goes to an open page in controller DRAM and costs the DRAM time. The Store that does not fit, or that fills the page, programs it and waits for it. Flush with a volatile write cache, clearing WCE and shutdown program the open page (Base 2.3, 5.2.26.1.4 and 7.2). A packed Retrieve reads one page, GC moves values one by one, and log C0h counts host pages from value bytes. `kv_pack=off` gives the old model, one value or more per page ([KV value packing](features/kv-value-packing.md)).
+- With `kv_pack=on`, the key limit (MNK) of a KV namespace is the number of 1-byte values its usable flash holds, at most 4194303. Small values are no longer held to two keys for each 4 KiB of value space. The index takes up to about 341 MiB of host DRAM, only as keys use it. New property `kv_max_keys` sets the limit ([KV mode](modes/kvssd.md#key-limit-kv_max_keys)).
 - A device with `blk_pe_limit` keeps reserve lines out of service, so it needs one or more lines more. It also refuses `mdts=0`, reports WZSL equal to MDTS with ONCS bit 3 (NVMWZSV) clear, and limits MCL so a Copy writes no more than MDTS. `eol_read_only=off` gives the old model.
 - With `blk_pe_limit`, the Persistent Event log records the spare, reliability and read-only warnings when the FTL sees them start. The event carries the warning byte of that moment. Before, the log recorded them only when the host next read the SMART log.
 - With `blk_pe_limit`, the media goes read-only at the end of life by default. A worn-out block with no replacement no longer stays in service with critical warning bit 2. With spare lines, a line no longer retires while the media stays writable. The worn line retires only as the media goes read-only. `eol_read_only=off` gives the old behaviour.
@@ -303,6 +304,7 @@ was not doing anything.
 - With `mapping=dftl` and no FDP, a read starts its media read when its translation is ready. So a CMT miss adds the translation read to the page read; before, the two overlapped. With `hot_cold_sep` a write also waits for its translation.
 - With `mapping=dftl` and no FDP, DSM Deallocate and Write Zeroes with Deallocate write the translation pages they change once each, and charge that to the command. Write Zeroes without Deallocate pays the translation of each page, as a write does. Format and Sanitize drop the translation pages with no write-back.
 - With `mapping=dftl` and `eol_read_only`, read-only media opens no new translation page line, so the reserve lines stay for the writes in flight.
+- ZNS: a zone Finish, by the host or by the controller (`zns_frl_sec`), programs the pages the zone's write cache still holds. A host Finish completes after these programs.
 - The `run-*.sh` launchers name QEMU's threads (`-name ...,debug-threads=on`), so `ps -T` and `top -H` show `femu-poller`, `FEMU-FTL-Thread` and `CPU N/KVM` ([e29fe6ee2](https://github.com/MoatLab/FEMU/commit/e29fe6ee2)).
 
 The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
