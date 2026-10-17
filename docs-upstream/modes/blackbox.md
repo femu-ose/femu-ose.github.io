@@ -3,12 +3,12 @@ title: "BlackBox SSD (BBSSD)"
 description: "BlackBox mode (femu_mode=1) emulates a conventional NVMe SSD: the device runs its own flash translation layer (FTL), garbage collection (GC) and NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/modes/blackbox.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/modes/blackbox.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/modes/blackbox.md) at FEMU `cd2d39de8` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/modes/blackbox.md) at FEMU `9174990e2` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -240,20 +240,25 @@ All of these are off by default.
 - With `mapping=dftl`, read-only media opens no new translation page line.
   The reserve stays for the writes in flight. Their mapping changes stay in
   the CMT or pending, in power-loss-protected DRAM.
-- The controller raises a SMART asynchronous event once for each of these,
-  if the host enabled its bit of Asynchronous Event Configuration:
+- The controller raises a SMART asynchronous event each time one of these
+  starts, if the host enabled its bit of Asynchronous Event Configuration:
 
   | Condition | AEC bit | Information |
   | --- | --- | --- |
   | the spare falls below its threshold | 0 | 02h |
-  | the first block stays in service past its limit | 2 | 00h |
+  | a block stays in service past its limit while none did | 2 | 00h |
   | the media goes read-only | 3 | 00h |
 
-- The read-only end of life covers bbssd and CSD (the NVM namespace). FDP
-  keeps refusing `blk_pe_limit`: a handle update leaves a unit part written
-  for each command, and units are padded and erased outside the reserve. ZNS ends the life of
-  a zone with the Read Only and Offline zone states. This model does not
-  drive them. KV has no NVM write path. Both refuse `blk_pe_limit`.
+- The read-only end of life covers bbssd and CSD (the NVM namespace).
+- FDP takes `blk_pe_limit` too. A worn-out block retires its reclaim unit
+  while the unit's group keeps the units the namespaces and placement
+  need. Otherwise the media goes read-only (`eol_read_only`), or the block
+  stays in service with critical warning bit 2 (`eol_read_only=off`). Each
+  reclaim group then holds its own reserve units, and RUH Update fails
+  after the end of life ([FDP wear-out](../design/fdp.md#block-wear-out)).
+- ZNS ends the life of a zone with the Read Only and Offline zone states.
+  This model does not drive them. KV has no NVM write path. Both refuse
+  `blk_pe_limit`.
 - With `blk_pe_limit`, SMART Percentage Used counts erases against the sum
   of the blocks' limits. `query-femu` shows retired and spare lines with
   their own states.

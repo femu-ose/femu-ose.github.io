@@ -3,12 +3,12 @@ title: "KV: the key-value extension"
 description: "This chapter describes how FEMU emulates a key-value SSD (femu_mode=5): the NVMe Key Value command set as implemented, the device-side index and value..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/design/kvssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/design/kvssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/kvssd.md`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/design/kvssd.md) at FEMU `cd2d39de8` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/kvssd.md`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/design/kvssd.md) at FEMU `9174990e2` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -553,14 +553,14 @@ Refusal messages are listed in the
 
 | File | Contents |
 | --- | --- |
-| [`hw/femu/kvssd/kvssd.c`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/kvssd/kvssd.c) | command parsing, registration, init and exit |
-| [`hw/femu/kvssd/kvssd-ftl.c`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/kvssd/kvssd-ftl.c) | index, value arena, NAND placement, value packing, page owners, value GC, timing, owner check, self-test |
-| [`hw/femu/kvssd/kv-lsm.c`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/kvssd/kv-lsm.c) | the LSM tree of `kv_index=lsm`: memtable, levels, merges, scan |
-| [`hw/femu/kvssd/kv-pack.c`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/kvssd/kv-pack.c) | the packed page header of `kv_pack=on`: records, fit, compaction |
-| [`hw/femu/kvssd/kvssd-admin.c`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/kvssd/kvssd-admin.c) | Identify structures, Key Value Configuration feature |
-| [`hw/femu/kvssd/kvssd.h`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/kvssd/kvssd.h) | `FemuKvssdState`, `FemuKvssdMappingEntry`, `FemuKvIndexOps` |
-| [`hw/femu/bbssd/ftl-media.c`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/bbssd/ftl-media.c) | `ssd_advance_status()`, the media model KV charges through |
-| [`hw/femu/nvme-admin.c`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/nvme-admin.c) | Identify and feature routing to the KV handlers |
+| [`hw/femu/kvssd/kvssd.c`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/kvssd/kvssd.c) | command parsing, registration, init and exit |
+| [`hw/femu/kvssd/kvssd-ftl.c`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/kvssd/kvssd-ftl.c) | index, value arena, NAND placement, value packing, page owners, value GC, timing, owner check, self-test |
+| [`hw/femu/kvssd/kv-lsm.c`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/kvssd/kv-lsm.c) | the LSM tree of `kv_index=lsm`: memtable, levels, merges, scan |
+| [`hw/femu/kvssd/kv-pack.c`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/kvssd/kv-pack.c) | the packed page header of `kv_pack=on`: records, fit, compaction |
+| [`hw/femu/kvssd/kvssd-admin.c`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/kvssd/kvssd-admin.c) | Identify structures, Key Value Configuration feature |
+| [`hw/femu/kvssd/kvssd.h`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/kvssd/kvssd.h) | `FemuKvssdState`, `FemuKvssdMappingEntry`, `FemuKvIndexOps` |
+| [`hw/femu/bbssd/ftl-media.c`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/bbssd/ftl-media.c) | `ssd_advance_status()`, the media model KV charges through |
+| [`hw/femu/nvme-admin.c`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/nvme-admin.c) | Identify and feature routing to the KV handlers |
 
 ## Related pages
 

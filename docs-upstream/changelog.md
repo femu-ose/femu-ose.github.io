@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/CHANGELOG.md) at FEMU `cd2d39de8` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/CHANGELOG.md) at FEMU `9174990e2` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -141,6 +141,7 @@ listed one by one.
 - Optional LUN contention (`zns_lun_contention`): the planes of one LUN run their operations one at a time, and a zone reset erases each LUN's planes in one multi-plane operation. Off by default, so the timing does not change.
 - Optional zone reset by fill (`zns_reset_by_fill`): a zone reset erases only the blocks that hold programmed pages, so its time and the SMART wear follow the zone's fill. Off by default, so a reset of a non-empty zone still erases every block.
 - Opt-in ZNS read timing by page type (`zns_page_types`) and ECC read time by block wear (`zns_ecc_step_ns`). The page types keep the mean read latency of the flash type.
+- ZNS Reset Zone Recommended (`zns_rzr_sec`, `zns_rrl_sec`, off by default). A zone Full for `zns_rzr_sec` seconds of guest time gets RZR at the next check, and Identify reports RRL. With a nonzero RRL, the controller refreshes the zone itself at the first check once RZR has been set for RRL seconds. It clears RZR, and the zone ages again. RRL 0 means no refresh. Both changes enter the Changed Zone List; a host Reset clears RZR with no event.
 
 #### BlackBox SSD (bbssd) and NAND media
 
@@ -181,6 +182,8 @@ listed one by one.
 - Opt-in block erase limits (`blk_pe_limit`, `blk_pe_spread`, `blk_pe_seed`): a block past its limit stays in service, is counted in log page C0h and sets SMART critical warning bit 2 ([12f1c582c](https://github.com/MoatLab/FEMU/commit/12f1c582c)). The block's line leaves service while enough lines remain ([af99ecb21](https://github.com/MoatLab/FEMU/commit/af99ecb21)). `spare_lines` holds lines back whose blocks replace worn-out ones, and SMART Available Spare follows what is left ([ee6afccd4](https://github.com/MoatLab/FEMU/commit/ee6afccd4)). Crossing into either warning raises a SMART asynchronous event when the host enabled it ([c9b3d3ad8](https://github.com/MoatLab/FEMU/commit/c9b3d3ad8)). SMART Percentage Used then counts against the blocks' limits, and `query-femu` reports retired and spare lines ([b6af86af1](https://github.com/MoatLab/FEMU/commit/b6af86af1)).
 - With `blk_pe_limit`, the new `eol_read_only` (on by default) keeps erased reserve lines for the writes in flight at the end of life. Each write takes credits for the NAND pages it may program before it changes data, and waits in its queue while the reserve is full. `query-femu` reports the reserve lines and the credits.
 - With `eol_read_only`, the media goes read-only when no block can replace a worn-out one, as on a real SSD. Writes, Write Zeroes, Write Uncorrectable, Copy and a deallocating Dataset Management fail with Attempted Write to Read Only Range (182h) and change nothing. Reads, Flush, Format NVM and Sanitize still run, and the writes in flight finish from the reserve. SMART shows critical warning bit 3 and Available Spare 0, the Endurance Group log bit 3, and Identify Namespace NSATTR bit 0. A SMART event with information 00h follows when the host enabled bit 3. Format NVM fails with Command Sequence Error while admitted writes wait for the FTL.
+- FDP takes `blk_pe_limit` with `eol_read_only=off`. A worn-out block retires its reclaim unit while the unit's group keeps the units the namespaces and placement need. Otherwise the block stays in service with SMART critical warning bit 2. SMART and the Endurance Group Information log report the warnings, Available Spare (the worst group) and Percentage Used, and `query-femu` shows retired units. FDP still refuses `eol_read_only=on`, `spare_lines` and `fdp_trim_erase_all` with it.
+- FDP also takes `eol_read_only` (on by default with `blk_pe_limit`). Each reclaim group holds erased units for the writes in flight, the media goes read-only when no unit can replace a worn-out one, and writes then fail with 182h. Collection, refresh and padding stop then, and RUH Update fails with Capacity Exceeded.
 
 #### Timing and fault models
 
@@ -377,6 +380,8 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 - The `random` and `d-choice` GC policies and FDP's random reclaim strategy draw victims from a generator seeded by the new `gc_seed` property instead of the wall clock and `rand()`, so the same configuration and workload give the same victims and WAF on every run. `fifo` finds its victim at the top of a queue ordered by close order instead of scanning every line, with the same victims as before ([04ba1c0aa](https://github.com/MoatLab/FEMU/commit/04ba1c0aa)).
 - FDP background GC counts the pages a unit never wrote as reclaimable. A unit that RUH Update retired holding a few valid pages had none invalid, so each background pass took it from the top of the victim queue, refused it and stopped; units behind it were collected only under the foreground watermark ([beb9878ac](https://github.com/MoatLab/FEMU/commit/beb9878ac)).
 - FDP cost-benefit GC ages a unit retired with no page invalidated from its retirement. It used to count from time zero, so a part-written unit left by RUH Update outscored every other victim; with few pages to free, background GC refused it on every pass and collected nothing. ([a9e0e1af6](https://github.com/MoatLab/FEMU/commit/a9e0e1af6))
+- FDP RUH Update runs foreground collection first, as a write does, while the reclaim group is at or below its forced watermark. It used to take the last free units, so collection had no unit to move pages into, and a write that fit the namespace failed with Capacity Exceeded.
+- FDP RUH Update gives a handle with no reclaim unit an empty one, or fails with Capacity Exceeded when collection frees none. A handle is left with no unit when its last unit fills with nothing free. The update used to succeed and leave the handle with no unit (Base 2.3, 7.4.1.1).
 - FDP cost-benefit GC measures a unit's utilization against all its pages at every invalidation, as it already did at retirement. The first overwrite in a part-written unit used to measure it against the pages written only, so a unit holding 3 valid pages of 16 scored as 3 of 4 full and lost to units that cost more to collect. ([529d70960](https://github.com/MoatLab/FEMU/commit/529d70960))
 - FDP background cost-benefit GC takes the best-scoring unit with enough to free. A unit with one invalid page and an old invalidation could outscore every other victim; the pass refused it and collected nothing until the others aged past it or the foreground watermark was reached ([fe29da90b](https://github.com/MoatLab/FEMU/commit/fe29da90b)).
 - A ZNS Zone Management Send waits for the writes to its zones that the controller already accepted. A Reset in the gap between a write's acceptance and its data copy left an Empty zone with a moved write pointer and the old data.

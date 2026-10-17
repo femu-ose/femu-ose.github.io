@@ -3,12 +3,12 @@ title: "CSD: the computational storage extension"
 description: "This chapter describes how FEMU emulates a computational storage drive (femu_mode=4): the device memory, how programs are loaded and run, how compute time..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/design/csd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/design/csd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/csd.md`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/design/csd.md) at FEMU `cd2d39de8` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/csd.md`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/design/csd.md) at FEMU `9174990e2` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -538,13 +538,13 @@ format 4h, gives the FTL no source range, so only the write is charged.
 
 | File | Contents |
 | --- | --- |
-| [`hw/femu/csd/csd.c`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/csd/csd.c) | state, every CSD command, program loading, compute unit threads, execution |
-| [`hw/femu/csd/csd-int.h`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/csd/csd-int.h) | state shared by the CEMU and the CP and SLM code |
-| [`hw/femu/csd/cp-slm.c`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/csd/cp-slm.c) | the SLM and CP command sets, their namespaces, Identify and logs |
-| [`hw/femu/csd/csd.h`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/csd/csd.h) | command layouts, opcodes, program types |
-| [`hw/femu/tests/csd/`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/tests/csd/README.md) | guest tool, example programs, program ABI |
-| [`hw/femu/bbssd/`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/bbssd/ftl.c) | the black-box FTL under the namespace |
-| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/femu.c) | the one-CSD-namespace check, FTL thread start |
+| [`hw/femu/csd/csd.c`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/csd/csd.c) | state, every CSD command, program loading, compute unit threads, execution |
+| [`hw/femu/csd/csd-int.h`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/csd/csd-int.h) | state shared by the CEMU and the CP and SLM code |
+| [`hw/femu/csd/cp-slm.c`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/csd/cp-slm.c) | the SLM and CP command sets, their namespaces, Identify and logs |
+| [`hw/femu/csd/csd.h`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/csd/csd.h) | command layouts, opcodes, program types |
+| [`hw/femu/tests/csd/`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/tests/csd/README.md) | guest tool, example programs, program ABI |
+| [`hw/femu/bbssd/`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/bbssd/ftl.c) | the black-box FTL under the namespace |
+| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/femu.c) | the one-CSD-namespace check, FTL thread start |
 
 ## Related pages
 

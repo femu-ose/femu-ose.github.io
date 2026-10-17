@@ -3,12 +3,12 @@ title: "FDP: Flexible Data Placement"
 description: "This chapter describes how FEMU implements NVMe Flexible Data Placement (FDP): how the subsystem builds reclaim groups, reclaim units and reclaim unit..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/design/fdp.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/design/fdp.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/design/fdp.md) at FEMU `cd2d39de8` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/design/fdp.md) at FEMU `9174990e2` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -356,14 +356,20 @@ identifiers. The poller checks every identifier first and fails the command
 with Invalid Field if one is invalid, so nothing changes. On a bbssd
 namespace `ssd_fdp_update_ruhs()` then, for each handle:
 
-- skips a handle that has no current unit (device full); the command still
-  succeeds;
+- gives a handle that has no current unit (its last unit filled with
+  nothing free to follow it) an empty unit, after the same passes as below,
+  or fails with Capacity Exceeded when none can be freed;
 - keeps the current unit if nothing was written to it yet. The handle does
   not move, so no event follows (Base 2.3, 7.4.1.1 lets an empty unit
   stay);
-- otherwise takes a fresh unit, with one GC pass if none is free, and
-  retires the old one as if it had filled. If no unit can be freed, the
-  command fails with Capacity Exceeded;
+- otherwise first runs foreground GC passes in the group, as a write does,
+  while its free units are at or below the forced watermark. An update
+  that took the last free units would leave collection no unit to move
+  pages into. A pass into an Initially Isolated handle can fill the old
+  unit and move the handle, which then counts as the update;
+- then takes a fresh unit, with one GC pass if none is free, and retires
+  the old one as if it had filled. If no unit can be freed, the command
+  fails with Capacity Exceeded;
 - when the handle moves off a unit that still had room (RUAMW not zero),
   records host event "Reclaim Unit Not Fully Written". The handle must
   have that event enabled.
@@ -430,8 +436,8 @@ whose RUAMW differs from the room they leave.
   `(1 - gc_thres_pcent_high / 100) * units` (at least one unless
   `gc_thres_pcent_high` is 100), it runs passes in that group. It stops
   when the pressure clears or no victim is left. The host write waits for them.
-  Foreground passes, and the pass RUH Update may run, always collect their
-  victim.
+  RUH Update runs the same passes before it takes a unit. Foreground
+  passes, and the passes RUH Update runs, always collect their victim.
 
 ### Victim selection
 
@@ -499,6 +505,100 @@ with the Deallocate bit does the same. `fdp_trim_erase_all` (test only)
 instead resets every unit, handle and mapping on any Dataset Management
 deallocate, ignoring the ranges; Write Zeroes with Deallocate still unmaps
 only its range.
+
+### Block wear-out
+
+With `blk_pe_limit`, each block has an erase limit, as in bbssd
+([end of life](ftl.md#read-only-end-of-life-eol_read_only)). The check
+runs in `fdp_collect_ru()` after the erase of every block of the victim
+unit. The unit holds no data then. Collection, read reclaim and retention
+refresh all reach it there.
+
+```text
+ erase of unit U in group g takes a block of U to its limit
+   eol_read_only=off:
+     U(g) - 1 >= floor and a free unit besides U  --> U retires
+     otherwise                                     --> U goes back to the
+                                                       free list; its worn-out
+                                                       blocks stay in service
+                                                       (overworn, bit 2)
+   eol_read_only=on (default):
+     U(g) - 1 >= floor                             --> U retires
+     otherwise                                     --> U retires, READ-ONLY
+
+ U(g)  = units of group g - retired units of group g - reserve units R
+ floor = units the namespaces fill (ceil(exposed pages / unit pages))
+       + one unit per handle + one per persistently isolated handle
+       + the units forced collection keeps (at realize) + 1
+```
+
+- The floor is what `bb_check_capacity()` asks of the pool at realize,
+  plus one unit. Each group keeps its own floor, since a host may place all
+  of its data in one group (Base 2.3, 8.1.11).
+- The free unit besides U is where the next collection moves pages to.
+- A retired unit is on no list, holds no data and has no handle. It
+  keeps its blocks; their erase counts no longer change.
+- SMART Available Spare is the worst group's share of the units it may
+  still retire: `(units - R - floor - retired) * 100 / (units - R -
+  floor)`, or 100 when the group starts at or below the floor. It is 0
+  once the media is read-only.
+- SMART critical warning bit 2, the Endurance Group Critical Warning
+  Summary, and the Endurance Group Information log (09h) critical warning,
+  Available Spare and Percentage Used all follow the same state. Crossing
+  into a warning raises the SMART asynchronous event the host enabled.
+- No FDP event reports a retired unit; the specification has none. The
+  moves before the erase are reported as before. The configuration log
+  and RUH Status do not change.
+- Log page C0h offset 128 counts the lines of retired units. `query-femu`
+  shows them in the `retired` state.
+
+#### Read-only end of life
+
+With `eol_read_only` (on by default), the media goes read-only when a
+worn-out block has no unit to replace it, as in line mode. The page
+credits, the 182h refusal, WZSL, MCL and the Format and Sanitize rules are
+the same. Each reclaim group holds R erased units back for the writes in
+flight:
+
+```text
+ B = most bytes one command may program: MDTS, or MCL in the largest
+     LBA format when that is larger (femu_eol_max_bytes())
+ C = credit cap in pages = ceil((ceil(B / page) + 1) / Q) * Q
+ R = C / Q + handles                      in EVERY reclaim group
+     Q = pages of one unit; realize counts R out of each group's pool
+
+ transition (FTL thread)
+   read-only bit set in the admission word; no write is admitted again
+   each group's R reserve units join its free list
+   collection, read reclaim, retention refresh and padding stop
+   admitted writes finish into their handles' units and the reserve
+```
+
+- A handle that takes c pages takes at most c / Q + 1 new units: one for
+  a missing unit and one at each fill. A host may place every page in one
+  group, so each group holds the whole R.
+- A host write that finds no unit for its handle, after collection, also
+  ends the life of the media. The write then finishes from the reserve.
+  This covers a device whose collection cannot make room, such as one
+  with `gc_thres_pcent_high=100`.
+- RUH Update after the transition fails with Capacity Exceeded, as one
+  with no empty unit to give: a move would take a reserve unit that no
+  data can fill. An update the poller passed before, or whose own
+  collection ends the life of the media, fails the same way. The handles
+  it moved before that stay moved (Base 2.3, 7.4.1.1).
+- `query-femu` shows the reserve units in the `reserve` state and counts
+  them in `unit-counts`. Its `end-of-life` object shows the credits.
+
+```text
+-device femu-subsys,id=fdpe,fdp=on,fdp.nruh=4 -device femu,devsz_mb=1,femu_mode=1,secsz=512,secs_per_pg=8,pgs_per_blk=4,blks_per_pl=40,luns_per_ch=2,nchs=2,subsys=fdpe,blk_pe_limit=8,mdts=2
+```
+
+With `eol_read_only=off`, this small device retires units after a few
+thousand writes, then keeps worn-out blocks in service:
+
+```text
+-device femu-subsys,id=fdpw,fdp=on,fdp.nruh=4 -device femu,devsz_mb=1,femu_mode=1,secsz=512,secs_per_pg=8,pgs_per_blk=4,blks_per_pl=40,luns_per_ch=2,nchs=2,subsys=fdpw,blk_pe_limit=8,eol_read_only=off
+```
 
 ## Log pages and features
 
@@ -796,6 +896,13 @@ last:
 - The handle counters of query-femu are 64-bit and stop at their largest
   value.
 - Metadata, Streams and Namespace Management do not combine with FDP.
+- `spare_lines`, `fdp_trim_erase_all` and `buffer_size` are refused with
+  `blk_pe_limit`.
+- With `gc_thres_pcent_high=100` no unit is kept free for collection. A
+  persistently isolated handle then may find no unit to move pages into,
+  and a write can fail with Capacity Exceeded before the namespace is full.
+  With `blk_pe_limit` and `eol_read_only`, that write ends the life of the
+  media instead.
 
 ## How to extend it
 

@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/reference/properties.md) at FEMU `cd2d39de8` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/reference/properties.md) at FEMU `9174990e2` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,7 +28,7 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 204 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 206 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
@@ -168,11 +168,11 @@ Devices:
 | `pd_open_close_sec` | `int32` | `0` | bbssd, CSD, FDP: program disturb, seconds of device time (age_scale) a frontier line or reclaim unit may stay open after its first program; the next request pads its free pages and closes it; under FDP the handle gets a fresh unit and event 1h; 0 (default) turns it off |
 | `pe_cycles_rated` | `uint32` | `0` | bbssd, CSD, KV, ZNS: rated program/erase cycles used for SMART Percentage Used; 0 takes the rating of nand_cell_type (ZNS: zns_flash_type), or reports none |
 | `nand_bad_blocks` | `uint32` | `0` | bbssd, CSD, KV: blocks marked bad at start, capped at the block count, which lowers SMART Available Spare |
-| `blk_pe_limit` | `uint32` | `0` | bbssd, CSD: mean program/erase cycles a block survives before it wears out; 0 (default) turns wear-out off. When no block can replace a worn-out one, the media goes read-only (eol_read_only) |
-| `blk_pe_spread` | `uint32` | `0` | bbssd, CSD: how far each block's limit varies from blk_pe_limit, in percent, 0 to 90 |
-| `blk_pe_seed` | `uint64` | `0` | bbssd, CSD: seed of the per-block erase limits; one seed gives the same limits on every run |
+| `blk_pe_limit` | `uint32` | `0` | bbssd, CSD, also FDP: mean program/erase cycles a block survives before it wears out; 0 (default) turns wear-out off. When no block can replace a worn-out one, the media goes read-only (eol_read_only). Under FDP a worn-out block retires its reclaim unit |
+| `blk_pe_spread` | `uint32` | `0` | bbssd, CSD, also FDP: how far each block's limit varies from blk_pe_limit, in percent, 0 to 90 |
+| `blk_pe_seed` | `uint64` | `0` | bbssd, CSD, also FDP: seed of the per-block erase limits; one seed gives the same limits on every run |
 | `spare_lines` | `uint32` | `0` | bbssd, CSD: lines held back, needs blk_pe_limit; their blocks replace worn-out blocks of the same plane, and SMART Available Spare is the spare blocks the emptiest plane has left, in percent |
-| `eol_read_only` | `bool` | `on` | bbssd, CSD, with blk_pe_limit: on (default) puts the media in read-only mode when no block can replace a worn-out one, with reserve lines for the writes in flight; needs mdts 1 or more and limits Write Zeroes (WZSL) to mdts and Copy (MCL) to mdts or one block. off keeps a worn-out block in service with the SMART reliability warning |
+| `eol_read_only` | `bool` | `on` | bbssd, CSD, with blk_pe_limit: on (default) puts the media in read-only mode when no block can replace a worn-out one, with reserve lines for the writes in flight; needs mdts 1 or more and limits Write Zeroes (WZSL) to mdts and Copy (MCL) to mdts or one block. off keeps a worn-out block in service with the SMART reliability warning. Under FDP each reclaim group holds reserve units |
 | `energy_read_nj` | `uint32` | `0` | bbssd, CSD, KV: energy of one plane read in nJ, for the energy total in log page C0h; 0 (default) gives no figure |
 | `energy_prog_nj` | `uint32` | `0` | bbssd, CSD, KV: energy of one plane program in nJ, for the energy total in log page C0h; 0 (default) gives no figure |
 | `energy_erase_nj` | `uint32` | `0` | bbssd, CSD, KV: energy of one plane erase in nJ, for the energy total in log page C0h; 0 (default) gives no figure |
@@ -240,6 +240,8 @@ Devices:
 | `zns_reset_by_fill` | `int32` | `0` | ZNS: non-zero makes a zone reset erase only the blocks that hold programmed pages, so its time and wear follow the zone's fill |
 | `zns_fzr_sec` | `uint32` | `0` | ZNS: seconds a zone may stay written but not finished before the controller sets Finish Zone Recommended and reports the zone as changed; 0 disables |
 | `zns_frl_sec` | `uint32` | `0` | ZNS: Finish Recommended Limit in seconds: after it, the controller finishes a zone with Finish Zone Recommended itself (a Zone Active Excursion); 0 means no excursion; needs zns_fzr_sec |
+| `zns_rzr_sec` | `uint32` | `0` | ZNS: seconds a zone may stay Full before the controller sets Reset Zone Recommended and reports the zone as changed; 0 disables |
+| `zns_rrl_sec` | `uint32` | `0` | ZNS: Reset Recommended Limit in seconds: after it, the controller refreshes a zone with Reset Zone Recommended itself and clears it; 0 means no refresh; needs zns_rzr_sec |
 | `zns_page_types` | `int32` | `0` | ZNS: non-zero gives each read the latency of its page type (lower to upper page), spread around the read latency of the flash type; programs keep one latency per wordline |
 | `zns_ecc_step_ns` | `int64` | `0` | ZNS: ECC read time in ns added per 750 erases of the block, up to 4 steps, as bbssd ecc_step_ns; 0 or more |
 | `zns_tsusp_ns` | `int64` | `0` | ZNS: overhead in ns added to a read that suspends a program or erase, 0 or more |

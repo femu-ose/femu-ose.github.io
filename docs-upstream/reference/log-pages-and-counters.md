@@ -3,12 +3,12 @@ title: "Log pages and counters"
 description: "How to read FEMU's own counters from the guest. Device properties are in properties.md, and the counters of femu-cxl-ssd are QOM properties listed in..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/reference/log-pages-and-counters.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/reference/log-pages-and-counters.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/cd2d39de8a5324fbf862a557c39cb6aa5a19958f/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `cd2d39de8` (2026-10-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `9174990e2` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -41,7 +41,7 @@ own media counters, little-endian at these offsets (`FemuStatsLog` in
 | 104 | 8 | Erases charged to log-block merges |
 | 112 | 8 | Blocks in service past their erase limit (`blk_pe_limit`) |
 | 120 | 8 | Worn-out blocks taken out of service |
-| 128 | 8 | Lines taken out of service |
+| 128 | 8 | Lines taken out of service (under FDP, the lines of retired reclaim units) |
 | 136 | 8 | Lines moved by static wear levelling (`wl_spread`) |
 | 144 | 8 | Pages those moves copied (also counted at offset 16) |
 | 152 | 8 | NAND pages host writes covered only in part (a device reads such a page to program it again; FEMU does not charge that read) |
