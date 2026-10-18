@@ -3,12 +3,12 @@ title: "Measuring"
 description: "How to read FEMU's counters, measure latency and throughput from the guest, and get numbers that repeat from run to run. Commands in sh blocks run inside..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/guides/measuring.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/docs/guides/measuring.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/guides/measuring.md`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/guides/measuring.md) at FEMU `9174990e2` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/guides/measuring.md`](https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/docs/guides/measuring.md) at FEMU `1918eb979` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

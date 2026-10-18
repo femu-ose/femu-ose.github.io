@@ -3,12 +3,12 @@ title: "Timing model"
 description: "FEMU makes an emulated SSD take as long as a real one would. This page explains how it computes that time, how it makes the guest wait for it, which..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/concepts/timing-model.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/docs/concepts/timing-model.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/timing-model.md`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/concepts/timing-model.md) at FEMU `9174990e2` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/timing-model.md`](https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/docs/concepts/timing-model.md) at FEMU `1918eb979` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -229,7 +229,10 @@ CSD runs a program on the compute unit that frees up first. A program holds
 its unit for its declared run time, or for its measured host run time
 multiplied by the program's own scale, or by `csf_runtime_scale` when it
 gives none. `nr_cu` sets how many units run at once. A copy from the
-namespace into device memory costs `pg_rd_lat`.
+namespace into device memory costs `pg_rd_lat` once. The completion cannot
+come before the host has run the program. The opt-in `csd_pause` stops the
+guest and its clocks for the run, which hides the host run
+([CSD](../modes/csd.md#hide-the-host-run-time-csd_pause)).
 
 Properties: [CSD](../reference/properties.md#csd-computational-storage).
 

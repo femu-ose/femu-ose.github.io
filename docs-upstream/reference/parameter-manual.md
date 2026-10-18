@@ -3,12 +3,12 @@ title: "Parameter manual"
 description: "This manual explains how to configure an emulated device: the ways a parameter reaches FEMU, then every group of parameters by component, with what each one..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/reference/parameter-manual.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/docs/reference/parameter-manual.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/reference/parameter-manual.md) at FEMU `9174990e2` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/parameter-manual.md`](https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/docs/reference/parameter-manual.md) at FEMU `1918eb979` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -572,8 +572,12 @@ bbssd FTL, so sections 5 to 9 apply.
 | `csd_slm_size` | MiB | 0 to 1024; 0 adds none | adds a memory namespace (SLM 1.2) of this size |
 | `csd_cp` | bool | needs `csd_slm_size` | adds a compute namespace (CP 1.2) |
 | `csd_legacy_opcodes` | bool | needs a CSD namespace | old CEMU admin opcodes 21h to 25h instead of C5h to CDh |
+| `csd_pause` | bool | needs a CSD namespace, KVM on x86 | stop the guest and its clocks while a program runs |
+| `csd_pause_max_ms` | ms | 1 to 60000 | the longest such stop (default 1000) |
 
 `csd_slm_size` and `csd_cp` refuse `ns_mgmt`, `power_loss` and a CXL link.
+`csd_pause` refuses namespaces of other modes than bbssd and CSD, and shared
+namespaces ([CSD](../modes/csd.md#hide-the-host-run-time-csd_pause)).
 With `subsys`, the controller must be the only one in its subsystem. Guide: [CP and SLM](../features/cp-slm.md).
 
 ### KV

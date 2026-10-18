@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/CHANGELOG.md) at FEMU `9174990e2` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/docs/CHANGELOG.md) at FEMU `1918eb979` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -71,6 +71,7 @@ listed one by one.
 - Computational Storage Drive mode (`femu_mode=4`) with program load and execute commands, routed through the bbssd FTL ([eb01bb73b](https://github.com/MoatLab/FEMU/commit/eb01bb73b), [50b65ca91](https://github.com/MoatLab/FEMU/commit/50b65ca91)).
 - CSD `nr_cu` and `csf_runtime_scale` now take effect ([202ab7afb](https://github.com/MoatLab/FEMU/commit/202ab7afb)).
 - A CSD runtime shorter than the program's own run on the host cannot be reached, since the completion carries the result; QEMU now warns once when that happens ([b8e8d6b45](https://github.com/MoatLab/FEMU/commit/b8e8d6b45)).
+- Opt-in `csd_pause` stops the guest while a CSD program runs on the host. Under KVM the kvmclock and the TSC skip the stop. The controller times its I/O on a clock that stops too, so the guest sees the modelled run time. `csd_pause_max_ms` bounds a stop.
 - Key-value SSD mode (`femu_mode=5`) with store, retrieve, list, delete and exist commands ([e72465909](https://github.com/MoatLab/FEMU/commit/e72465909)).
 - Every KV namespace has its own command set and key space, the KV command set is advertised to the host, and the KV Configuration feature is served ([39664d242](https://github.com/MoatLab/FEMU/commit/39664d242), [e62db84f2](https://github.com/MoatLab/FEMU/commit/e62db84f2), [e4949509c](https://github.com/MoatLab/FEMU/commit/e4949509c)).
 - Opt-in KV workload-mix timing (`kv_timing=model`): Store and Retrieve take their time from the Samsung KVSSD emulator fit over the last 16 of them, or from coefficients in `kv_model_coeffs`. A device with no KV namespace refuses both.

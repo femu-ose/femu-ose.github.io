@@ -3,12 +3,12 @@ title: "Scripts and tools"
 description: "Every script and tool shipped under hw/femu/scripts/ and hw/femu/tools/: what it does, its arguments and the environment variables it reads. The top-level..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/reference/scripts.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/docs/reference/scripts.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/scripts.md`](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/docs/reference/scripts.md) at FEMU `9174990e2` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/scripts.md`](https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/docs/reference/scripts.md) at FEMU `1918eb979` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -201,6 +201,7 @@ Run this one on the host:
 | Script | What it does | Arguments and environment |
 | --- | --- | --- |
 | `guest-conformance.sh` | Boots a guest for each suite with a fresh overlay of the guest image, runs the suite's guest script in it over SSH, stops the guest and prints `RESULT SUITE PASS`, `FAIL` or `SETUP-ERROR`. An SMBIOS string checks that the SSH port reaches this guest. It refuses an overlay or PID file that an earlier run left in the result directory. CI does not run it. See [conformance suites](../guides/testing.md#conformance-suites). | Suites `blktests-block`, `blktests-zbd`, `nvme-cli`, `zenfs-crash`, `kv-bench` or `all`. Options `--qemu PATH` (default `./qemu-system-x86_64`), `--image FILE`, `--key FILE`, `--port N` (default 8090), `--outdir DIR`, `--timeout SEC` (default 7200 for `zenfs-crash`, else 3600), `--boot-timeout SEC` (default 300), `--device PROPS` (the FEMU properties for a control run), `--smp N` and `--mem SIZE` (default 16 and `16G` for `zenfs-crash`, else 4 and `4G`), `--sudo`, `--keep`. Reads `QEMU`, `IMGDIR`, `OSIMGF`, `SSH_KEY` and `SSH_PORT`, and passes the `BLKTESTS_*`, `NVMECLI_*`, `ROCKSDB_*`, `ZENFS_*` and `KVBENCH_*` variables that `--help` lists to the guest. Exits 0 when every suite passed, 1 when a suite failed, and 2 when a suite could not run and no suite failed. |
+| `csd-pause-check/run.sh` | Boots a small KVM guest from a kernel and a busybox initramfs twice, with `csd_pause` off and on. In the guest, `csdlat.c` times Execute of a program that sleeps on the host, and `clockcheck.c` counts clock steps back on each vCPU, sleeps that end early, and the gap between the TSC and the kvmclock. Prints both results; it checks nothing itself. See [CSD](../modes/csd.md#hide-the-host-run-time-csd_pause). | `QEMU KERNEL MODDIR OUTDIR [VCPUS]`: a FEMU binary, a guest bzImage, its `/lib/modules/<version>` for `nvme.ko` or `none`, an output directory, and the vCPU count (default 4). Needs `gcc` with static glibc, a static `busybox`, `cpio` and `gzip`. |
 
 ## Host monitoring tools
 
@@ -241,7 +242,7 @@ guest builds `libcca.a`, the `ccactl` command and the `cca-test` self-test.
 runs the self-test as root, logging to `cca-guest-YYYYMMDD-HHMMSS.log` by
 default.
 See [the caching API guide](../features/cxl-cca.md) and the
-[tool README](https://github.com/MoatLab/FEMU/blob/9174990e2223f7cf5ba25f971594d0475ba08112/hw/femu/tools/cca/README.md).
+[tool README](https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/tools/cca/README.md).
 
 ## Legacy scripts
 
