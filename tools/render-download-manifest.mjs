@@ -20,13 +20,22 @@ for (const [directory, kind] of Object.entries(groups)) {
   const folder = path.join(root, 'static', directory);
   // A group may be empty (git does not track empty folders).
   if (!existsSync(folder)) continue;
-  const entries = await readdir(folder, {withFileTypes: true});
-  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name, 'en'))) {
-    if (!entry.isFile()) throw new Error(`Unexpected non-file download: ${directory}/${entry.name}`);
-    const data = await readFile(path.join(folder, entry.name));
-    artifacts.push({path: `${directory}/${entry.name}`, kind, bytes: data.length,
-      sha256: createHash('sha256').update(data).digest('hex')});
+  async function visit(folder, relative) {
+    const entries = await readdir(folder, {withFileTypes: true});
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name, 'en'))) {
+      const child = path.join(folder, entry.name);
+      const artifactPath = `${relative}/${entry.name}`;
+      if (entry.isDirectory()) {
+        await visit(child, artifactPath);
+        continue;
+      }
+      if (!entry.isFile()) throw new Error(`Unexpected non-file download: ${artifactPath}`);
+      const data = await readFile(child);
+      artifacts.push({path: artifactPath, kind, bytes: data.length,
+        sha256: createHash('sha256').update(data).digest('hex')});
+    }
   }
+  await visit(folder, directory);
 }
 const manifest = {
   format_version: 1,

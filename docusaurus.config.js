@@ -148,6 +148,7 @@ const config = {
         logo: {alt: '', src: 'img/femu-mark.svg'},
         items: [
           {to: '/docs/start', label: 'Get started', position: 'left'},
+          {to: '/docs/learn', label: 'Learn', position: 'left'},
           {
             type: 'docSidebar',
             sidebarId: 'manual',

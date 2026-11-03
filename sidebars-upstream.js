@@ -165,6 +165,10 @@ const sidebars = {
         {
           "type": "doc",
           "id": "features/kv-value-packing"
+        },
+        {
+          "type": "doc",
+          "id": "features/tiered-nand"
         }
       ]
     },

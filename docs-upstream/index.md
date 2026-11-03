@@ -4,12 +4,12 @@ description: "Start with the goal you have. What changed since the last release 
 slug: /
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/docs/README.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/hw/femu/docs/README.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/README.md`](https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/docs/README.md) at FEMU `1918eb979` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/README.md`](https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/hw/femu/docs/README.md) at FEMU `2815321fb` (2026-11-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -54,9 +54,10 @@ and what the guest needs. In short:
 | A Zoned Namespace SSD | ZNS (`femu_mode=3`) | `run-zns.sh` | [ZNS](modes/zns.md) |
 | A host-managed OpenChannel SSD | OCSSD (`femu_mode=0`) | `run-whitebox.sh` | [OCSSD](modes/ocssd.md) |
 | A key-value SSD | KV (`femu_mode=5`) | `run-kvssd.sh` | [KV](modes/kvssd.md) |
-| Computational storage | CSD (`femu_mode=4`) | `run-csd.sh` | [CSD](modes/csd.md), [CSD guest tools](https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/tests/csd/README.md) |
+| Computational storage | CSD (`femu_mode=4`) | `run-csd.sh` | [CSD](modes/csd.md), [CSD guest tools](https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/hw/femu/tests/csd/README.md) |
 | NVMe Computational Programs and Subsystem Local Memory | CSD with `csd_slm_size`, `csd_cp=on` | none | [CP and SLM](features/cp-slm.md) |
 | Flexible Data Placement | BBSSD with `femu-subsys,fdp=on` | `run-blackbox-fdp.sh` | [FDP](features/fdp.md) |
+| A pSLC cache in front of MLC, TLC or QLC NAND | BBSSD with `nand_cell_type` and `tier_mode=static` | none | [Tiered NAND](features/tiered-nand.md) |
 | Create and delete namespaces from the guest | NoSSD or BBSSD with `ns_mgmt=on` | none | [Namespace management](features/ns-management-and-pi.md#namespace-management) |
 | Per-block metadata and protection information | NoSSD or BBSSD with `meta`, `mc`, `pi=on` | none | [Metadata and PI](features/ns-management-and-pi.md#metadata-and-protection-information) |
 | Several namespaces on one controller | any NVMe mode | none | [Several namespaces](features/multi-namespace.md) |
@@ -148,7 +149,7 @@ two differ.
 - [Code structure](development/code-structure.md): what lives where under
   `hw/femu/`, and where to start a change. [Architecture](concepts/architecture.md)
   explains how the parts work together.
-- [Contributing](https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/CONTRIBUTING.md): style, tests, sign-off and pull
+- [Contributing](https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/CONTRIBUTING.md): style, tests, sign-off and pull
   requests.
 - [AI policy](ai-policy.md): using AI coding tools, disclosure with
   `Assisted-by:`, and what is not allowed.
@@ -159,8 +160,8 @@ two differ.
 ## How to cite
 
 If you use FEMU in your research, cite the FAST '18 paper. The BibTeX entry
-is in [the README](https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/README.md#primary-citation), and
-[CITATION.cff](https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/CITATION.cff) has the same entry for citation tools.
+is in [the README](https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/README.md#primary-citation), and
+[CITATION.cff](https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/CITATION.cff) has the same entry for citation tools.
 If you use FDP, the CXL SSD or CSD, also cite the paper that mode comes from:
 [WARP](features/fdp.md#citation) (FAST '26), [Cylon](modes/cxl-ssd.md#citation)
 (FAST '26) or [CEMU](modes/csd.md#citation) (ASPLOS '26).

@@ -3,12 +3,12 @@ title: "Debugging"
 description: "Where FEMU reports problems, how to get more output, and how to run it under a debugger. For answers to common problems, see troubleshooting."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/docs/guides/debugging.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/hw/femu/docs/guides/debugging.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/guides/debugging.md`](https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/docs/guides/debugging.md) at FEMU `1918eb979` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/guides/debugging.md`](https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/hw/femu/docs/guides/debugging.md) at FEMU `2815321fb` (2026-11-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -309,7 +309,7 @@ Open an issue with:
 - for a crash, the `thread apply all bt` output from gdb, or the sanitizer
   report.
 
-Report a security problem privately, as [SECURITY.md](https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/SECURITY.md)
+Report a security problem privately, as [SECURITY.md](https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/SECURITY.md)
 says.
 
 ## Related pages

@@ -10,6 +10,10 @@ results. Start with a standalone model test when students do not have a
 Linux/KVM host. Add guest experiments after preparing and verifying that
 environment. The activities below share source revision `9d176f89138d`.
 
+For the current conference edition, use the [FEMU tutorial](/docs/tutorials/atc26)
+and its per-module qualification record. The activities below retain their
+original source pin and validation history.
+
 ## Choose an activity
 
 | Learning objective | Activity | Prerequisites | Student deliverable |

@@ -3,12 +3,12 @@ title: "NVMe frontend"
 description: "The NVMe frontend is the part of -device femu that a guest driver talks to: the PCI function, the controller registers, the admin and I/O queues, the poller..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/docs/design/nvme-frontend.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/hw/femu/docs/design/nvme-frontend.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/1918eb9795baa4483e7721429db5e58c54305878/hw/femu/docs/design/nvme-frontend.md) at FEMU `1918eb979` (2026-10-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/hw/femu/docs/design/nvme-frontend.md) at FEMU `2815321fb` (2026-11-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
