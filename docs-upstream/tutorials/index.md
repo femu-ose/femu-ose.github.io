@@ -3,12 +3,12 @@ title: "Tutorials"
 description: "Hands-on walkthroughs. Each one starts a guest with an emulated device, runs a workload inside it, and reads what the device reports. Every tutorial stands..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/hw/femu/docs/tutorials/README.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/7716b2207d95c9f31005fca28230d7cd9b62be35/hw/femu/docs/tutorials/README.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/tutorials/README.md`](https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/hw/femu/docs/tutorials/README.md) at FEMU `2815321fb` (2026-11-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/tutorials/README.md`](https://github.com/MoatLab/FEMU/blob/7716b2207d95c9f31005fca28230d7cd9b62be35/hw/femu/docs/tutorials/README.md) at FEMU `7716b2207` (2026-11-03), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

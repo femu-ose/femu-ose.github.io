@@ -3,12 +3,12 @@ title: "Build FEMU"
 description: "How to get the source, install dependencies and build the FEMU binary. Check requirements.md first."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/hw/femu/docs/getting-started/build.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/7716b2207d95c9f31005fca28230d7cd9b62be35/hw/femu/docs/getting-started/build.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/getting-started/build.md`](https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/hw/femu/docs/getting-started/build.md) at FEMU `2815321fb` (2026-11-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/getting-started/build.md`](https://github.com/MoatLab/FEMU/blob/7716b2207d95c9f31005fca28230d7cd9b62be35/hw/femu/docs/getting-started/build.md) at FEMU `7716b2207` (2026-11-03), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

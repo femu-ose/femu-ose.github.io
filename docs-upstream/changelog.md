@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/7716b2207d95c9f31005fca28230d7cd9b62be35/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/hw/femu/docs/CHANGELOG.md) at FEMU `2815321fb` (2026-11-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/7716b2207d95c9f31005fca28230d7cd9b62be35/hw/femu/docs/CHANGELOG.md) at FEMU `7716b2207` (2026-11-03), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -186,6 +186,7 @@ listed one by one.
 - FDP takes `blk_pe_limit` with `eol_read_only=off`. A worn-out block retires its reclaim unit while the unit's group keeps the units the namespaces and placement need. Otherwise the block stays in service with SMART critical warning bit 2. SMART and the Endurance Group Information log report the warnings, Available Spare (the worst group) and Percentage Used, and `query-femu` shows retired units. FDP still refuses `eol_read_only=on`, `spare_lines` and `fdp_trim_erase_all` with it.
 - FDP also takes `eol_read_only` (on by default with `blk_pe_limit`). Each reclaim group holds erased units for the writes in flight, the media goes read-only when no unit can replace a worn-out one, and writes then fail with 182h. Collection, refresh and padding stop then, and RUH Update fails with Capacity Exceeded.
 - Opt-in pSLC tier in front of MLC, TLC or QLC NAND. The properties `tier_mode`, `tier_static_mb`, `tier_full_policy`, `tier_pslc_read_ns`, `tier_pslc_prog_ns`, `tier_pslc_erase_ns` and `tier_pslc_pe_cycles` control it. Host writes go to a static pool of pSLC lines first. A fold moves the oldest full pool line to the dense lines. The tier is off by default, and with it off nothing changes. See [tiered NAND](features/tiered-nand.md).
+- `tier_mode=dynamic` lets the pSLC pool borrow free dense lines while the device has room, with `tier_max_mb` as a cap and `tier_shrink_pct` as the fill where the pool starts to shrink. A borrowed line goes back to the dense free list after its fold, and the dense lines always keep room for every valid page. See [tiered NAND](features/tiered-nand.md#dynamic-pool).
 
 #### Timing and fault models
 

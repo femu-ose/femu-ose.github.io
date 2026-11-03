@@ -3,12 +3,12 @@ title: "Zoned Namespace SSD (ZNS)"
 description: "ZNS mode (femu_mode=3) emulates an NVMe SSD with the Zoned Namespace command set. The namespace is divided into zones. The host writes each zone..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/hw/femu/docs/modes/zns.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/7716b2207d95c9f31005fca28230d7cd9b62be35/hw/femu/docs/modes/zns.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/zns.md`](https://github.com/MoatLab/FEMU/blob/2815321fb6dba1600cd92898ecfcdbfa957a9002/hw/femu/docs/modes/zns.md) at FEMU `2815321fb` (2026-11-02), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/zns.md`](https://github.com/MoatLab/FEMU/blob/7716b2207d95c9f31005fca28230d7cd9b62be35/hw/femu/docs/modes/zns.md) at FEMU `7716b2207` (2026-11-03), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
