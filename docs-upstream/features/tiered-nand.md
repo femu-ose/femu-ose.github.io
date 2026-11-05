@@ -3,12 +3,12 @@ title: "Tiered NAND: a pSLC pool in front of dense NAND"
 description: "Many TLC and QLC SSDs write host data to a fast cache first. The cache is ordinary NAND that the drive programs with one bit per NAND unit (pSLC). Later the..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/7716b2207d95c9f31005fca28230d7cd9b62be35/hw/femu/docs/features/tiered-nand.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/cb7c977b4195b898cf1509e3af93adb25c7465ce/hw/femu/docs/features/tiered-nand.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/tiered-nand.md`](https://github.com/MoatLab/FEMU/blob/7716b2207d95c9f31005fca28230d7cd9b62be35/hw/femu/docs/features/tiered-nand.md) at FEMU `7716b2207` (2026-11-03), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/tiered-nand.md`](https://github.com/MoatLab/FEMU/blob/cb7c977b4195b898cf1509e3af93adb25c7465ce/hw/femu/docs/features/tiered-nand.md) at FEMU `cb7c977b4` (2026-11-05), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -89,6 +89,8 @@ pool takes 4 lines.
 | `tier_pslc_pe_cycles` | `0` | pSLC erase rating; 0 is 30 times the dense rating |
 | `tier_max_mb` | `0` | `dynamic`: cap of the borrowed lines in MiB; 0 sets no cap |
 | `tier_shrink_pct` | `50` | `dynamic`: fill in % where the pool starts to shrink |
+| `tier_idle_ms` | `0` | quiet time in ms before an idle fold; 0 turns idle folds off |
+| `tier_lazy_pct` | `0` | idle folds: 0 folds every closed line; else only while use is above this % |
 
 The full descriptions are in the
 [property reference](../reference/properties.md#pslc-tier-bbssd).
@@ -144,6 +146,43 @@ A 4 GiB TLC device with no fixed pool and a cache of up to 1 GiB:
 
 ```
 -device femu,femu_mode=1,devsz_mb=4096,nchs=8,luns_per_ch=8,pgs_per_blk=256,blks_per_pl=256,nand_cell_type=3,tier_mode=dynamic,tier_max_mb=1024
+```
+
+## Idle folds
+
+By default a pool line folds only when a host write needs room. With
+`tier_idle_ms` above 0, the device also folds in idle time, so the next
+burst finds free pool lines:
+
+```
+ burst --> pool full --> quiet for tier_idle_ms --> step, step, ... --> next burst
+                                                     |
+                          each step: at most one page per LUN, then wait
+                          until the work of that step ends
+```
+
+- The idle time counts from the end of the last host request and of the
+  NAND work it queued, such as GC. The PCIe transfer time is not part of it.
+- A step moves at most one page from each LUN. The next step starts only
+  when the programs (and, at the end of a line, the erases) of the last one
+  end. So idle work adds at most one step on a LUN to a host command.
+- A host request between two steps runs as usual. A fold that the request
+  needs takes the half-moved line first and moves all of it.
+- At the forced GC mark (`gc_thres_pcent_high`), idle folds stop until a
+  host write runs GC. An idle step never runs dense GC.
+- The open pool line does not fold at idle, so one open line can stay.
+- `tier_lazy_pct=0` (eager) folds every closed line. A value of 1 to 99
+  (lazy) folds only while the closed and open lines are above that percent
+  of the pool. The pool is the static lines plus the borrowed lines the
+  fill allows. Lazy keeps more recent data in pSLC.
+- An idle fold of a borrowed line gives it back to the dense free list.
+- Idle folds charge their time, as other folds do.
+
+A 4 GiB TLC device with a 512 MiB static pool that folds after 100 ms of
+quiet time:
+
+```
+-device femu,femu_mode=1,devsz_mb=4096,nchs=8,luns_per_ch=8,pgs_per_blk=256,blks_per_pl=256,nand_cell_type=3,tier_mode=static,tier_static_mb=512,tier_idle_ms=100
 ```
 
 ## Capacity
@@ -247,9 +286,10 @@ the channel too, set a bus profile such as `pg_xfer_lat` or `onfi_mode`.
   does not remove the fold cost.
 - Dense programs use the FEMU page model: one program per page, timed by its
   page type. A one-shot word line program is a later option.
-- A fold moves a whole pool line in one step. Host requests do not run
-  between the page moves of a fold.
-- No idle fold and no read promotion yet.
+- A fold that a host write needs moves a whole pool line in one step. Host
+  requests do not run between its page moves. Idle folds move one step at
+  a time.
+- No read promotion yet.
 
 ## Credit
 
