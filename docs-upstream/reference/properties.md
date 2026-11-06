@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0a7bf60740757d79785b6a984a5eb79eb9db5db4/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/reference/properties.md) at FEMU `43655371a` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/0a7bf60740757d79785b6a984a5eb79eb9db5db4/hw/femu/docs/reference/properties.md) at FEMU `0a7bf6074` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,7 +28,7 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 219 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 236 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
@@ -160,6 +160,19 @@ Devices:
 | --- | --- | --- | --- |
 | `ecc_step_ns` | `int32` | `0` | bbssd, CSD, KV: extra read time in ns per ECC tier, one tier per 750 erases of the block plus one per ecc_retention_sec of data age, at most 4 tiers; 0 turns the model off |
 | `ecc_retention_sec` | `int32` | `0` | bbssd, CSD, KV: data age in seconds that adds one ECC tier, with ecc_step_ns; 0 counts wear only |
+| `rber_ppb` | `uint32` | `0` | bbssd: fresh raw bit error rate of host reads in parts per 10^9; it adds read-retry and soft decode time to host reads. 0 (default) turns the model off. At most 10^9; refused with bus phase or ONFI timing, pe_suspend, mp_read, onfi_cache_read, gc_copyback, ecc_step_ns, the pSLC tier and cxl_ssd |
+| `rber_pe_double` | `uint32` | `0` | bbssd with rber_ppb: block erases that double the raw bit error rate; 0 (default) leaves wear out |
+| `rber_age_double_sec` | `uint32` | `0` | bbssd with rber_ppb: data age in seconds that doubles the raw bit error rate, from the line close, or the first program with pd_open_age; 0 (default) leaves age out |
+| `rber_read_double` | `uint32` | `0` | bbssd with rber_ppb: block reads since its erase that double the raw bit error rate; 0 (default) leaves read disturb out |
+| `ecc_cw_bytes` | `uint32` | `1024` | bbssd with rber_ppb: data bytes per ECC codeword, 256 or more; it divides the page into 16 codewords or fewer |
+| `ecc_hard_bits` | `uint32` | `40` | bbssd with rber_ppb: bit errors per codeword that hard decode corrects, 1 to 1024 |
+| `ecc_soft_bits` | `uint32` | `72` | bbssd with rber_ppb: bit errors per codeword that soft decode corrects, ecc_hard_bits to 1024; 0 turns soft decode off |
+| `rr_steps` | `uint32` | `4` | bbssd with rber_ppb: read-retry steps before soft decode, 0 to 16; each step is one more page read |
+| `rr_gain` | `uint32` | `2` | bbssd with rber_ppb: each retry step divides the reducible part of the error mean by this, 2 to 16 |
+| `rr_floor_pct` | `uint8` | `10` | bbssd with rber_ppb: percent of the error mean that no retry removes, 0 to 100 |
+| `rr_soft_senses` | `uint32` | `3` | bbssd with rber_ppb: page reads of one soft decode, 0 to 8 |
+| `rr_soft_ns` | `uint32` | `20000` | bbssd with rber_ppb: controller time in ns of one soft decode, at most 10^7; it does not hold the LUN |
+| `rber_seed` | `uint32` | `1` | bbssd with rber_ppb: seed of the decode outcome generator; the same seed and trace give the same counts |
 | `pd_edge_wls` | `int32` | `0` | bbssd, CSD, KV: program disturb, bottom wordlines of each block whose reads take pd_edge_tiers more ECC tiers; set with pd_edge_tiers and ecc_step_ns; 0 (default) turns the term off. A wordline is the pages per wordline of nand_cell_type (else the effective cell_pages, 3 with pgtype_lat, else 1) contiguous pages |
 | `pd_edge_tiers` | `int32` | `0` | bbssd, CSD, KV: program disturb, ECC tiers added to a read of a pd_edge_wls wordline, 0 to 4, under the shared tier cap; chosen values for sensitivity studies, not fitted to error rates |
 | `pd_open_tiers` | `int32` | `0` | bbssd, CSD, KV: program disturb, ECC tiers added to a read of a block that is only part programmed, 0 to 4, under the shared tier cap; needs ecc_step_ns; 0 (default) turns the term off |
@@ -184,7 +197,7 @@ Devices:
 | `err_write_fail_ppm` | `uint32` | `0` | bbssd, CSD and ZNS: writes per million that fail, injected at a fixed period (a ZNS zone then goes read-only); 0 disables |
 | `read_reclaim_limit` | `int32` | `0` | bbssd, CSD: when a host read finds its block has taken this many reads since its erase, that line is queued and rewritten on a following write, one line at a time (under FDP, its reclaim unit); 0 disables |
 | `retention_limit_sec` | `int32` | `0` | bbssd, CSD: when a host read hits a line filled at least this many seconds earlier, the line is queued and rewritten on a following write (under FDP, its reclaim unit); 0 disables |
-| `age_scale` | `int32` | `1` | bbssd, CSD: data ages this many times faster than wall time, for retention_limit_sec and ecc_retention_sec only; 1 (default) or more. I/O timing and garbage collection order do not change |
+| `age_scale` | `int32` | `1` | bbssd, CSD: data ages this many times faster than wall time, for retention_limit_sec, ecc_retention_sec and rber_age_double_sec only; 1 (default) or more. I/O timing and garbage collection order do not change |
 
 ### Garbage collection, mapping and caches
 
@@ -203,6 +216,9 @@ Devices:
 | `read_cache_mb` | `uint32` | `0` | bbssd, CSD: size of the DRAM read cache in MiB; 0 disables it |
 | `cache_evict` | `str` | unset | bbssd, CSD: read cache eviction policy, one of clock, random, lru or arc; unset is clock |
 | `hot_cold_sep` | `bool` | `off` | bbssd, CSD with mapping page or dftl: write overwrites of mapped pages to separate hot lines; refused with FDP |
+| `gc_frontier` | `bool` | `off` | bbssd, CSD: write the pages garbage collection copies to lines of their own, apart from host writes; refused with FDP, cxl_ssd, gc_pace, Streams, and retention_limit_sec without pd_open_close_sec |
+| `gc_idle_ms` | `uint32` | `0` | bbssd with one namespace and page mapping: quiet time in ms after which the device collects lines in the background, one victim at a time; 0 (default) collects only on the write path |
+| `gc_idle_pcent` | `uint8` | `0` | bbssd with gc_idle_ms: idle collection runs while the line fill is above this percent, as gc_thres_pcent counts it; 0 (default) takes gc_thres_pcent, else 1 to 99 |
 | `buffer_size` | `int32` | `0` | bbssd, CSD: DRAM write buffer capacity in NAND pages, not bytes; 0 programs every write directly |
 | `buffer_thres_pcent` | `int32` | `90` | bbssd, CSD: buffer fill level in percent at which buffered pages are written to NAND, 1 to 100 when buffer_size > 0 |
 | `fdp_trim_erase_all` | `int32` | `0` | bbssd with FDP: non-zero makes a deallocate reset every reclaim unit instead of the given ranges |
@@ -230,6 +246,7 @@ Devices:
 | --- | --- | --- | --- |
 | `pcie_bandwidth_mbps` | `uint32` | `0` | Host link bandwidth in MB/s (10^6 bytes); each Read or Write is charged its transfer time on a per-direction link queue; 0 disables the bandwidth charge |
 | `pcie_prop_delay_ns` | `uint32` | `0` | Host link propagation delay in ns added to each Read or Write after its link transfer; 0 disables it |
+| `pcie_write_first` | `bool` | `on` | with the host link model: on (default) books a write's transfer before its media, as on a real drive; off charges it after the programs, the order before this option |
 | `fw_cpu_ns` | `uint64` | `0` | Controller firmware time in ns charged to each Read, Write and Zone Append, serialized on one modelled core; 0 disables it |
 | `fw_read_ns` | `uint64` | `0` | Controller firmware time in ns for each Read; 0 (default) takes fw_cpu_ns |
 | `fw_write_ns` | `uint64` | `0` | Controller firmware time in ns for each Write and Zone Append; 0 (default) takes fw_cpu_ns |
@@ -429,7 +446,7 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 
 These exist only when QEMU runs under qtest (`-accel qtest`) and serve FEMU's own tests. They are not part of the user interface.
 
-- `femu`: `x-cmt-slots`, `x-copy-held`, `x-copy-hold`, `x-csd-pause-stats`, `x-eol-enter`, `x-fdp-check`, `x-fdp-ns-mapped`, `x-ftl-check`, `x-ftl-hold`, `x-ftl-trace`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-query-delay-ms`, `x-range-waits`, `x-stream-test`, `x-tier-check`, `x-tier-fold-stop`, `x-tp-hold`, `x-zone-draining`, `x-zone-held`, `x-zone-lock-hold-ms`, `x-zone-log-changes`, `x-zone-log-hold-ms`, `x-zone-report-hold-ms`, `x-zone-write-hold-ms`
+- `femu`: `x-cmt-slots`, `x-copy-held`, `x-copy-hold`, `x-csd-pause-stats`, `x-eol-enter`, `x-fdp-check`, `x-fdp-ns-mapped`, `x-ftl-check`, `x-ftl-hold`, `x-ftl-trace`, `x-gc-frontier`, `x-gc-idle`, `x-gc-idle-hold`, `x-gc-idle-kick`, `x-gc-idle-latch`, `x-gc-idle-order`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-query-delay-ms`, `x-range-waits`, `x-rber-u`, `x-stream-test`, `x-tier-check`, `x-tier-fold-stop`, `x-tp-hold`, `x-zone-draining`, `x-zone-held`, `x-zone-lock-hold-ms`, `x-zone-log-changes`, `x-zone-log-hold-ms`, `x-zone-report-hold-ms`, `x-zone-write-hold-ms`
 - `femu-cxl-ssd`: `test-change-dpa`, `test-fault`, `test-fault-decode`, `test-fault-delivery`, `test-fault-fill`, `test-fault-repeats`, `test-fault-version`, `test-fault-walk`, `test-fill`, `test-fill-race`, `test-ftl-delay`, `test-ftl-hold`, `test-ftl-holding`, `test-guarded-write`, `test-lock-mutex`, `test-lock-wanted`, `test-map`, `test-media-disabled`, `test-nvme-after-posted`, `test-owner`, `test-posted-done`, `test-prefetch-race`, `test-prefetch-race-end`, `test-protect`, `test-protect-window`, `test-revoke-ahead`, `test-revoke-ahead-keep`, `test-rip`, `test-slot-reservation`, `test-storm`, `test-storm-ns`, `test-storm-served`, `test-storm-stops`, `test-storm-wait`, `test-thread-read`, `test-unprotect`
 
 ## Environment variables

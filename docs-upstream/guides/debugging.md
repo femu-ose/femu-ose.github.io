@@ -3,12 +3,12 @@ title: "Debugging"
 description: "Where FEMU reports problems, how to get more output, and how to run it under a debugger. For answers to common problems, see troubleshooting."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/guides/debugging.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0a7bf60740757d79785b6a984a5eb79eb9db5db4/hw/femu/docs/guides/debugging.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/guides/debugging.md`](https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/guides/debugging.md) at FEMU `43655371a` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/guides/debugging.md`](https://github.com/MoatLab/FEMU/blob/0a7bf60740757d79785b6a984a5eb79eb9db5db4/hw/femu/docs/guides/debugging.md) at FEMU `0a7bf6074` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -266,6 +266,45 @@ Options: `--json` prints one JSON object, `--qemu BINARY` names QEMU
 `--timeout SEC` (default 60). Put `--` before QEMU options when you give
 tool options.
 
+### Record an experiment manifest
+
+`--manifest FILE` also writes one JSON file for each run. Keep it with the
+results, so a reader can find the exact device behind each number.
+
+```text
+  manifest.json
+    exit, created (UTC)
+    host:   kernel, CPU model, CPUs, memory, NUMA nodes, cpufreq scaling
+    build:  QEMU path, sha256, version
+            tool-commit, tool-dirty: the checkout of this script, which
+            need not be the source of the QEMU binary
+    report: the --json report; each femu device also lists
+            properties: name, type, value, default, source
+```
+
+The source of each property value comes from the live device:
+
+| Source | Rule |
+| --- | --- |
+| `given` | the `-device` option names the property; `given` holds its text |
+| `default` | the value equals the class default, or the property has no default and is empty |
+| `derived` | neither of the above: realize, `-global` or another device set it |
+| `unknown` | the check could not match the device to its option |
+
+How the check matches devices and options:
+
+- A device with `id=` matches its option by id. The first `id=` counts, as
+  in QEMU.
+- The other femu devices match their options in creation order: the
+  key=value options first, then the JSON ones. When the counts differ, the
+  sources are `unknown` and the report notes why.
+- Options follow the QEMU rules: `,,` is a comma, a bare `flag` is on and
+  `noflag` is off. Property names stay as given.
+
+The manifest leaves out `x-` test properties, child and link properties,
+and the properties of `femu-subsys` and CXL devices. A failed property
+read keeps its `error`, and the records read before it stay.
+
 ## Inspect a running device
 
 QEMU's monitor shows what QEMU built. With the QMP socket the launchers
@@ -309,7 +348,7 @@ Open an issue with:
 - for a crash, the `thread apply all bt` output from gdb, or the sanitizer
   report.
 
-Report a security problem privately, as [SECURITY.md](https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/SECURITY.md)
+Report a security problem privately, as [SECURITY.md](https://github.com/MoatLab/FEMU/blob/0a7bf60740757d79785b6a984a5eb79eb9db5db4/SECURITY.md)
 says.
 
 ## Related pages

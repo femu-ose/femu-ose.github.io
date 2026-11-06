@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0a7bf60740757d79785b6a984a5eb79eb9db5db4/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/CHANGELOG.md) at FEMU `43655371a` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/0a7bf60740757d79785b6a984a5eb79eb9db5db4/hw/femu/docs/CHANGELOG.md) at FEMU `0a7bf6074` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -188,6 +188,11 @@ listed one by one.
 - Opt-in pSLC tier in front of MLC, TLC or QLC NAND. The properties `tier_mode`, `tier_static_mb`, `tier_full_policy`, `tier_pslc_read_ns`, `tier_pslc_prog_ns`, `tier_pslc_erase_ns` and `tier_pslc_pe_cycles` control it. Host writes go to a static pool of pSLC lines first. A fold moves the oldest full pool line to the dense lines. The tier is off by default, and with it off nothing changes. See [tiered NAND](features/tiered-nand.md).
 - `tier_mode=dynamic` lets the pSLC pool borrow free dense lines while the device has room, with `tier_max_mb` as a cap and `tier_shrink_pct` as the fill where the pool starts to shrink. A borrowed line goes back to the dense free list after its fold, and the dense lines always keep room for every valid page. See [tiered NAND](features/tiered-nand.md#dynamic-pool).
 - `tier_idle_ms` lets the pSLC tier fold pool lines in idle time, one bounded step at a time, so the next burst finds free pool lines. `tier_lazy_pct` folds only while the pool use is above a percent. Both are off by default. See [tiered NAND](features/tiered-nand.md#idle-folds).
+- `gc_frontier=on` writes the pages garbage collection copies to lines of their own, apart from host writes, as real drives do; under a skewed overwrite this lowers the pages copied. Off by default; refused with FDP, `cxl_ssd`, `gc_pace`, Streams, and `retention_limit_sec` without `pd_open_close_sec`.
+- `rber_ppb` adds a read-retry and soft decode model to host reads. Each ECC codeword draws a decode outcome from a raw bit error rate that grows with wear, data age and read disturb. Each failed attempt costs one more page read on the LUN. Off by default; log page C0h counts the outcomes. See [read retry and soft decode](design/ftl.md#read-retry-and-soft-decode-rber_ppb).
+- With the host link model on, a write to bbssd, FDP, CSD or NoSSD with no write buffer now books its link transfer before its media, as on a real drive. Before, the transfer came after the programs. `pcie_write_first=off` keeps the old order. Reads are not changed. See [host link and firmware CPU](design/nand-timing.md#host-link-and-firmware-cpu).
+- `femu-config-check.py --manifest FILE` writes an experiment manifest. It holds the configuration report, the host, and the QEMU build and source commit. Each femu property gets its value and source: given, default or derived. See [record an experiment manifest](guides/debugging.md#record-an-experiment-manifest).
+- `gc_idle_ms` lets the device collect lines in idle time, one victim at a time, so the next burst finds free lines. `gc_idle_pcent` sets how many lines idle time frees. Off by default; the first version takes one bbssd namespace with page mapping. See [idle collection](design/ftl.md#idle-collection-gc_idle_ms).
 
 #### Timing and fault models
 
@@ -455,6 +460,7 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 
 ### Documentation and tooling
 
+- `femu-steady-state.py` reports when per-round fio results reach steady state, by the SNIA PTS rule, so a WAF or GC study can skip the fresh-device rounds.
 - `femu-stat.py` prints the end-of-life state of a namespace with `eol_read_only`: read-only or writable, and the reserve pages that admitted writes hold.
 - Documentation moved under `hw/femu/docs/` with getting-started, concepts, mode and feature guides, an FAQ, security notes and a doc map ([e00c70f99](https://github.com/MoatLab/FEMU/commit/e00c70f99), [034670c4c](https://github.com/MoatLab/FEMU/commit/034670c4c), [62a565ae0](https://github.com/MoatLab/FEMU/commit/62a565ae0), [fb1cf3ce6](https://github.com/MoatLab/FEMU/commit/fb1cf3ce6), [28aa224b7](https://github.com/MoatLab/FEMU/commit/28aa224b7), [0bcb5cae2](https://github.com/MoatLab/FEMU/commit/0bcb5cae2)).
 - CXL SSD, caching API and NVMe link guides, and a reference for every `femu-cxl-ssd` property and counter ([41b318ef2](https://github.com/MoatLab/FEMU/commit/41b318ef2), [9ec16a701](https://github.com/MoatLab/FEMU/commit/9ec16a701), [93bfbf5c9](https://github.com/MoatLab/FEMU/commit/93bfbf5c9), [ccaa5d190](https://github.com/MoatLab/FEMU/commit/ccaa5d190), [dcea2b9a8](https://github.com/MoatLab/FEMU/commit/dcea2b9a8)).

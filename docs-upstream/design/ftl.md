@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0a7bf60740757d79785b6a984a5eb79eb9db5db4/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/design/ftl.md) at FEMU `43655371a` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/0a7bf60740757d79785b6a984a5eb79eb9db5db4/hw/femu/docs/design/ftl.md) at FEMU `0a7bf6074` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -456,15 +456,18 @@ The FTL has these pointers:
 
 | Pointer | In `struct ssd` | Takes | Opened |
 | --- | --- | --- | --- |
-| data | `wp` | host writes (only first writes with `hot_cold_sep=on`), GC relocations, read reclaim, merge relocations | at init |
+| data | `wp` | host writes (only first writes with `hot_cold_sep=on`), GC relocations and read reclaim (not with `gc_frontier=on`), wear levelling copies, merge relocations | at init |
 | hot | `hot_wp` | overwrites of mapped pages, with `hot_cold_sep=on` | on first use |
+| collection | `gc_wp` | GC relocations, read reclaim and retention refresh of untagged data, with `gc_frontier=on` | on first use |
 | log | `log_wp` | every host write under `hybrid` or `fast` | on first use |
 | stream | `stream_wp[i]` | writes of open stream `i` | on first use |
 | stream GC | `stream_gc_wp` | relocated pages of a released stream | on first use |
 | reclaim unit | per handle | FDP placement; see [FDP](../features/fdp.md) | FDP init |
 
-When a hot or log pointer cannot get a line, the write falls back to the
-data pointer. Every open pointer pins a line, so `bb_check_capacity()` adds
+When a hot, log or collection pointer cannot get a line, the write falls
+back to the data pointer. With `gc_frontier=on`, forced collection keeps at
+least 2 free lines, one for each frontier, and read reclaim seals an open
+collection line for any reason, as it does a translation page line. Every open pointer pins a line, so `bb_check_capacity()` adds
 one reserved line per pointer the configuration can hold open
 ([Capacity](#over-provisioning-and-capacity)).
 
@@ -764,6 +767,39 @@ buffer, FDP, Streams, CXL, hot/cold or hybrid mapping). Log page C0h counts
 the copies at offset 224, the lines it finishes at 232, and the lines the
 forced pass or the budget had to finish at 240.
 
+### Idle collection (`gc_idle_ms`)
+
+Collection otherwise runs only while host requests run, so a burst after a
+pause starts with the free lines the last burst left. With `gc_idle_ms`, the
+FTL thread collects in idle time, as a real drive does.
+
+```text
+  request tail (FTL thread): busy = max(busy, end of the request's media work)
+  FTL thread pass with no request:
+    due: now >= busy + gc_idle_ms and now >= fence   (timestamps only)
+    inside the sweep flag, as a request:
+      free lines >= idle target --> nothing to do
+      else do_gc(ssd, false): one victim, every normal guard
+      fence = latest end of all media work (LUN, channel, DQ, CA)
+      no victim or no gain --> fence also moves to now + gc_idle_ms
+```
+
+The idle target counts free lines, in the unit of `gc_thres_pcent`:
+
+```text
+  target = (1 - gc_idle_pcent / 100) * lines     (gc_idle_pcent 0: gc_thres_pcent)
+```
+
+A value below `gc_thres_pcent` makes idle time free more lines than the
+write path does.
+A host command that arrives during a step waits at most one victim's copies.
+The fence keeps the next step behind the media work of the last one.
+
+The first version takes one bbssd controller with one namespace of its own
+and page mapping. It refuses shared namespaces, `ns_mgmt`, FDP, `cxl_ssd`,
+`gc_pace`, Streams, `power_loss`, the pSLC tier and CSD. With the property
+at 0, the FTL thread does no new work.
+
 ### FDP reclaim units
 
 With Flexible Data Placement the FTL places data in reclaim units, one line
@@ -930,6 +966,30 @@ most worn namespace and the lowest spare.
 With `ecc_step_ns` set, a block's erase count (one tier per 750 erases) and
 the age of its line add time to each read. That model belongs to the NAND
 timing chapter.
+
+### Read retry and soft decode (`rber_ppb`)
+
+With `rber_ppb`, each host page read draws a decode outcome for each ECC
+codeword. A failed attempt costs one more page read on the same LUN and
+channel. The model is synthetic and not calibrated. It changes read time
+only, never data or status.
+
+```text
+  p        = rber_ppb * 1e-9 * 2^(PE/rber_pe_double + age/rber_age_double_sec
+                                  + reads/rber_read_double)
+  lambda   = min(p * 8 * ecc_cw_bytes, 4 * max(hard, soft), data bits)
+  lambda_k = lambda * (f + (1 - f) * rr_gain^-k)          f = rr_floor_pct / 100
+  codeword: attempt k = 0 .. rr_steps passes when u < F(ecc_hard_bits; lambda_k)
+            no pass --> soft decode passes when u < F(ecc_soft_bits; lambda_rr_steps)
+  page:     retries = deepest codeword; soft when any codeword needs it
+  time:     each retry and soft pass is a page read after the last one ends,
+            then rr_soft_ns of controller time
+```
+
+F is the Poisson CDF, summed in log space. u is a draw from a generator
+seeded with `rber_seed`. Each pass adds to the block read count, so read
+stress and read reclaim see it. GC reads, translation reads and FDP map
+reads are left out. Log page C0h counts the outcomes at offsets 296 to 320.
 
 ### Read-only end of life (`eol_read_only`)
 
@@ -1177,6 +1237,7 @@ does inside the FTL and what it interacts with.
 | `gc_policy` | line victim selection | under FDP, the reclaim unit strategy; needs `gc_strategy=0` |
 | `gc_seed` | seed for the `random` and `d-choice` policies and FDP random reclaim | no effect on the other policies |
 | `gc_pace` | paced collection: copies the victim in step with host writes ([paced collection](#paced-collection-gc_pace)) | replaces the background pass; refused where `blk_pe_limit` is, and under FDP |
+| `gc_idle_ms`, `gc_idle_pcent` | idle collection ([idle collection](#idle-collection-gc_idle_ms)) | one namespace, page mapping; refused with FDP, `gc_pace`, Streams, the tier |
 | `gc_strategy` | reclaim unit victim selection | FDP only; a `gc_policy` other than `greedy` replaces it |
 | `mapping` | L2P scheme | `hybrid` and `fast` reserve a line and refuse Streams and FDP |
 | `mapping_cache_mb` | DFTL cache size | used only with `mapping=dftl` |

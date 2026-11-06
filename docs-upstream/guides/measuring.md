@@ -3,12 +3,12 @@ title: "Measuring"
 description: "How to read FEMU's counters, measure latency and throughput from the guest, and get numbers that repeat from run to run. Commands in sh blocks run inside..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/guides/measuring.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0a7bf60740757d79785b6a984a5eb79eb9db5db4/hw/femu/docs/guides/measuring.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/guides/measuring.md`](https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/guides/measuring.md) at FEMU `43655371a` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/guides/measuring.md`](https://github.com/MoatLab/FEMU/blob/0a7bf60740757d79785b6a984a5eb79eb9db5db4/hw/femu/docs/guides/measuring.md) at FEMU `0a7bf6074` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -340,7 +340,19 @@ sudo fio --name=fdp --filename=/dev/ng0n1 --ioengine=io_uring_cmd --cmd_type=nvm
    namespace management starts its counters at zero, and deleting one
    removes its counts from C0h. Then precondition: fill the range you will read,
    and for steady-state write numbers, overwrite at random until the WAF
-   stops changing.
+   stops changing. To decide when it stops, run the writes in rounds of
+   equal length (for example `--runtime=60` each, with
+   `--output-format=json --output=round-N.json`) and give the rounds, in
+   order, to `femu-steady-state.py`. It applies the SNIA PTS rule: over the
+   last 5 rounds, the spread is at most 20% and the trend at most 10% of the
+   average. Measure only after the round it reports:
+
+   ```sh
+   python3 hw/femu/scripts/femu-steady-state.py round-*.json
+   ```
+
+   Sort the names by number if there are more than nine rounds. Per-round
+   WAF values, one per line, work too.
 4. **Measure intervals, not totals.** Read C0h, SMART or the QOM counters
    before and after each run and use the differences.
 5. **Run long enough, more than once.** Use `--time_based` with a

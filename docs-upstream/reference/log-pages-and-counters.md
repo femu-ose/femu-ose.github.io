@@ -3,12 +3,12 @@ title: "Log pages and counters"
 description: "How to read FEMU's own counters from the guest. Device properties are in properties.md, and the counters of femu-cxl-ssd are QOM properties listed in..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/reference/log-pages-and-counters.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0a7bf60740757d79785b6a984a5eb79eb9db5db4/hw/femu/docs/reference/log-pages-and-counters.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `43655371a` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/0a7bf60740757d79785b6a984a5eb79eb9db5db4/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `0a7bf6074` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -62,8 +62,12 @@ own media counters, little-endian at these offsets (`FemuStatsLog` in
 | 272 | 8 | Lines or units those pads closed |
 | 280 | 8 | Translation pages programmed (`mapping=dftl` without FDP): dirty CMT evictions, published changes, and translation pages that collection, refresh or wear levelling moved |
 | 288 | 8 | Translation pages read from flash (`mapping=dftl` without FDP) |
+| 296 | 8 | Host page reads with at least one read retry (`rber_ppb`) |
+| 304 | 8 | Read-retry page reads (`rber_ppb`) |
+| 312 | 8 | Host page reads with a soft decode, passed or failed (`rber_ppb`) |
+| 320 | 8 | Host page reads past the decode limit: soft decode failed, or failed with it off (`rber_ppb`) |
 
-Bytes 4-7 and 296-511 are reserved and read as zero. The counters are summed
+Bytes 4-7 and 328-511 are reserved and read as zero. The counters are summed
 over the controller's bbssd, CSD and KV namespaces (the block read count is the
 largest of them); other modes leave them zero. The write amplification factor
 stays zero until the host has written a page.
