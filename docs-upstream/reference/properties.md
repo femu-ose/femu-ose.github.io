@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/cb7c977b4195b898cf1509e3af93adb25c7465ce/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/cb7c977b4195b898cf1509e3af93adb25c7465ce/hw/femu/docs/reference/properties.md) at FEMU `cb7c977b4` (2026-11-05), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/reference/properties.md) at FEMU `43655371a` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -93,8 +93,8 @@ Devices:
 | `extended` | `uint8` | `0` | 1 boots with metadata interleaved with the data (extended LBAs); needs bit 0 of mc; 0 or 1 |
 | `meta` | `uint8` | `0` | Metadata bytes per logical block, NoSSD and bbssd only, not with FDP, dpc or dps; each format is then also offered with metadata |
 | `mc` | `uint8` | `0` | Metadata Capabilities bit mask: bit 0 interleaved (extended LBAs), bit 1 separate buffer; required when meta is set |
-| `pi` | `bool` | `off` | Offer end-to-end protection information types 1 to 3 when meta is at least 8 bytes and allow Format and Create to select them; not with power_loss or cxl_ssd |
-| `dpc` | `uint8` | `0` | Data Protection Capabilities reported in Identify Namespace when pi is off; must be 0 with meta |
+| `pi` | `bool` | `off` | Offer end-to-end protection information types 1 to 3, in the last 8 bytes of metadata, when meta is at least 8 bytes, and allow Format and Create to select them; not with power_loss or cxl_ssd |
+| `dpc` | `uint8` | `0` | Data Protection Capabilities reported in Identify Namespace when pi is off; must be 0 with meta, and bit 3 (first 8 bytes) is refused except on OCSSD |
 | `dps` | `uint8` | `0` | Data Protection Type Settings reported in Identify Namespace; a non-zero value needs 8 bytes of metadata, which meta refuses, so leave it 0 and use pi |
 | `ms` | `uint8` | `16` | No effect, kept for compatibility; meta sets the metadata size. A value other than the default warns at realize |
 | `ms_max` | `uint8` | `64` | No effect, kept for compatibility; OCSSD 2.0 reports a single LBA format. A value other than the default warns at realize |

@@ -3,12 +3,12 @@ title: "Log pages and counters"
 description: "How to read FEMU's own counters from the guest. Device properties are in properties.md, and the counters of femu-cxl-ssd are QOM properties listed in..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/cb7c977b4195b898cf1509e3af93adb25c7465ce/hw/femu/docs/reference/log-pages-and-counters.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/reference/log-pages-and-counters.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/cb7c977b4195b898cf1509e3af93adb25c7465ce/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `cb7c977b4` (2026-11-05), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `43655371a` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -158,7 +158,7 @@ it:
 Writes fail with Attempted Write to Read Only Range (status 182h, DNR). The
 same holds for Write Zeroes, Write Uncorrectable, Copy and a deallocating
 Dataset Management. The NVM Identify Controller (CNS 06h, CSI 00h) reports
-WZSL in byte 1, equal to MDTS. ONCS bit 3 is clear, so WZSL is a hard
+WZSL in byte 1, equal to MDTS, and VER 1.1 in bytes 23:20. ONCS bit 3 is clear, so WZSL is a hard
 limit.
 
 ## Thermal model

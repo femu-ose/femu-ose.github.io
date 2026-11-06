@@ -3,12 +3,12 @@ title: "Scripts and tools"
 description: "Every script and tool shipped under hw/femu/scripts/ and hw/femu/tools/: what it does, its arguments and the environment variables it reads. The top-level..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/cb7c977b4195b898cf1509e3af93adb25c7465ce/hw/femu/docs/reference/scripts.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/reference/scripts.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/scripts.md`](https://github.com/MoatLab/FEMU/blob/cb7c977b4195b898cf1509e3af93adb25c7465ce/hw/femu/docs/reference/scripts.md) at FEMU `cb7c977b4` (2026-11-05), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/scripts.md`](https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/reference/scripts.md) at FEMU `43655371a` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -232,6 +232,9 @@ explains each.
 | `gen-mode-table.py` | rewrites the mode tables from `docs/modes.py`; `--check` compares and checks `modes.py` against the code |
 | `check-doc-links.py` | `[--root DIR] [PATH...]`; checks every relative link and anchor |
 | `check-changelog-hashes.py` | `[--head COMMIT] [FILE]`; checks that every commit the CHANGELOG names is in the history of `--head` (needs a full clone) |
+| `check-c-style.py` | `[DIR]` (default `hw/femu`) or `--self-test`; finds C99 comments and trailing whitespace in `.c` and `.h` files, and fails on a tree with no source file |
+| `check-property-tests.py` | no argument or `--self-test`; checks that a file under `tests/` or `scripts/` names each property in `reference/properties.md`, or that `tests/untested-properties.list` lists it with a reason |
+| `check-unit-tests.py` | no argument, `--meson-names`, `--listed FILE` or `--self-test`; checks that each `tests/unit/test-*.c` is in `tests/meson.build` or `tests/Makefile`, and that the `femu-unit` suite lists every meson unit test |
 | `check-doc-examples.py` | `--lint`, `--list`, `--self-test`, `--qemu BINARY`, `--qos-test BINARY`, `--only NAME`, `--timeout SEC`, `[PATH...]`; checks every code block's tag and runs the tagged examples |
 
 ## CXL caching API tools: `hw/femu/tools/cca/`
@@ -242,7 +245,7 @@ guest builds `libcca.a`, the `ccactl` command and the `cca-test` self-test.
 runs the self-test as root, logging to `cca-guest-YYYYMMDD-HHMMSS.log` by
 default.
 See [the caching API guide](../features/cxl-cca.md) and the
-[tool README](https://github.com/MoatLab/FEMU/blob/cb7c977b4195b898cf1509e3af93adb25c7465ce/hw/femu/tools/cca/README.md).
+[tool README](https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/tools/cca/README.md).
 
 ## Legacy scripts
 

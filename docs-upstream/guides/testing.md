@@ -3,12 +3,12 @@ title: "Testing"
 description: "FEMU has five kinds of tests. The first four run without a guest and run in CI; the last runs inside a booted guest."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/cb7c977b4195b898cf1509e3af93adb25c7465ce/hw/femu/docs/guides/testing.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/guides/testing.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/guides/testing.md`](https://github.com/MoatLab/FEMU/blob/cb7c977b4195b898cf1509e3af93adb25c7465ce/hw/femu/docs/guides/testing.md) at FEMU `cb7c977b4` (2026-11-05), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/guides/testing.md`](https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/guides/testing.md) at FEMU `43655371a` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -18,7 +18,7 @@ CI; the last runs inside a booted guest.
 
 | Tests | Where | What they cover | Run with |
 | --- | --- | --- | --- |
-| Unit tests | `hw/femu/tests/unit/` | the NAND timing math, the completion priority queue, the hybrid mapping, the CXL cache, page table entries and caching API ring | `make -C hw/femu/tests check` and `meson test` in a build; each runs a different subset |
+| Unit tests | `hw/femu/tests/unit/` | the NAND timing math, the completion priority queue, the hybrid mapping, the CXL cache, page table entries and caching API ring | `make -C hw/femu/tests check`, and `meson test --suite femu-unit` in a build; each runs a different subset |
 | Device tests (qtest) | `hw/femu/tests/qtest/femu-test.c` | about 400 cases that drive the controller through its registers with no guest: every mode, admin and I/O commands, error paths, fuzzers, the CXL SSD | `qos-test` |
 | Documentation checks | `hw/femu/scripts/` | the property reference, mode tables, links and every example in the docs | `make -C hw/femu/tests check-docs` |
 | Host tool checks | `hw/femu/scripts/femu-stat.py`, `femu-config-check.py` | the host tools against QEMU under qtest, with planted faults | `make -C hw/femu/tests check-tools` |
@@ -52,18 +52,20 @@ make -C hw/femu/tests check
 make -C hw/femu/tests clean
 ```
 
-This compiles the NAND media, hybrid mapping, CXL cache, page table entry
-and caching API ring tests against a stub `qemu/osdep.h` and runs them, in
-about a second. The CXL cache test needs GLib development files and is
-skipped without them. In a configured build directory, meson runs the NAND
-media, priority queue and hybrid mapping tests against QEMU's real headers.
-CI runs both:
+This compiles the tests that need no GLib test framework against a stub
+`qemu/osdep.h` and runs them, in about a second. The CXL cache test needs
+GLib development files and is skipped without them. In a configured build
+directory, the `femu-unit` meson suite runs every test in
+`hw/femu/tests/meson.build` against QEMU's real headers. CI runs both:
 
 ```sh
 cd build
-./pyvenv/bin/meson test test-femu-nand-media test-femu-pqueue test-femu-hybrid-oracle \
-    --print-errorlogs
+./pyvenv/bin/meson test --suite femu-unit --print-errorlogs
 ```
+
+A new test goes in `tests/meson.build`, in `tests/Makefile`, or in both.
+`hw/femu/scripts/check-unit-tests.py` fails CI for a test source that is in
+neither list.
 
 ## Device tests (qtest)
 
@@ -451,4 +453,4 @@ starts it, enables each controller, and writes and reads one block. See
 
 - [Debugging](debugging.md)
 - [Scripts reference](../reference/scripts.md)
-- [CONTRIBUTING.md](https://github.com/MoatLab/FEMU/blob/cb7c977b4195b898cf1509e3af93adb25c7465ce/CONTRIBUTING.md)
+- [CONTRIBUTING.md](https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/CONTRIBUTING.md)

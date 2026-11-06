@@ -3,12 +3,12 @@ title: "Keeping the documentation correct"
 description: "Four checks keep the documentation in step with the code. CI runs all of them, and so does"
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/cb7c977b4195b898cf1509e3af93adb25c7465ce/hw/femu/docs/development/docs-maintenance.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/development/docs-maintenance.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/development/docs-maintenance.md`](https://github.com/MoatLab/FEMU/blob/cb7c977b4195b898cf1509e3af93adb25c7465ce/hw/femu/docs/development/docs-maintenance.md) at FEMU `cb7c977b4` (2026-11-05), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/development/docs-maintenance.md`](https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/development/docs-maintenance.md) at FEMU `43655371a` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -39,7 +39,7 @@ also needs an entry in [CHANGELOG.md](../changelog.md).
 
 ## Per-mode facts: `modes.py`
 
-[`hw/femu/docs/modes.py`](https://github.com/MoatLab/FEMU/blob/cb7c977b4195b898cf1509e3af93adb25c7465ce/hw/femu/docs/modes.py) holds one entry per mode or feature:
+[`hw/femu/docs/modes.py`](https://github.com/MoatLab/FEMU/blob/43655371ad22003f1b12d0b7441c9a8c632ff379/hw/femu/docs/modes.py) holds one entry per mode or feature:
 how to turn it on, a minimal example, the guest kernel and tools it needs,
 host requirements, its launcher and the page that documents it. Change a
 fact there, never in a table, then run
@@ -52,6 +52,12 @@ The script rewrites the text between `` and
 `` in README.md and in any page under
 `hw/femu/docs/` that has the two markers. To put the table on a new page, add
 the markers and run the script. README.md must keep its markers.
+
+The same script writes a checkbox list of the entries between
+`` and `` in
+`.github/ISSUE_TEMPLATE/bug_report.md` and `.github/pull_request_template.md`.
+Both files must keep these markers, so a new mode appears in the bug
+report and pull request forms with no manual edit.
 
 `--check` also compares `modes.py` with the code. Each `symbol` must have the
 stated `femu_mode` value in `hw/femu/nvme.h`, every mode in that enum must
