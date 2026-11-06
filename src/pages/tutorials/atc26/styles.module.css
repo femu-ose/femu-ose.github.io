@@ -129,3 +129,33 @@
 @media (max-width: 780px) { .header { height: 72px; } .menuButton { display: flex; align-items: center; gap: 18px; border: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 13px !important; padding: 8px 12px; border-radius: 4px; } .nav { display: none; position: absolute; top: 72px; left: 0; right: 0; padding: 18px 25px 25px; background: var(--paper); border-bottom: 1px solid var(--line); box-shadow: 0 15px 20px #142e4610; } .navOpen { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 25px; } .nav a { padding: 12px 0; } .nav .projectLink { border-left: 0; padding-left: 0; } .heroInner { grid-template-columns: 1fr; padding: 44px 0; gap: 40px; } .heroInner, .facts, .section { margin-left: 25px; margin-right: 25px; } .hero h1 { font-size: clamp(43px, 8vw, 62px); } .heroDescription { font-size: 17px; } .stackPanel { max-width: 540px; width: 100%; } .facts { grid-template-columns: 1fr 1fr; gap: 22px; } .section { padding: 55px 0; } .overviewGrid, .prepGrid, .resourcesGrid, .faqSection { grid-template-columns: 1fr; gap: 30px; } .outcomes { gap: 22px; } .outcomes h3 { font-size: 18px; } .outcomes p { font-size: 13px; } .audience { grid-template-columns: 1fr; gap: 15px; } .programIntro { display: block; } .badge { display: inline-block; margin-top: 22px; } .session summary { grid-template-columns: 80px 1fr 20px; gap: 15px; } .sessionId { display: none; } .time { font-size: 11px; } .sessionTitle strong { font-size: 17px; } .sessionTitle small { font-size: 9px; } .sessionBody { padding: 0 20px 25px 110px; } .interlude { grid-template-columns: 80px 1fr; gap: 15px; padding: 18px 15px; font-size: 11px; } .interlude > span:last-child { display: none; } .logistics { grid-template-columns: 1fr 1fr; } .people { grid-template-columns: 1fr; gap: 35px; } .people article { padding-bottom: 28px; border-bottom: 1px solid var(--line); } .initials { float: right; margin-left: 20px; width: 56px; height: 56px; } .people article > p:last-child { max-width: 520px; } .faqSection { gap: 30px; } .site section[id] { scroll-margin-top: 85px; } }
 @media (max-width: 450px) { .heroInner, .facts, .section { margin-left: 20px; margin-right: 20px; } .header { padding: 0 20px; } .heroEyebrow { font-size: 9px; } .hero h1 { font-size: 43px; } .actions { gap: 18px; } .facts strong { font-size: 13px; } .facts span { font-size: 10px; } .outcomes { grid-template-columns: 1fr; } .outcomes h3 { font-size: 21px; } .outcomes p { font-size: 15px; } .session summary { padding-left: 0; padding-right: 0; grid-template-columns: 76px 1fr 16px; gap: 10px; } .sessionBody { padding-left: 0; padding-right: 0; } .sessionTitle strong { font-size: 16px; } .prepLead { padding: 25px; } .stackPanel { padding: 18px; } .layer { padding: 13px 10px; gap: 10px; } .layer strong { font-size: 15px; } .layer small { font-size: 9px; } .figureLabel { font-size: 8px; } }
 @media (prefers-reduced-motion: reduce) { .site * { scroll-behavior: auto !important; transition: none !important; } }
+
+/* Conference tutorial typography and plain document sections. */
+.conference { font-size: 24px; color: var(--blue); margin-bottom: 22px !important; font-weight: 600; }
+.hero h1 { font-size: clamp(38px, 4vw, 57px); line-height: 1.15; letter-spacing: -.035em; }
+.heroInner { padding-top: 58px; padding-bottom: 58px; }
+.sectionHeading .eyebrow { display: none; }
+.figureLabel { font-size: 15px; letter-spacing: 0; }
+.stackPanel { box-shadow: none; border-radius: 4px; }
+.overviewGrid { grid-template-columns: 1fr; gap: 25px; }
+.overviewText { max-width: 960px; }
+.audience { background: transparent; padding: 0; margin-top: 27px; display: block; border-radius: 0; }
+.audience h3 { margin-bottom: 12px; }
+.audience p { max-width: 960px; font-size: 16px; }
+.prepLead { background: transparent; border: 0; border-radius: 0; padding: 0; }
+.prepLead h3 { font-size: 22px; margin-top: 0; }
+.prepLead > p { border-top: 0; padding-top: 0; }
+.logisticsNote, .releaseNote { color: var(--muted); font-size: 15px; margin-top: 30px !important; max-width: 960px; }
+.people { display: block; margin-top: 32px; max-width: 960px; }
+.people article { padding: 0; border: 0; margin-top: 28px; }
+.people article > p:last-child { font-size: 16px; max-width: none; }
+.people h3 { font-size: 22px; }
+.affiliation { font-size: 14px; margin: 5px 0 10px !important; }
+.resourceList > a { padding: 15px 0; }
+.sessionId { border: 0; border-radius: 0; }
+.sessionTitle strong { font-size: 18px; }
+.sessionBody { padding-top: 5px; }
+.interlude { background: transparent; border-bottom: 1px solid var(--line); }
+.breakRow { background: transparent; }
+@media (max-width: 780px) { .conference { font-size: 21px; } .overviewGrid { gap: 24px; } .hero h1 { font-size: 43px; } }
+@media (max-width: 450px) { .hero h1 { font-size: 36px; } .sessionTitle strong { font-size: 16px; } .prepLead { padding: 0; } }
