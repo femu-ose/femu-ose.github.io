@@ -5,6 +5,8 @@ slug: /modes
 description: "Compare FEMU device interfaces and choose a mode for block I/O, zones, placement hints, key-value commands, or computational storage."
 ---
 
+import DesignFigure from '@site/src/components/DesignFigure';
+
 # Mode notes
 
 :::tip[Design note]
@@ -33,6 +35,10 @@ trace.
 | [No SSD](/docs/modes/nossd) | 2 | No flash placement | NVMe software path and optional controller costs |
 | [OpenChannel](/docs/modes/ocssd) | 0 | Compatible host placement stack | Historical physical I/O and chunk management |
 | [CXL SSD](/manual/modes/cxl-ssd) (manual) | `-device femu-cxl-ssd` | Device cache and FTL behind CXL memory | Load and store access with SSD timing on cache misses |
+
+<DesignFigure src="/img/site/host-device-split.svg"
+  alt="Host and device responsibilities in BlackBox, FDP, ZNS and Open-Channel modes, from device-managed to host-managed placement"
+  caption="Who decides where data lands. In BlackBox mode the device maps and places every block; with FDP the host tags writes with a placement handle and the device maps it to a reclaim unit; with ZNS the host writes each zone sequentially; with Open-Channel the host runs the FTL and the device checks addresses and times the media." />
 
 ## Choosing a starting point
 
