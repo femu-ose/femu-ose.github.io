@@ -3,12 +3,12 @@ title: "NVMe frontend"
 description: "The NVMe frontend is the part of -device femu that a guest driver talks to: the PCI function, the controller registers, the admin and I/O queues, the poller..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/0a7bf60740757d79785b6a984a5eb79eb9db5db4/hw/femu/docs/design/nvme-frontend.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/4321a87957cb187346d7e97e57a130437acfa0df/hw/femu/docs/design/nvme-frontend.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/0a7bf60740757d79785b6a984a5eb79eb9db5db4/hw/femu/docs/design/nvme-frontend.md) at FEMU `0a7bf6074` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/4321a87957cb187346d7e97e57a130437acfa0df/hw/femu/docs/design/nvme-frontend.md) at FEMU `4321a8795` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -327,7 +327,11 @@ Plan one core per poller and one for the FTL thread
 ### Data copies and write atomicity
 
 Identify reports AWUN 0, so a one-block write must reach the media whole
-with respect to every other command. With more than one poller, two commands
+with respect to every other command. With `atomic_write_lbas` = N, each
+namespace reports NAWUN and NABSN as N - 1. The same locks cover each
+whole command, so a write of up to N blocks inside one N-block boundary
+is atomic too. NAWUPF stays 0: a power loss can still tear a buffered
+write, so `power_loss` refuses the property. With more than one poller, two commands
 on the same blocks copy at the same time. Each access to the memory backend
 therefore holds the locks of the 4 KiB granules it touches. The granules share
 1024 locks: granule `g` takes lock `g % 1024`.
