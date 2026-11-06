@@ -1,6 +1,6 @@
 ---
 title: "Learn FEMU"
-description: "Run a verified storage experiment, understand the implementation, or teach a prepared FEMU lab."
+description: "Run a verified storage experiment, understand the implementation, or explore the FEMU tutorial."
 ---
 
 # Learn FEMU
@@ -15,7 +15,7 @@ runnable experiment, checked data, and a reproducible explanation.
 
 ## A complete learning path
 
-The [ATC26 edition](/docs/tutorials/atc26) covers architecture, garbage
+The [ATC26 edition](/tutorials/atc26/) covers architecture, garbage
 collection, FDP, ZNS, computational storage, CXL and a command extension.
 Its source is frozen at `1918eb9795ba`; newer documentation does not silently
 change the edition's experiments. See its [qualification record](/docs/tutorials/atc26/errata).

@@ -149,6 +149,7 @@ const config = {
         items: [
           {to: '/docs/start', label: 'Get started', position: 'left'},
           {to: '/docs/learn', label: 'Learn', position: 'left'},
+          {to: '/tutorials/atc26/', label: 'Tutorial', position: 'left'},
           {
             type: 'docSidebar',
             sidebarId: 'manual',

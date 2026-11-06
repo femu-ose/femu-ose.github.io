@@ -16,8 +16,8 @@ const sidebars = {
     {
       type: 'category',
       label: 'FEMU tutorial',
-      link: {type: 'doc', id: 'tutorials/atc26/index'},
-      items: ['tutorials/atc26/setup', 'tutorials/atc26/s0', 'tutorials/atc26/s1', 'tutorials/atc26/s2', 'tutorials/atc26/s3', 'tutorials/atc26/s4', 'tutorials/atc26/s5', 'tutorials/atc26/s6', 'tutorials/atc26/advanced', 'tutorials/atc26/downloads', 'tutorials/atc26/errata'],
+      link: {type: 'generated-index', title: 'Tutorial reference', description: 'Candidate lesson outlines. Visit the dedicated tutorial website for the program and participation guidance.'},
+      items: [{type: 'link', label: 'Tutorial website ↗', href: '/tutorials/atc26/'}, 'tutorials/atc26/index', 'tutorials/atc26/setup', 'tutorials/atc26/s0', 'tutorials/atc26/s1', 'tutorials/atc26/s2', 'tutorials/atc26/s3', 'tutorials/atc26/s4', 'tutorials/atc26/s5', 'tutorials/atc26/s6', 'tutorials/atc26/advanced', 'tutorials/atc26/downloads', 'tutorials/atc26/errata'],
     },
     {
       type: 'category',
