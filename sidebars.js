@@ -17,7 +17,7 @@ const sidebars = {
       type: 'category',
       label: 'FEMU tutorial',
       link: {type: 'doc', id: 'tutorials/atc26/index'},
-      items: ['tutorials/atc26/setup', 'tutorials/atc26/s0', 'tutorials/atc26/s1', 'tutorials/atc26/s2', 'tutorials/atc26/s3', 'tutorials/atc26/s4', 'tutorials/atc26/s5', 'tutorials/atc26/s6', 'tutorials/atc26/advanced', 'tutorials/atc26/instructors', 'tutorials/atc26/downloads', 'tutorials/atc26/errata'],
+      items: ['tutorials/atc26/setup', 'tutorials/atc26/s0', 'tutorials/atc26/s1', 'tutorials/atc26/s2', 'tutorials/atc26/s3', 'tutorials/atc26/s4', 'tutorials/atc26/s5', 'tutorials/atc26/s6', 'tutorials/atc26/advanced', 'tutorials/atc26/downloads', 'tutorials/atc26/errata'],
     },
     {
       type: 'category',

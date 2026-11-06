@@ -1,6 +1,6 @@
 ---
 title: "FEMU ATC26 tutorial"
-description: "A frozen hands-on FEMU edition with seven sessions, verified lab contracts, slides and instructor guidance."
+description: "A frozen hands-on FEMU edition with seven sessions, verified lab contracts, slides and exercises."
 ---
 
 # FEMU ATC26 tutorial
@@ -34,8 +34,7 @@ Each exercise begins with a prediction and ends with evidence. Only the
 paired placement experiments support a controlled performance comparison.
 ZNS, CSD and CXL change the interface and answer different questions.
 
-[Instructor guide](/docs/tutorials/atc26/instructors) ·
 [Community help](/docs/community) · [How to cite FEMU](/docs/research/cite)
 
-Videos are not yet recorded. The learner pack includes speaking notes and
+Videos are not yet recorded. The learner pack includes slides and
 worksheets; no recording is implied by those materials.

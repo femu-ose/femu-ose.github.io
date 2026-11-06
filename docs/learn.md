@@ -12,7 +12,6 @@ runnable experiment, checked data, and a reproducible explanation.
 | --- | --- | --- |
 | Run an experiment | [Conference lab setup](/docs/tutorials/atc26/setup), then [S0](/docs/tutorials/atc26/s0) | Verified readback and a complete receipt |
 | Understand or extend FEMU | [Follow one write](/docs/community/developer-path), then [S6](/docs/tutorials/atc26/s6) | A small patch with failing and passing tests |
-| Teach with FEMU | [Instructor guide](/docs/tutorials/atc26/instructors) | Prepared environments, checkpoints and recovery instructions |
 
 ## A complete learning path
 

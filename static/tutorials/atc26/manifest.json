@@ -1,199 +1,67 @@
 {
   "edition": "atc26-20261022",
   "femu_source": "1918eb9795baa4483e7721429db5e58c54305878",
-  "qualification": "See labs/QUALIFICATION.md for per-module evidence and open gates.",
+  "qualification": "See lessons/errata.md for module status and known limitations.",
   "files": {
     "README.md": {
-      "bytes": 2933,
-      "sha256": "aa7db9187e53dc76a003ae33f93f731a0fc8300fa96702e694541f249ad5db4d"
-    },
-    "beamer/S0-architecture/CHECKED.md": {
-      "bytes": 387,
-      "sha256": "ee934547adaf74574c586b08ea4da76c3f4462f7636df3b270da74e231101347"
-    },
-    "beamer/S0-architecture/Makefile": {
-      "bytes": 35,
-      "sha256": "e6125d81f3d38452730acbae38d6d2c8e9ed8623a4f1ebc5bca26d42c4540035"
+      "bytes": 2849,
+      "sha256": "299b5ca39d342887056ce06159b9fed1706f9a450902ce4925bb492b22f6482f"
     },
     "beamer/S0-architecture/main-handout.pdf": {
       "bytes": 315387,
       "sha256": "faa752d435067115aca0ba27acf3769beaa69489a8ee8356abe8d141935556cf"
     },
-    "beamer/S0-architecture/main-notes.pdf": {
-      "bytes": 352989,
-      "sha256": "0b6fd39f2b975f064f09d13cbcac27c21d27011c4b46f7b4420e9e05f31e22f0"
-    },
     "beamer/S0-architecture/main.pdf": {
       "bytes": 354869,
       "sha256": "09c9de024125b82ba1d3f4a1e71a9fd1cd26336822b42f5564733aa27b1afa33"
-    },
-    "beamer/S0-architecture/main.tex": {
-      "bytes": 29355,
-      "sha256": "863b3f2c02437f1cac1cae3286259b3bd180b9981c1e621effe80991ecb70859"
-    },
-    "beamer/S1-blackbox/CHECKED.md": {
-      "bytes": 387,
-      "sha256": "ee934547adaf74574c586b08ea4da76c3f4462f7636df3b270da74e231101347"
-    },
-    "beamer/S1-blackbox/Makefile": {
-      "bytes": 35,
-      "sha256": "e6125d81f3d38452730acbae38d6d2c8e9ed8623a4f1ebc5bca26d42c4540035"
     },
     "beamer/S1-blackbox/main-handout.pdf": {
       "bytes": 373737,
       "sha256": "82f1db1a27badfe115b2abec071a01dcc38b8d8a4b16237354678b41e98ed883"
     },
-    "beamer/S1-blackbox/main-notes.pdf": {
-      "bytes": 429711,
-      "sha256": "e86817b76ce7c0cd1b4b2ecd127a77abda2ca6f90a9f067d3ee154bfc4c4a95d"
-    },
     "beamer/S1-blackbox/main.pdf": {
       "bytes": 429778,
       "sha256": "ce39d3763a6562e819d184f8db815c6f4e474003ff97646b597066c8cfc06f39"
-    },
-    "beamer/S1-blackbox/main.tex": {
-      "bytes": 23808,
-      "sha256": "154d8e7624a188e9eb39aad56859cf25a82cc9c851e0b6621cc4a7dcb112e075"
-    },
-    "beamer/S2-fdp/CHECKED.md": {
-      "bytes": 379,
-      "sha256": "6fabc2b0c6b423dd64944c1a19f7ca4e38aa5f575c952fc3bd85e8a99bedcae8"
-    },
-    "beamer/S2-fdp/Makefile": {
-      "bytes": 35,
-      "sha256": "e6125d81f3d38452730acbae38d6d2c8e9ed8623a4f1ebc5bca26d42c4540035"
     },
     "beamer/S2-fdp/main-handout.pdf": {
       "bytes": 162015,
       "sha256": "10c0528305d11d09135945fcd58dab13d889f868825608e573d332bf0fc1b22d"
     },
-    "beamer/S2-fdp/main-notes.pdf": {
-      "bytes": 157852,
-      "sha256": "b872d732ad4e8994f607a390893c52538e6f53486d8ff340a44a6f4883ac7920"
-    },
     "beamer/S2-fdp/main.pdf": {
       "bytes": 168825,
       "sha256": "4636ce053ef27462779370b4971fd479e99ac6389e3f6e9d5dce3a557349feea"
-    },
-    "beamer/S2-fdp/main.tex": {
-      "bytes": 6404,
-      "sha256": "002934985e011bc974bd7eb0971f0310385b54eb89831773739f1a1a124283ec"
-    },
-    "beamer/S3-zns/CHECKED.md": {
-      "bytes": 379,
-      "sha256": "a2e56899379f3d183ac62319b836f0c081d9d1d3db3324a2958e9f7718178397"
-    },
-    "beamer/S3-zns/Makefile": {
-      "bytes": 35,
-      "sha256": "e6125d81f3d38452730acbae38d6d2c8e9ed8623a4f1ebc5bca26d42c4540035"
     },
     "beamer/S3-zns/main-handout.pdf": {
       "bytes": 146754,
       "sha256": "675d66874ea4aa918b52b6e973696177bf42922fd02c9275c9780bce1012f4d3"
     },
-    "beamer/S3-zns/main-notes.pdf": {
-      "bytes": 145850,
-      "sha256": "25e5d251e51ee4c091e73e8dcce533921b3f29804c6e1a1dc3a017ae5f0dfc71"
-    },
     "beamer/S3-zns/main.pdf": {
       "bytes": 153922,
       "sha256": "e901b7908a7f4b8d8c9a18bd49f94f7bdd118f900a47cb0a76e89819a4df35c8"
-    },
-    "beamer/S3-zns/main.tex": {
-      "bytes": 5998,
-      "sha256": "930095157af5e2e953977b1e3bc9202e1dd61a98eb987a435d355e50f9bdb185"
-    },
-    "beamer/S4-csd/CHECKED.md": {
-      "bytes": 379,
-      "sha256": "a6a3e03b193262244b6982e92dedd60531daf6919f35d35252017320882a085e"
-    },
-    "beamer/S4-csd/Makefile": {
-      "bytes": 35,
-      "sha256": "e6125d81f3d38452730acbae38d6d2c8e9ed8623a4f1ebc5bca26d42c4540035"
     },
     "beamer/S4-csd/main-handout.pdf": {
       "bytes": 178871,
       "sha256": "16827715160f4f5b590089966301369a5a408107a44c15d60fb5f59237038a0b"
     },
-    "beamer/S4-csd/main-notes.pdf": {
-      "bytes": 171418,
-      "sha256": "710c8d554b98f1a91d19bc3bb75b66071ebcf11f60a1d7d9fe7c00d6717e3f4c"
-    },
     "beamer/S4-csd/main.pdf": {
       "bytes": 181868,
       "sha256": "915927ab1fe359b90f138a9a0cdfcf9c6f12450627a8de98dbeafbbb03e9d8d2"
-    },
-    "beamer/S4-csd/main.tex": {
-      "bytes": 5782,
-      "sha256": "29b61a76f3b0b101e8db58fb92c639e268eec262e09e23f9e151c94717a5fd9c"
-    },
-    "beamer/S5-cxl/CHECKED.md": {
-      "bytes": 379,
-      "sha256": "d9c171b00c60327f56e89d67a442a4a33f44e1668843c3941bdcbfe236896b8d"
-    },
-    "beamer/S5-cxl/Makefile": {
-      "bytes": 35,
-      "sha256": "e6125d81f3d38452730acbae38d6d2c8e9ed8623a4f1ebc5bca26d42c4540035"
     },
     "beamer/S5-cxl/main-handout.pdf": {
       "bytes": 153674,
       "sha256": "cf9fdf6738ef74e68b1f39197ef232812c28a1224b96b305d3224502ddc90710"
     },
-    "beamer/S5-cxl/main-notes.pdf": {
-      "bytes": 152638,
-      "sha256": "8cddc5ed372b177aae1ee07aaf4e70ceeb39b69bcefc14e6f06a6af26600e5e3"
-    },
     "beamer/S5-cxl/main.pdf": {
       "bytes": 156881,
       "sha256": "cf00f12a3a3b28f4f8ada2f8b7274b943f0dd466e5303715113ed1d3eff891b7"
-    },
-    "beamer/S5-cxl/main.tex": {
-      "bytes": 5621,
-      "sha256": "199a3384cabb0c78a6ac2da6051aff42308694efbcea63350dc4525178695b3d"
-    },
-    "beamer/S6-extending/CHECKED.md": {
-      "bytes": 379,
-      "sha256": "df3fb6bccabb2dcaf3586f697a213762a224c0b1d155e15bbd832b8ab9430e37"
-    },
-    "beamer/S6-extending/Makefile": {
-      "bytes": 35,
-      "sha256": "e6125d81f3d38452730acbae38d6d2c8e9ed8623a4f1ebc5bca26d42c4540035"
     },
     "beamer/S6-extending/main-handout.pdf": {
       "bytes": 138541,
       "sha256": "d05fb59c4da121a3fef7300b2da88aba58ab26195f5e83401f5b0cfda83caab9"
     },
-    "beamer/S6-extending/main-notes.pdf": {
-      "bytes": 129217,
-      "sha256": "e66a2876f297f001726c588d7bf9ac514390f4bcfcfc92c7a9e3679fe2a35bea"
-    },
     "beamer/S6-extending/main.pdf": {
       "bytes": 141915,
       "sha256": "244803ba13e20c278fa32c6acd8230de1a17f0435cd55c98fe110592152204ce"
-    },
-    "beamer/S6-extending/main.tex": {
-      "bytes": 4852,
-      "sha256": "122a5fef4a92d3910b169fcdbcd0f7b4e1e997cef648b510df7e564855e1ff3b"
-    },
-    "beamer/common/Makefile.include": {
-      "bytes": 1894,
-      "sha256": "a2f5dc93c3044bd6a84c517a3bc330a8f807e30f8ff8c39451d0233bed68201a"
-    },
-    "beamer/common/femu-style.sty": {
-      "bytes": 8571,
-      "sha256": "ef6d226e0548d64a73a46d200b5344e46a8632c2ee6001f6f4a810d701c835fc"
-    },
-    "beamer/common/lkp-style.sty": {
-      "bytes": 9037,
-      "sha256": "d1b2735905dd57663a58619f3f7334033b0f084ae9393e0f1300d354a8f132a4"
-    },
-    "beamer/common/lkp-tikz-styles.sty": {
-      "bytes": 13545,
-      "sha256": "4e57ecb43d6c3011f76b8931ab442ec7277532769b34671641f21dc8b752bc00"
-    },
-    "beamer/common/vtlogo.pdf": {
-      "bytes": 6715,
-      "sha256": "bb7fc154af0ce754498239fefd013ff2ebf5c5ecf52a12639d6253a7feb26c72"
     },
     "figures/arch-io-write.svg": {
       "bytes": 136857,
@@ -222,14 +90,6 @@
     "figures/zns-states.svg": {
       "bytes": 120790,
       "sha256": "2107f57f1d29c57f6f9d3b6469aea51e35b34f5ad9fb64488bcc1331cf9d1330"
-    },
-    "labs/QUALIFICATION.md": {
-      "bytes": 3381,
-      "sha256": "df96f768a5b4c085a76795f3533cd1b1e36a2625adc7073f545b099aac5d9fed"
-    },
-    "labs/RELEASE.md": {
-      "bytes": 2933,
-      "sha256": "aa7db9187e53dc76a003ae33f93f731a0fc8300fa96702e694541f249ad5db4d"
     },
     "labs/bin/build-cxl-kernel.sh": {
       "bytes": 1257,
@@ -327,10 +187,6 @@
       "bytes": 491,
       "sha256": "13899a62034a78a161752cec8c92f5282464f32abdd2fe851302a0b1ee5872ac"
     },
-    "labs/qualification/observed-results-2026-10-22.json": {
-      "bytes": 2397,
-      "sha256": "14366c45f69f0e6885e1e7fe81fa485ee3e91a742a7d863796d7749c5387f15c"
-    },
     "labs/tests/test_contract.py": {
       "bytes": 4520,
       "sha256": "f8d243d260e0e1f3d6d412193fc8c79c42f649c39bb27c687007b6cf59fe4ea1"
@@ -340,64 +196,52 @@
       "sha256": "694582be0b5c12d4c336517449086435d5ff2ce85dee15bb31e375df1590aa36"
     },
     "lessons/downloads.md": {
-      "bytes": 416,
-      "sha256": "a065c4c665e6644313c1f5c99e6402edcea83e6aa1c591c6ab12ba740f0207ec"
+      "bytes": 307,
+      "sha256": "88e938fab3b89a45760b98bcfe60b98c6bfd1c3ff9be113f8d2d24fb27855218"
     },
     "lessons/errata.md": {
       "bytes": 1933,
       "sha256": "8bafdef487f00fe51a6f67b76d82a291f284bf2fa9d9cee55d49a206d509aa49"
     },
     "lessons/index.md": {
-      "bytes": 1962,
-      "sha256": "310fd9a015326d73f80dd868596c79552562426a800d7f2cbdc817e6764b1451"
-    },
-    "lessons/instructors.md": {
-      "bytes": 2416,
-      "sha256": "49431a95b421f8ca59b37700d2ceb1d079b88350b7b4d2a72fd956feeb10bac9"
+      "bytes": 1906,
+      "sha256": "391cc2800321135d652f76510fd295d7e265ab9318a850358f11be4297901fd3"
     },
     "lessons/s0.md": {
-      "bytes": 2300,
-      "sha256": "23e1595303fdcaee76fa9780a7e7d4d34bcf803e0781094d13c8bd93558cddf5"
+      "bytes": 2284,
+      "sha256": "7413775e0df44aeda3d8d7798253394fdc5d479794e4bffd9fc5f5644ee7bd06"
     },
     "lessons/s1.md": {
-      "bytes": 2389,
-      "sha256": "ec01cf3550ff3d3bd6e2573df0f17ffcae1d33416de7187ea7e34329ae4b72dd"
+      "bytes": 2373,
+      "sha256": "ac81648e723565b07525d65988c156531ba4ff2ea69b04823bbfbb4096083116"
     },
     "lessons/s2.md": {
-      "bytes": 2571,
-      "sha256": "9467f307ea3161b815f02ec58b51a3b745bfec7951047e6da9a06b13a4f119ed"
+      "bytes": 2555,
+      "sha256": "9ee33943f913a0ce5deb844aa408949348fdaa3ff461f57f40bc088ed8c9f057"
     },
     "lessons/s3.md": {
-      "bytes": 2471,
-      "sha256": "91f74a27c322c81d61e19374c09c9a80b332e61d55e49ce5a3913c220f204214"
+      "bytes": 2455,
+      "sha256": "f118edb6190783aaddfd656905021043ca8c4e7a2a09f6f47243b572c6ec62a1"
     },
     "lessons/s4.md": {
-      "bytes": 2516,
-      "sha256": "b1e8ce58c7a91b2c147c443876b1ecdb03ec298be1820f3bdd58875586aa0196"
+      "bytes": 2500,
+      "sha256": "75183ea5653a9b9b00712d7e36cff55dd1c3f10bc89c7ce790607a2e6991862e"
     },
     "lessons/s5.md": {
-      "bytes": 2527,
-      "sha256": "435f63c0eed950518c9819ebcfdf9e8efd4f41c6a1331296291764432a8cd142"
+      "bytes": 2511,
+      "sha256": "864ef4b181cfd394d3ce0e83230b58caddc58c9c6e5b79653d58cda59803088c"
     },
     "lessons/s6.md": {
-      "bytes": 2632,
-      "sha256": "c5e4e2ad8af95342cc9cea84d4c1adfc1982b5c34435d3ec14369a54ecf211bb"
+      "bytes": 2616,
+      "sha256": "102552972b18bb27d71a593404542a76c196d445ffebf27647a50cb25b8cd661"
     },
     "lessons/setup.md": {
       "bytes": 3661,
       "sha256": "b3121313c1234e3e3e57e1e0fb2ef09de67c1f56a1a367662b4f5e5f49e7768f"
     },
-    "recording-kit.md": {
-      "bytes": 4241,
-      "sha256": "4e12ce28897f455b1cf9d09e088ab2d842121938e4fa641616e4f02d68b181e6"
-    },
     "release/femu-atc26-handout.pdf": {
       "bytes": 1576035,
       "sha256": "e76f564cd83b0a345ddf5b92b5cd3072ef1a6ac90fb0ab6858d9cf9f21658c6f"
-    },
-    "release/femu-atc26-notes.pdf": {
-      "bytes": 1677404,
-      "sha256": "b749a048db579d821f97853732aa1d5116cf2601050601352327bf0ed88f0ea8"
     },
     "release/femu-atc26-presentation.pdf": {
       "bytes": 1713412,
@@ -408,12 +252,8 @@
       "sha256": "43c0a19d2a9505e28c8332ea72acad8e48e1e7f11ee5428004e4d8023b4820a3"
     },
     "tools/check-pack.py": {
-      "bytes": 1164,
-      "sha256": "884f8d15e9746f83a19a3ff453db5374ebd896741a2d16c87775ee37e70e74fc"
-    },
-    "tools/join-core.py": {
-      "bytes": 856,
-      "sha256": "9365deff9e67b0f8e4bcb1bd1b4f4b5ab4ae0cb1ad29f11dd0fafedbf6e5772d"
+      "bytes": 1477,
+      "sha256": "729dd6cc0a5d36d5eae5fb7457fd4474429943f3c2574d9c5d2552a6c9377698"
     },
     "workbook.md": {
       "bytes": 4648,

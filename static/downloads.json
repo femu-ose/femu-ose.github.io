@@ -127,19 +127,13 @@
       "path": "tutorials/atc26/femu-atc26-learner-pack.sha256",
       "kind": "tutorial patch",
       "bytes": 97,
-      "sha256": "f46ade9b7e4445bb87c229101edb608fc8195c5c0eb6c4fa400325fb4cbbf27d"
+      "sha256": "490abe45a8f6ff6db05f786dd86f374bb50da687fbbff32d6b5001827de593b5"
     },
     {
       "path": "tutorials/atc26/femu-atc26-learner-pack.tar.gz",
       "kind": "tutorial patch",
-      "bytes": 9180111,
-      "sha256": "2e199b4595a8490159cfb3886363639aab7c31ca90b548740597013218b53763"
-    },
-    {
-      "path": "tutorials/atc26/femu-atc26-notes.pdf",
-      "kind": "tutorial patch",
-      "bytes": 1677404,
-      "sha256": "b749a048db579d821f97853732aa1d5116cf2601050601352327bf0ed88f0ea8"
+      "bytes": 6151588,
+      "sha256": "e2ea9d004fd71daa0c39f4848eebf039be0db7a1d948f8b2b23f652faa2d1e20"
     },
     {
       "path": "tutorials/atc26/femu-atc26-presentation.pdf",
@@ -156,8 +150,8 @@
     {
       "path": "tutorials/atc26/manifest.json",
       "kind": "tutorial patch",
-      "bytes": 15339,
-      "sha256": "b47c035e0d7a1195a5df805268d73e8b7abd6b5069d6a09ba82376900f6a53c2"
+      "bytes": 9433,
+      "sha256": "2e8ee45c3335b8cd438cb5a961774031bdcda1cc598a3b6af48a8cfb5824851e"
     },
     {
       "path": "tutorials/ecc-boundary.patch",
