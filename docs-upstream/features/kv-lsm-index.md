@@ -3,12 +3,12 @@ title: "LSM-tree key index for KV namespaces"
 description: "A key-value namespace keeps a device index from each key to the place of its value. By default this index is an open-addressed hash in device DRAM. With..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/6208ba1e5b8fd413497c429f2f65d0332b2e92a3/hw/femu/docs/features/kv-lsm-index.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/10d3b6bec3bbb3a79f08112a3b23b1e54e247e74/hw/femu/docs/features/kv-lsm-index.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/kv-lsm-index.md`](https://github.com/MoatLab/FEMU/blob/6208ba1e5b8fd413497c429f2f65d0332b2e92a3/hw/femu/docs/features/kv-lsm-index.md) at FEMU `6208ba1e5` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/kv-lsm-index.md`](https://github.com/MoatLab/FEMU/blob/10d3b6bec3bbb3a79f08112a3b23b1e54e247e74/hw/femu/docs/features/kv-lsm-index.md) at FEMU `10d3b6bec` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
