@@ -3,12 +3,12 @@ title: "OCSSD: the Open-Channel extension"
 description: "This chapter describes how FEMU emulates an Open-Channel SSD (femu_mode=0). It covers the internals: the two protocol versions, their address formats, the..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/4f57fad16fe5f8a39fa651f91ee64413639a513a/hw/femu/docs/design/ocssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0513a1f851669e38e154a1baa247347a7fa0b65c/hw/femu/docs/design/ocssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ocssd.md`](https://github.com/MoatLab/FEMU/blob/4f57fad16fe5f8a39fa651f91ee64413639a513a/hw/femu/docs/design/ocssd.md) at FEMU `4f57fad16` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ocssd.md`](https://github.com/MoatLab/FEMU/blob/0513a1f851669e38e154a1baa247347a7fa0b65c/hw/femu/docs/design/ocssd.md) at FEMU `0513a1f85` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -538,13 +538,13 @@ Refusals at realize are listed in the
 
 | File | Contents |
 | --- | --- |
-| [`hw/femu/ocssd/oc12.c`](https://github.com/MoatLab/FEMU/blob/4f57fad16fe5f8a39fa651f91ee64413639a513a/hw/femu/ocssd/oc12.c), [`oc12.h`](https://github.com/MoatLab/FEMU/blob/4f57fad16fe5f8a39fa651f91ee64413639a513a/hw/femu/ocssd/oc12.h) | 1.2 commands, PPA format, sector metadata, bad block tables, init and exit |
-| [`hw/femu/ocssd/oc20.c`](https://github.com/MoatLab/FEMU/blob/4f57fad16fe5f8a39fa651f91ee64413639a513a/hw/femu/ocssd/oc20.c), [`oc20.h`](https://github.com/MoatLab/FEMU/blob/4f57fad16fe5f8a39fa651f91ee64413639a513a/hw/femu/ocssd/oc20.h) | 2.0 commands, chunk descriptors, write pointer rules, geometry, log page |
-| [`hw/femu/ocssd/oc-timing.c`](https://github.com/MoatLab/FEMU/blob/4f57fad16fe5f8a39fa651f91ee64413639a513a/hw/femu/ocssd/oc-timing.c), [`oc-timing.h`](https://github.com/MoatLab/FEMU/blob/4f57fad16fe5f8a39fa651f91ee64413639a513a/hw/femu/ocssd/oc-timing.h) | `flash_type` times (`set_latency()`), geometry bound check, 0xEE |
-| [`hw/femu/nand/nand-media.c`](https://github.com/MoatLab/FEMU/blob/4f57fad16fe5f8a39fa651f91ee64413639a513a/hw/femu/nand/nand-media.c) | chip and channel busy-until times for both versions |
-| [`hw/femu/nand/nand.h`](https://github.com/MoatLab/FEMU/blob/4f57fad16fe5f8a39fa651f91ee64413639a513a/hw/femu/nand/nand.h), [`nand.c`](https://github.com/MoatLab/FEMU/blob/4f57fad16fe5f8a39fa651f91ee64413639a513a/hw/femu/nand/nand.c) | per-cell-type latency tables and page-type tables |
-| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/4f57fad16fe5f8a39fa651f91ee64413639a513a/hw/femu/femu.c) | `nvme_register_extensions()`, realize-time checks |
-| [`hw/femu/nvme-io.c`](https://github.com/MoatLab/FEMU/blob/4f57fad16fe5f8a39fa651f91ee64413639a513a/hw/femu/nvme-io.c) | `nvme_io_cmd()` dispatch, completion queue |
+| [`hw/femu/ocssd/oc12.c`](https://github.com/MoatLab/FEMU/blob/0513a1f851669e38e154a1baa247347a7fa0b65c/hw/femu/ocssd/oc12.c), [`oc12.h`](https://github.com/MoatLab/FEMU/blob/0513a1f851669e38e154a1baa247347a7fa0b65c/hw/femu/ocssd/oc12.h) | 1.2 commands, PPA format, sector metadata, bad block tables, init and exit |
+| [`hw/femu/ocssd/oc20.c`](https://github.com/MoatLab/FEMU/blob/0513a1f851669e38e154a1baa247347a7fa0b65c/hw/femu/ocssd/oc20.c), [`oc20.h`](https://github.com/MoatLab/FEMU/blob/0513a1f851669e38e154a1baa247347a7fa0b65c/hw/femu/ocssd/oc20.h) | 2.0 commands, chunk descriptors, write pointer rules, geometry, log page |
+| [`hw/femu/ocssd/oc-timing.c`](https://github.com/MoatLab/FEMU/blob/0513a1f851669e38e154a1baa247347a7fa0b65c/hw/femu/ocssd/oc-timing.c), [`oc-timing.h`](https://github.com/MoatLab/FEMU/blob/0513a1f851669e38e154a1baa247347a7fa0b65c/hw/femu/ocssd/oc-timing.h) | `flash_type` times (`set_latency()`), geometry bound check, 0xEE |
+| [`hw/femu/nand/nand-media.c`](https://github.com/MoatLab/FEMU/blob/0513a1f851669e38e154a1baa247347a7fa0b65c/hw/femu/nand/nand-media.c) | chip and channel busy-until times for both versions |
+| [`hw/femu/nand/nand.h`](https://github.com/MoatLab/FEMU/blob/0513a1f851669e38e154a1baa247347a7fa0b65c/hw/femu/nand/nand.h), [`nand.c`](https://github.com/MoatLab/FEMU/blob/0513a1f851669e38e154a1baa247347a7fa0b65c/hw/femu/nand/nand.c) | per-cell-type latency tables and page-type tables |
+| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/0513a1f851669e38e154a1baa247347a7fa0b65c/hw/femu/femu.c) | `nvme_register_extensions()`, realize-time checks |
+| [`hw/femu/nvme-io.c`](https://github.com/MoatLab/FEMU/blob/0513a1f851669e38e154a1baa247347a7fa0b65c/hw/femu/nvme-io.c) | `nvme_io_cmd()` dispatch, completion queue |
 
 ## Related pages
 

@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/4f57fad16fe5f8a39fa651f91ee64413639a513a/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0513a1f851669e38e154a1baa247347a7fa0b65c/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/4f57fad16fe5f8a39fa651f91ee64413639a513a/hw/femu/docs/CHANGELOG.md) at FEMU `4f57fad16` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/0513a1f851669e38e154a1baa247347a7fa0b65c/hw/femu/docs/CHANGELOG.md) at FEMU `0513a1f85` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -190,6 +190,7 @@ listed one by one.
 - `tier_idle_ms` lets the pSLC tier fold pool lines in idle time, one bounded step at a time, so the next burst finds free pool lines. `tier_lazy_pct` folds only while the pool use is above a percent. Both are off by default. See [tiered NAND](features/tiered-nand.md#idle-folds).
 - `gc_frontier=on` writes the pages garbage collection copies to lines of their own, apart from host writes, as real drives do; under a skewed overwrite this lowers the pages copied. Off by default; refused with FDP, `cxl_ssd`, `gc_pace`, Streams, and `retention_limit_sec` without `pd_open_close_sec`.
 - `nand_profile=FILE` reads a versioned NAND profile: the base read, program and erase times and the bus phases of a chip, in one format for bbssd, CSD, KV and ZNS. ZNS programs a wordline, so it takes the page program time times the pages of a wordline. `query-femu` reports the times the media uses and the profile. Two profiles in `hw/femu/profiles/` give today's defaults. Off by default.
+- `throttle=on` (bbssd and CSD, with the thermal model) slows NAND array time when the device is hot. The host sets the light and heavy levels with feature 10h (HCTM); SMART bytes 216 to 231 count them. Autonomous protection (`hot_k`, or 77 C and 75 C with `ocp=on`) runs apart from HCTM; with `ocp=on` it raises and clears the temperature warning, and C0h bytes 96 and 97 report it.
 - With `ocp=on`, log C4h (Device Capabilities) reports what FEMU supports, and feature C7h selects a DSSD power state; it and Power Management (02h) are saveable, and CAP.CPS reports NVM subsystem scope. `ps_max_watts` (default 25) sets the Maximum Power of power state 0, the only one; FEMU does not cap its modelled power at it.
 - Write Zeroes with Deallocate clears the Write Uncorrectable mark of its blocks, so they read back zeros (OCP 2.7 NVMe-IO-6).
 - `fw_slots` (default 1, or 3 with `ocp=on`) adds Firmware Image Download and Firmware Commit. Slot 1 is read only. FEMU checks a small image format (header, revision, security version, CRC-32) and refuses an image below the security version floor. Activation works now, without a reset, or at the next Controller Level Reset; a Persistent Event log entry records each Commit. Sanitize waits until a pending activation runs. Images stay in memory only.
