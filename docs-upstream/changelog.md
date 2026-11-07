@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/4321a87957cb187346d7e97e57a130437acfa0df/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8ded67f2aaad06f04e73d9c520d7bc57aa27fdb6/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/4321a87957cb187346d7e97e57a130437acfa0df/hw/femu/docs/CHANGELOG.md) at FEMU `4321a8795` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/8ded67f2aaad06f04e73d9c520d7bc57aa27fdb6/hw/femu/docs/CHANGELOG.md) at FEMU `8ded67f2a` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -189,6 +189,8 @@ listed one by one.
 - `tier_mode=dynamic` lets the pSLC pool borrow free dense lines while the device has room, with `tier_max_mb` as a cap and `tier_shrink_pct` as the fill where the pool starts to shrink. A borrowed line goes back to the dense free list after its fold, and the dense lines always keep room for every valid page. See [tiered NAND](features/tiered-nand.md#dynamic-pool).
 - `tier_idle_ms` lets the pSLC tier fold pool lines in idle time, one bounded step at a time, so the next burst finds free pool lines. `tier_lazy_pct` folds only while the pool use is above a percent. Both are off by default. See [tiered NAND](features/tiered-nand.md#idle-folds).
 - `gc_frontier=on` writes the pages garbage collection copies to lines of their own, apart from host writes, as real drives do; under a skewed overwrite this lowers the pages copied. Off by default; refused with FDP, `cxl_ssd`, `gc_pace`, Streams, and `retention_limit_sec` without `pd_open_close_sec`.
+- `femu-subsys,rotational=on` reports endurance group 1 as rotational media. Its namespaces set NSFEAT bit 4 in CNS 08h and 1Fh, log 09h sets EGRMEDIA, and log 16h and Spinup Control (Feature 1Ah, fixed off) answer. Linux then marks the disk rotational. Timing does not change. Off by default.
+- `query-femu-stages` adds `bands`: per bucket of total time, the count, total sum and past-due sum. `femu-stat.py` shows the past-due share of the p50 to p99.9 bands, so a tail that is past due is told apart from a slow model.
 - `perf_hints` reports the optimal write and deallocate granularity of a bbssd namespace as one flash page, and NOWS as one stripe. A guest then aligns writes and discards to them. Off by default; refused with FDP and `ns_mgmt`.
 - `atomic_write_lbas` reports a namespace atomic write unit (NSFEAT bit 1, NAWUN and NABSN). The range locks already cover each whole command; the power-fail unit stays one block. Off by default. See [data copies and write atomicity](design/nvme-frontend.md#data-copies-and-write-atomicity).
 - `rber_ppb` adds a read-retry and soft decode model to host reads. Each ECC codeword draws a decode outcome from a raw bit error rate that grows with wear, data age and read disturb. Each failed attempt costs one more page read on the LUN. Off by default; log page C0h counts the outcomes. See [read retry and soft decode](design/ftl.md#read-retry-and-soft-decode-rber_ppb).

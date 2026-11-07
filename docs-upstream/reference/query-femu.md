@@ -3,12 +3,12 @@ title: "QMP query-femu"
 description: "query-femu is a QMP command that reports the FTL state of a FEMU NVMe controller to the host. It needs no guest tools. The schema is in qapi/femu.json, and..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/4321a87957cb187346d7e97e57a130437acfa0df/hw/femu/docs/reference/query-femu.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8ded67f2aaad06f04e73d9c520d7bc57aa27fdb6/hw/femu/docs/reference/query-femu.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/4321a87957cb187346d7e97e57a130437acfa0df/hw/femu/docs/reference/query-femu.md) at FEMU `4321a8795` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/8ded67f2aaad06f04e73d9c520d7bc57aa27fdb6/hw/femu/docs/reference/query-femu.md) at FEMU `8ded67f2a` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -543,6 +543,22 @@ the FTL after their due time; for those, `hold` is 0.
 Each stage has `count`, `sum-ns`, `max-ns` and 40 `buckets`. Bucket i holds
 the commands that took 2^i to 2^(i+1) - 1 ns. Bucket 0 also holds 0 ns,
 and bucket 39 also holds every longer time.
+
+`bands` joins two of the stages. It has one entry for each non-empty
+`total` bucket: `bucket`, `count`, `total-sum-ns` and `past-due-sum-ns`. The
+past-due sum covers the commands in that bucket. So it shows whether the
+slow commands are slow in the model, or complete after their due time.
+
+```
+ command: total 3.1 ms --> bucket 21    past-due 0.9 ms
+ bands[21]: count += 1, total-sum-ns += 3.1 ms, past-due-sum-ns += 0.9 ms
+ past-due share of a band = past-due-sum-ns / total-sum-ns
+```
+
+Past-due time is relative to the model. It also grows when the guest does
+not consume its completion queue, so it does not name a cause. A query
+copies the stages and bands of each poller as one, so they agree for
+that poller, also during I/O. Pollers are copied one after the other.
 
 ```json
 {"execute": "query-femu-stages", "arguments": {"reset": true}}
