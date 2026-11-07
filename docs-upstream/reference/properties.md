@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/c814606ccd215ca9d468425c0e2b4a4c8d8dc54e/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8ea1b855cf8c8ed7dd8611f55b66f636d93b1949/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/c814606ccd215ca9d468425c0e2b4a4c8d8dc54e/hw/femu/docs/reference/properties.md) at FEMU `c814606cc` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/8ea1b855cf8c8ed7dd8611f55b66f636d93b1949/hw/femu/docs/reference/properties.md) at FEMU `8ea1b855c` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,7 +28,7 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 239 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 242 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
@@ -83,6 +83,7 @@ Devices:
 | `sgl` | `bool` | `off` | Advertise and accept address scatter gather lists for data transfer; OCSSD ignores it |
 | `cmbsz` | `uint32` | `0` | Controller Memory Buffer size register; 0 means no buffer, otherwise the size field times the unit must be a non-zero power of two |
 | `cmbloc` | `uint32` | `0` | Controller Memory Buffer location register; its BAR field must be 2 when cmbsz is set |
+| `fw_slots` | `uint8` | `0` | number of firmware slots, 1 to 7; 0 (default) means 1, or 3 with ocp; slot 1 is read only; with 2 or more, Firmware Image Download and Firmware Commit work and activation needs no reset; not with a femu-subsys or a CXL device |
 
 ### LBA formats, metadata and protection
 
@@ -91,7 +92,8 @@ Devices:
 | `nlbaf` | `uint8` | `5` | Number of LBA formats, 1 to 16 (at most 8 with meta): 512-byte blocks doubling with each format |
 | `atomic_write_lbas` | `uint32` | `0` | Namespace atomic write unit in blocks: NAWUN and the boundary NABSN become N - 1, from block 0. 0 (default) keeps one block; else a power of two from 2 to 65536 that fits MDTS at the largest block size. The power-fail unit stays one block. bbssd and NoSSD only; refused with power_loss, ns_mgmt, namespace_modes and a subsystem |
 | `perf_hints` | `bool` | `off` | bbssd, CSD: report the optimal write and deallocate granularity (NPWG, NPWA, NPDG, NPDA) as one flash page and NOWS as one stripe, for the format in use; off (default) reports 0 (one block). Refused with FDP and ns_mgmt |
-| `ocp` | `bool` | `off` | bbssd, CSD: report the OCP 2.5 SMART Extended (C0h) and Error Recovery (C1h) logs behind the OCP UUID; the FEMU C0h counters move to UUID index 2; not with a femu-subsys; off (default) keeps C0h as the FEMU counters |
+| `ocp` | `bool` | `off` | bbssd, CSD: report the OCP 2.7 SMART Extended (C0h) and Error Recovery (C1h) logs behind the OCP UUID; the FEMU C0h counters move to UUID index 2; not with a femu-subsys; off (default) keeps C0h as the FEMU counters |
+| `ocp_profile` | `str` | unset | with ocp=on: 13 letters, A or B, one per OCP 2.7 device profile setting DP-CFG-1 to DP-CFG-13; unset (default) is BAABABAAAABAB, the settings FEMU meets; B for DP-CFG-7 turns on Write Uncorrectable; A for DP-CFG-1, 4, 6, 11 or 13 is refused, and ocp needs lba_index 0 |
 | `lba_index` | `uint8` | `0` | LBA format the namespaces boot with, below nlbaf; ZNS needs a block size of 4 KiB or less |
 | `extended` | `uint8` | `0` | 1 boots with metadata interleaved with the data (extended LBAs); needs bit 0 of mc; 0 or 1 |
 | `meta` | `uint8` | `0` | Metadata bytes per logical block, NoSSD and bbssd only, not with FDP, dpc or dps; each format is then also offered with metadata |
@@ -183,6 +185,7 @@ Devices:
 | `pd_open_read_limit` | `int32` | `0` | bbssd, CSD, FDP: program disturb, reads of a part-programmed block that queue its line or reclaim unit; the next Write rewrites it, after it seals a frontier line or retires a frontier unit with its free pages unprogrammed; not above a non-zero read_reclaim_limit; 0 (default) turns it off |
 | `pd_open_close_sec` | `int32` | `0` | bbssd, CSD, FDP: program disturb, seconds of device time (age_scale) a frontier line or reclaim unit may stay open after its first program; the next request pads its free pages and closes it; under FDP the handle gets a fresh unit and event 1h; 0 (default) turns it off |
 | `pe_cycles_rated` | `uint32` | `0` | bbssd, CSD, KV, ZNS: rated program/erase cycles used for SMART Percentage Used; 0 takes the rating of nand_cell_type (ZNS: zns_flash_type), or reports none |
+| `nand_profile` | `str` | unset | bbssd, CSD, KV, ZNS: file of a versioned NAND profile (base read, program and erase times and bus phases), relative to the working directory; the timing properties it sets must keep their defaults; unset (default) uses the properties |
 | `nand_bad_blocks` | `uint32` | `0` | bbssd, CSD, KV: blocks marked bad at start, capped at the block count, which lowers SMART Available Spare |
 | `blk_pe_limit` | `uint32` | `0` | bbssd, CSD, also FDP: mean program/erase cycles a block survives before it wears out; 0 (default) turns wear-out off. When no block can replace a worn-out one, the media goes read-only (eol_read_only). Under FDP a worn-out block retires its reclaim unit |
 | `blk_pe_spread` | `uint32` | `0` | bbssd, CSD, also FDP: how far each block's limit varies from blk_pe_limit, in percent, 0 to 90 |
@@ -455,7 +458,7 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 
 These exist only when QEMU runs under qtest (`-accel qtest`) and serve FEMU's own tests. They are not part of the user interface.
 
-- `femu`: `x-cmt-slots`, `x-copy-held`, `x-copy-hold`, `x-csd-pause-stats`, `x-eol-enter`, `x-fdp-check`, `x-fdp-ns-mapped`, `x-ftl-check`, `x-ftl-hold`, `x-ftl-trace`, `x-gc-frontier`, `x-gc-idle`, `x-gc-idle-hold`, `x-gc-idle-kick`, `x-gc-idle-latch`, `x-gc-idle-order`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-query-delay-ms`, `x-range-waits`, `x-rber-u`, `x-stage-hold-ms`, `x-stream-test`, `x-tier-check`, `x-tier-fold-stop`, `x-tp-hold`, `x-zone-draining`, `x-zone-held`, `x-zone-lock-hold-ms`, `x-zone-log-changes`, `x-zone-log-hold-ms`, `x-zone-report-hold-ms`, `x-zone-write-hold-ms`
+- `femu`: `x-cmt-slots`, `x-copy-held`, `x-copy-hold`, `x-csd-pause-stats`, `x-eol-enter`, `x-fdp-check`, `x-fdp-ns-mapped`, `x-ftl-check`, `x-ftl-hold`, `x-ftl-trace`, `x-gc-frontier`, `x-gc-idle`, `x-gc-idle-hold`, `x-gc-idle-kick`, `x-gc-idle-latch`, `x-gc-idle-order`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-ocp-lat-skew-ms`, `x-query-delay-ms`, `x-range-waits`, `x-rber-u`, `x-stage-hold-ms`, `x-stream-test`, `x-tier-check`, `x-tier-fold-stop`, `x-tp-hold`, `x-zone-draining`, `x-zone-held`, `x-zone-lock-hold-ms`, `x-zone-log-changes`, `x-zone-log-hold-ms`, `x-zone-report-hold-ms`, `x-zone-write-hold-ms`
 - `femu-cxl-ssd`: `test-change-dpa`, `test-fault`, `test-fault-decode`, `test-fault-delivery`, `test-fault-fill`, `test-fault-repeats`, `test-fault-version`, `test-fault-walk`, `test-fill`, `test-fill-race`, `test-ftl-delay`, `test-ftl-hold`, `test-ftl-holding`, `test-guarded-write`, `test-lock-mutex`, `test-lock-wanted`, `test-map`, `test-media-disabled`, `test-nvme-after-posted`, `test-owner`, `test-posted-done`, `test-prefetch-race`, `test-prefetch-race-end`, `test-protect`, `test-protect-window`, `test-revoke-ahead`, `test-revoke-ahead-keep`, `test-rip`, `test-slot-reservation`, `test-storm`, `test-storm-ns`, `test-storm-served`, `test-storm-stops`, `test-storm-wait`, `test-thread-read`, `test-unprotect`
 
 ## Environment variables

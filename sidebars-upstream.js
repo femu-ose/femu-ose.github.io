@@ -168,6 +168,10 @@ const sidebars = {
         },
         {
           "type": "doc",
+          "id": "features/nand-profiles"
+        },
+        {
+          "type": "doc",
           "id": "features/tiered-nand"
         }
       ]

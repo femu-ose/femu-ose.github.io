@@ -3,12 +3,12 @@ title: "QMP query-femu"
 description: "query-femu is a QMP command that reports the FTL state of a FEMU NVMe controller to the host. It needs no guest tools. The schema is in qapi/femu.json, and..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/c814606ccd215ca9d468425c0e2b4a4c8d8dc54e/hw/femu/docs/reference/query-femu.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8ea1b855cf8c8ed7dd8611f55b66f636d93b1949/hw/femu/docs/reference/query-femu.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/c814606ccd215ca9d468425c0e2b4a4c8d8dc54e/hw/femu/docs/reference/query-femu.md) at FEMU `c814606cc` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/8ea1b855cf8c8ed7dd8611f55b66f636d93b1949/hw/femu/docs/reference/query-femu.md) at FEMU `8ea1b855c` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -236,6 +236,8 @@ fallbacks. Times are in ns.
 | Member | Content |
 | --- | --- |
 | `staged-bus` | true when the channel bus phases are charged |
+| `array-timing`, `read-ns`, `program-ns`, `erase-ns` | `flat` (one time each) or `table` (per NAND type and page type), and the base array times the media uses, before ECC and other additions; with `table`, page 0 of the media's table row. A ZNS program covers the pages of a wordline |
+| `nand-profile`, `nand-profile-file` | the name in the `nand_profile` file and the file as given; absent without a profile |
 | `onfi-profile`, `onfi-mode` | true when `onfi_mode` 0 to 26 or `onfi_param_page` sets the bus phases; `onfi-mode` is present only then, and with a parameter page and `onfi_mode=-1` it is the highest mode the page lists |
 | `column-cycles`, `row-cycles` | the address cycles of each command with the profile: 2 and 3, or the page's byte 101; 0 without the profile |
 | `page-transfer-ns` | one page on the bus |

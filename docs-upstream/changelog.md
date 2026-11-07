@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/c814606ccd215ca9d468425c0e2b4a4c8d8dc54e/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8ea1b855cf8c8ed7dd8611f55b66f636d93b1949/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/c814606ccd215ca9d468425c0e2b4a4c8d8dc54e/hw/femu/docs/CHANGELOG.md) at FEMU `c814606cc` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/8ea1b855cf8c8ed7dd8611f55b66f636d93b1949/hw/femu/docs/CHANGELOG.md) at FEMU `8ea1b855c` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -189,7 +189,15 @@ listed one by one.
 - `tier_mode=dynamic` lets the pSLC pool borrow free dense lines while the device has room, with `tier_max_mb` as a cap and `tier_shrink_pct` as the fill where the pool starts to shrink. A borrowed line goes back to the dense free list after its fold, and the dense lines always keep room for every valid page. See [tiered NAND](features/tiered-nand.md#dynamic-pool).
 - `tier_idle_ms` lets the pSLC tier fold pool lines in idle time, one bounded step at a time, so the next burst finds free pool lines. `tier_lazy_pct` folds only while the pool use is above a percent. Both are off by default. See [tiered NAND](features/tiered-nand.md#idle-folds).
 - `gc_frontier=on` writes the pages garbage collection copies to lines of their own, apart from host writes, as real drives do; under a skewed overwrite this lowers the pages copied. Off by default; refused with FDP, `cxl_ssd`, `gc_pace`, Streams, and `retention_limit_sec` without `pd_open_close_sec`.
-- `ocp=on` reports the OCP 2.5 SMART / Health Extended log (C0h) and the Error Recovery log (C1h) of a bbssd or CSD controller. The UUID List (CNS 17h) names the OCP UUID at index 1 and a FEMU UUID at index 2. C0h at UUID index 0 or 1 is the OCP page, and the FEMU counters move to index 2. Off by default.
+- `nand_profile=FILE` reads a versioned NAND profile: the base read, program and erase times and the bus phases of a chip, in one format for bbssd, CSD, KV and ZNS. ZNS programs a wordline, so it takes the page program time times the pages of a wordline. `query-femu` reports the times the media uses and the profile. Two profiles in `hw/femu/profiles/` give today's defaults. Off by default.
+- `fw_slots` (default 1, or 3 with `ocp=on`) adds Firmware Image Download and Firmware Commit. Slot 1 is read only. FEMU checks a small image format (header, revision, security version, CRC-32) and refuses an image below the security version floor. Activation works now, without a reset, or at the next Controller Level Reset; a Persistent Event log entry records each Commit. Sanitize waits until a pending activation runs. Images stay in memory only.
+- With `ocp=on`, the Persistent Event log holds 5 MiB (PELS 80), as OCP 2.7 STD-LOG-22 asks; otherwise it stays 64 KiB.
+- With `ocp=on`, the OCP 2.7 latency monitor runs: feature C5h configures it and log C3h reports it. Read, Write and Deallocate commands that take longer than threshold A count in four buckets, with the measured latency and a stamp per bucket and command. The active set moves to a static set at each timer interval. The debug log and persistence across QEMU restarts are not there yet.
+- With `ocp=on`, NUSE counts the blocks that hold data: a write allocates a block and a deallocate frees it. C0h Total NUSE is the same sum.
+- `ocp_profile` holds the OCP 2.7 device profile: A or B for each of DP-CFG-1 to DP-CFG-13. The default, BAABABAAAABAB, picks the settings FEMU meets. B for DP-CFG-7 turns on Write Uncorrectable. FEMU refuses A for DP-CFG-1, 4, 6, 11 and 13. With `ocp=on`, `lba_index` must be 0: the factory sector size is LBA format 0.
+- With `ocp=on`, Get and Set Features take a UUID index, and OCP feature C9h (DSSD Asynchronous Event Configuration) answers: error reporting AENs on by default, not saveable. Enabling Media Ready AENs reports the DSSD Media Ready event once per Controller Level Reset, as a One-Shot event. FEMU has no error event to report, and C1h says so.
+- With `ocp=on`, the values OCP 2.7 fixes win over the base NVMe choices: CAP.CSS has only the NVM command set, NSFEAT.DAE and LPA bit 0 are clear, WCTEMP is 77 C and CCTEMP 85 C, DULBE and SMART per namespace are refused, and the Timestamp survives a controller reset. CSD memory and program namespaces refuse `ocp`.
+- `ocp=on` reports the OCP 2.7 SMART / Health Extended log (C0h) and the Error Recovery log (C1h) of a bbssd or CSD controller. The UUID List (CNS 17h) names the OCP UUID at index 1 and a FEMU UUID at index 2. C0h at UUID index 0 or 1 is the OCP page, and the FEMU counters move to index 2. Off by default.
 - `femu-subsys,rotational=on` reports endurance group 1 as rotational media. Its namespaces set NSFEAT bit 4 in CNS 08h and 1Fh, log 09h sets EGRMEDIA, and log 16h and Spinup Control (Feature 1Ah, fixed off) answer. Linux then marks the disk rotational. Timing does not change. Off by default.
 - `query-femu-stages` adds `bands`: per bucket of total time, the count, total sum and past-due sum. `femu-stat.py` shows the past-due share of the p50 to p99.9 bands, so a tail that is past due is told apart from a slow model.
 - `perf_hints` reports the optimal write and deallocate granularity of a bbssd namespace as one flash page, and NOWS as one stripe. A guest then aligns writes and discards to them. Off by default; refused with FDP and `ns_mgmt`.

@@ -3,12 +3,12 @@ title: "NVMe frontend"
 description: "The NVMe frontend is the part of -device femu that a guest driver talks to: the PCI function, the controller registers, the admin and I/O queues, the poller..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/c814606ccd215ca9d468425c0e2b4a4c8d8dc54e/hw/femu/docs/design/nvme-frontend.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8ea1b855cf8c8ed7dd8611f55b66f636d93b1949/hw/femu/docs/design/nvme-frontend.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/c814606ccd215ca9d468425c0e2b4a4c8d8dc54e/hw/femu/docs/design/nvme-frontend.md) at FEMU `c814606cc` (2026-11-06), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/8ea1b855cf8c8ed7dd8611f55b66f636d93b1949/hw/femu/docs/design/nvme-frontend.md) at FEMU `8ea1b855c` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -656,14 +656,15 @@ Namespace Management.
 | Supported Log Pages | 00h | lists the ids the controller advertises (04h only with Namespace Management) |
 | Error Information | 01h | newest `elpe` + 1 entries; each names the command set (byte 30) and opcode (byte 31) of its command, and every entry, an empty one too, has Log Page Version 1h (byte 63); Open-Channel entries keep the 1.4 layout |
 | SMART / Health | 02h | host totals from the pollers, media wear, `temperature` |
-| Firmware Slot | 03h | one slot, read-only; Identify FRMW reports the same |
+| Firmware Slot | 03h | slot 1 read-only; with `fw_slots` above 1, AFI shows the running slot and the slot for the next reset, and FRS2 to FRS7 the committed images; a read without RAE clears the Firmware Activation Starting notice |
 | Changed Namespace List | 04h | namespaces whose attributes changed |
 | Commands Supported and Effects | 05h | per command set (NVM, zoned, KV) |
 | Device Self-test | 06h | tests complete at once |
 | Telemetry Host / Controller | 07h, 08h | 07h: header plus the C0h counters captured by the last Create; 08h: header only |
 | Endurance Group | 09h | with `femu-subsys`; Identify reports the group (CTRATT bit 4, ENDGIDMAX, ENDGID, and the Endurance Group List, CNS 19h) with it |
 | Persistent Event | 0Dh | kept in `pel_file` if set |
-| OCP SMART / Health Extended, Error Recovery | C0h, C1h | with `ocp=on`: OCP 2.5 layouts at UUID index 0 and 1 (CNS 17h lists the OCP UUID, then the FEMU UUID `2ff92965-47be-4ce0-923d-649d30079203`); the FEMU counters at C0h, UUID index 2. Fields FEMU does not model are 0, capacitor health is FFFFh (no PLP) |
+| OCP Latency Monitor | C3h | with `ocp=on`: 512 bytes, version 0005h, configured by Feature C5h; bytes 512 to 4095 read as zeros |
+| OCP SMART / Health Extended, Error Recovery | C0h, C1h | with `ocp=on`: OCP 2.7 layouts at UUID index 0 and 1 (CNS 17h lists the OCP UUID, then the FEMU UUID `2ff92965-47be-4ce0-923d-649d30079203`); the FEMU counters at C0h, UUID index 2. Fields FEMU does not model are 0, capacitor health is FFFFh (no PLP) |
 | Rotational Media Information | 16h | with `femu-subsys,rotational=on`: one actuator, one spinup and one load per QEMU run; Spinup Control (Feature 1Ah) is fixed off |
 | LBA Status | 0Eh | |
 | Feature Identifiers Supported and Effects | 12h | built from the check Get and Set Features use; per command set (CSI) when CC.CSS is 110b |
