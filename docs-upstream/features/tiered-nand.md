@@ -3,12 +3,12 @@ title: "Tiered NAND: a pSLC pool in front of dense NAND"
 description: "Many TLC and QLC SSDs write host data to a fast cache first. The cache is ordinary NAND that the drive programs with one bit per NAND unit (pSLC). Later the..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/cfff56b2eeeb5145ede05029e3150df97f2871c5/hw/femu/docs/features/tiered-nand.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/e82281c8dc3e2056b039bd2d15fde9b5e9b0fe42/hw/femu/docs/features/tiered-nand.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/tiered-nand.md`](https://github.com/MoatLab/FEMU/blob/cfff56b2eeeb5145ede05029e3150df97f2871c5/hw/femu/docs/features/tiered-nand.md) at FEMU `cfff56b2e` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/tiered-nand.md`](https://github.com/MoatLab/FEMU/blob/e82281c8dc3e2056b039bd2d15fde9b5e9b0fe42/hw/femu/docs/features/tiered-nand.md) at FEMU `e82281c8d` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -185,6 +185,34 @@ quiet time:
 -device femu,femu_mode=1,devsz_mb=4096,nchs=8,luns_per_ch=8,pgs_per_blk=256,blks_per_pl=256,nand_cell_type=3,tier_mode=static,tier_static_mb=512,tier_idle_ms=100
 ```
 
+## Write buffer
+
+With `buffer_size`, host pages wait in DRAM first. A write-back places
+each page as a direct write does: in the pool when it has room, else by
+`tier_full_policy`. A buffered page leaves DRAM only after it has a place.
+
+```
+ host write --> DRAM buffer --> write-back --> pool page (pSLC)
+                                          \-> dense page (full pool, direct)
+ idle write-back: next page needs a fold --> stop, upkeep owed
+ idle FTL thread: upkeep step (one page per LUN) --> pool room --> write-back
+```
+
+- The fill counts mapped pages only. A buffered page with no mapping counts
+  once a write-back places it. A buffered overwrite of a mapped page counts
+  once, as before.
+- The idle write-back (`buffer_low_pcent`) runs no fold and no forced
+  garbage collection. When the next page needs a fold, it stops and the
+  pool owes an upkeep fold.
+- Upkeep runs on the idle FTL thread whatever `tier_idle_ms` and
+  `tier_lazy_pct` say. Each step moves at most one page of each LUN, as an
+  idle fold does. It folds a stopped fold first, then a borrowed line that
+  Rule B or Rule C gives back, then the oldest closed line of a full pool.
+- An optional idle fold waits while the idle write-back has pages to write.
+- A Flush and a foreground write-back may fold, as a direct write does.
+- x-tier-check reports the upkeep steps and the idle write-backs that
+  stopped for a fold.
+
 ## Capacity
 
 The exported capacity does not change. Realize checks that the dense lines
@@ -273,7 +301,7 @@ the channel too, set a bus profile such as `pg_xfer_lat` or `onfi_mode`.
 
 - bbssd only, with one namespace and page mapping.
 - Realize refuses the tier with FDP, KV, ZNS, CSD, OCSSD, `mapping` other
-  than `page`, `buffer_size`, `power_loss`, Streams, `hot_cold_sep`,
+  than `page`, `power_loss`, Streams, `hot_cold_sep`,
   `gc_pace` and `gc_copyback`.
 - Realize also refuses it with `blk_pe_limit`, `wl_spread`,
   `read_reclaim_limit`, `retention_limit_sec`, the `pd_*` properties,

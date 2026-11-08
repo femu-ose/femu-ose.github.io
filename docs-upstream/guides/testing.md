@@ -3,12 +3,12 @@ title: "Testing"
 description: "FEMU has five kinds of tests. The first four run without a guest and run in CI; the last runs inside a booted guest."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/cfff56b2eeeb5145ede05029e3150df97f2871c5/hw/femu/docs/guides/testing.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/e82281c8dc3e2056b039bd2d15fde9b5e9b0fe42/hw/femu/docs/guides/testing.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/guides/testing.md`](https://github.com/MoatLab/FEMU/blob/cfff56b2eeeb5145ede05029e3150df97f2871c5/hw/femu/docs/guides/testing.md) at FEMU `cfff56b2e` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/guides/testing.md`](https://github.com/MoatLab/FEMU/blob/e82281c8dc3e2056b039bd2d15fde9b5e9b0fe42/hw/femu/docs/guides/testing.md) at FEMU `e82281c8d` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -453,4 +453,4 @@ starts it, enables each controller, and writes and reads one block. See
 
 - [Debugging](debugging.md)
 - [Scripts reference](../reference/scripts.md)
-- [CONTRIBUTING.md](https://github.com/MoatLab/FEMU/blob/cfff56b2eeeb5145ede05029e3150df97f2871c5/CONTRIBUTING.md)
+- [CONTRIBUTING.md](https://github.com/MoatLab/FEMU/blob/e82281c8dc3e2056b039bd2d15fde9b5e9b0fe42/CONTRIBUTING.md)

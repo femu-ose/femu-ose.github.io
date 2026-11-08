@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/cfff56b2eeeb5145ede05029e3150df97f2871c5/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/e82281c8dc3e2056b039bd2d15fde9b5e9b0fe42/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/cfff56b2eeeb5145ede05029e3150df97f2871c5/hw/femu/docs/CHANGELOG.md) at FEMU `cfff56b2e` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/e82281c8dc3e2056b039bd2d15fde9b5e9b0fe42/hw/femu/docs/CHANGELOG.md) at FEMU `e82281c8d` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -188,6 +188,7 @@ listed one by one.
 - Opt-in pSLC tier in front of MLC, TLC or QLC NAND. The properties `tier_mode`, `tier_static_mb`, `tier_full_policy`, `tier_pslc_read_ns`, `tier_pslc_prog_ns`, `tier_pslc_erase_ns` and `tier_pslc_pe_cycles` control it. Host writes go to a static pool of pSLC lines first. A fold moves the oldest full pool line to the dense lines. The tier is off by default, and with it off nothing changes. See [tiered NAND](features/tiered-nand.md).
 - `tier_mode=dynamic` lets the pSLC pool borrow free dense lines while the device has room, with `tier_max_mb` as a cap and `tier_shrink_pct` as the fill where the pool starts to shrink. A borrowed line goes back to the dense free list after its fold, and the dense lines always keep room for every valid page. See [tiered NAND](features/tiered-nand.md#dynamic-pool).
 - `tier_idle_ms` lets the pSLC tier fold pool lines in idle time, one bounded step at a time, so the next burst finds free pool lines. `tier_lazy_pct` folds only while the pool use is above a percent. Both are off by default. See [tiered NAND](features/tiered-nand.md#idle-folds).
+- The pSLC tier now works with `buffer_size`. A write-back places buffered pages in the pool. The idle write-back runs no fold; when the pool is full, the idle FTL thread folds one bounded step at a time until a pool line is free. See [tiered NAND](features/tiered-nand.md#write-buffer).
 - `gc_frontier=on` writes the pages garbage collection copies to lines of their own, apart from host writes, as real drives do; under a skewed overwrite this lowers the pages copied. Off by default; refused with FDP, `cxl_ssd`, `gc_pace`, Streams, and `retention_limit_sec` without `pd_open_close_sec`.
 - `nand_profile=FILE` reads a versioned NAND profile: the base read, program and erase times and the bus phases of a chip, in one format for bbssd, CSD, KV and ZNS. ZNS programs a wordline, so it takes the page program time times the pages of a wordline. `query-femu` reports the times the media uses and the profile. Two profiles in `hw/femu/profiles/` give today's defaults. Off by default.
 - Controller-initiated telemetry: a SMART warning that begins, the temperature condition starting, or autonomous thermal protection captures the FEMU statistics once into log 08h (TCDA 1, TCDGN up, a reason). The Telemetry Log Changed notice follows when AEC bit 10 is set, also when it is set later. A read without RAE hands the capture over. A reset keeps it; a QEMU restart does not. Off with `ocp=on` until the OCP layout exists.
@@ -415,6 +416,7 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 
 #### Data correctness
 
+- Write buffer: a page leaves the buffer only after it finds a place on the media. Before, a failed placement dropped the page. An FUA write or a Write Zeroes whose page finds no place now fails with Capacity Exceeded.
 - Write buffer: a Flush now waits for the programs of the idle write-back, and it fails when a page finds no line. Disabling the volatile write cache writes back the buffer first.
 - A CXL memory device (`cxl-type3` and `femu-cxl-ssd`) disables its media while a Sanitize command runs, as the CXL specification says. The media check read the first mailbox register instead of the memory device status, so media was never disabled; it now reads the status atomically, so `femu-cxl-ssd` fault exits without the BQL read it without a data race.
 - With more than one poller, a read no longer sees a write, a Copy destination or a Write Zeroes range half done. Each NVMe access to the memory backend now holds the locks of the 4 KiB granules it touches, so a write is atomic as AWUN 0 promises. CXL.mem accesses of a `femu-cxl-ssd` medium do not take these locks.

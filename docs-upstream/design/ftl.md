@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/cfff56b2eeeb5145ede05029e3150df97f2871c5/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/e82281c8dc3e2056b039bd2d15fde9b5e9b0fe42/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/cfff56b2eeeb5145ede05029e3150df97f2871c5/hw/femu/docs/design/ftl.md) at FEMU `cfff56b2e` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/e82281c8dc3e2056b039bd2d15fde9b5e9b0fe42/hw/femu/docs/design/ftl.md) at FEMU `e82281c8d` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -870,9 +870,13 @@ handle's reclaim unit (`fdp_buffer_destage()` in
   that pays differs.
 - **Reads.** A read of a buffered page costs one DRAM access and does not
   reach NAND, even when the buffer has stopped accepting writes.
-- **FUA and stream writes** program directly. A direct write first drops any
-  buffered copy of its own pages, so an older version is never programmed
-  after the newer one.
+- **FUA and stream writes** program directly. Once a direct write places a
+  page, it drops any buffered copy of that page, so an older version is
+  never programmed after the newer one. If a page finds no place, the write
+  fails with Capacity Exceeded and the buffered copy stays owed.
+- **Placement.** A write-back takes the oldest page and removes it from the
+  buffer only once the page has a new mapping and a booked program. A page
+  that finds no place keeps its place at the head, and the write-back stops.
 - **Deallocate** drops buffered copies before unmapping, so discarded data is
   never programmed later.
 - **Flush** reaches the FTL like any other command and writes back the whole
