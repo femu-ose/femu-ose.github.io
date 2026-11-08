@@ -3,12 +3,12 @@ title: "Scripts and tools"
 description: "Every script and tool shipped under hw/femu/scripts/ and hw/femu/tools/: what it does, its arguments and the environment variables it reads. The top-level..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/4a24647f0420e7e88458e8e843d5eaf149c3efa5/hw/femu/docs/reference/scripts.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/cfff56b2eeeb5145ede05029e3150df97f2871c5/hw/femu/docs/reference/scripts.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/scripts.md`](https://github.com/MoatLab/FEMU/blob/4a24647f0420e7e88458e8e843d5eaf149c3efa5/hw/femu/docs/reference/scripts.md) at FEMU `4a24647f0` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/scripts.md`](https://github.com/MoatLab/FEMU/blob/cfff56b2eeeb5145ede05029e3150df97f2871c5/hw/femu/docs/reference/scripts.md) at FEMU `cfff56b2e` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -231,7 +231,7 @@ explains each.
 
 | Script | Arguments |
 | --- | --- |
-| `gen-property-docs.py` | `--qemu BINARY` regenerates `reference/properties.md` and `runtime-properties.md` from the binary; `--check` compares instead of writing (`--qemu` is still required) |
+| `gen-property-docs.py` | `--qemu BINARY` regenerates `reference/properties.md` and `runtime-properties.md` from the binary; `--check` compares instead of writing (`--qemu` is still required); `--schema FILE` also writes a JSON Schema (draft 2020-12) of each device's own properties: JSON type, integer range, default, description, QOM type and topic |
 | `gen-combinations.py` | rewrites `reference/combinations.md` from the refusal messages in `hw/femu`; `--check` compares instead of writing; `--self-test` checks the parser |
 | `gen-mode-table.py` | rewrites the mode tables from `docs/modes.py`; `--check` compares and checks `modes.py` against the code |
 | `check-doc-links.py` | `[--root DIR] [PATH...]`; checks every relative link and anchor |
@@ -250,7 +250,7 @@ guest builds `libcca.a`, the `ccactl` command and the `cca-test` self-test.
 runs the self-test as root, logging to `cca-guest-YYYYMMDD-HHMMSS.log` by
 default.
 See [the caching API guide](../features/cxl-cca.md) and the
-[tool README](https://github.com/MoatLab/FEMU/blob/4a24647f0420e7e88458e8e843d5eaf149c3efa5/hw/femu/tools/cca/README.md).
+[tool README](https://github.com/MoatLab/FEMU/blob/cfff56b2eeeb5145ede05029e3150df97f2871c5/hw/femu/tools/cca/README.md).
 
 ## Legacy scripts
 

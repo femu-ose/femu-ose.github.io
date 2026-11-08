@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/4a24647f0420e7e88458e8e843d5eaf149c3efa5/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/cfff56b2eeeb5145ede05029e3150df97f2871c5/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/4a24647f0420e7e88458e8e843d5eaf149c3efa5/hw/femu/docs/design/ftl.md) at FEMU `4a24647f0` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/cfff56b2eeeb5145ede05029e3150df97f2871c5/hw/femu/docs/design/ftl.md) at FEMU `cfff56b2e` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -876,10 +876,16 @@ handle's reclaim unit (`fdp_buffer_destage()` in
 - **Deallocate** drops buffered copies before unmapping, so discarded data is
   never programmed later.
 - **Flush** reaches the FTL like any other command and writes back the whole
-  buffer, charged to the Flush.
+  buffer, charged to the Flush. It also waits for the programs that the idle
+  write-back (`buffer_low_pcent`) or a cache disable booked. While one of
+  them is due, the Flush waits for all booked media work, since a suspend
+  can move a program past its booked end. If a page finds no line, the
+  Flush fails with Capacity Exceeded.
 - **Volatile write cache.** With `vwc=1` the controller advertises a cache.
   When the host turns it off with feature 06h, the buffer stops accepting
-  writes and the next write drains it. With `vwc=0` the buffer still works,
+  writes and Set Features writes back every buffered page first. If a page
+  finds no line, the cache stays on and Set Features fails with Capacity
+  Exceeded. With `vwc=0` the buffer still works,
   and the host has no way to turn it off; Linux sends no Flush to a
   controller that advertises no cache.
 
