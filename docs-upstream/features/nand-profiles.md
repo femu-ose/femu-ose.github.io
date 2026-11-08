@@ -3,12 +3,12 @@ title: "NAND profiles"
 description: "A NAND profile is a small versioned file that states the base timing of one NAND chip. bbssd, CSD, KV and ZNS read the same file, so one study can name the..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/259d6294c5d009b55181840a6913a36d83e6a08a/hw/femu/docs/features/nand-profiles.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/4a24647f0420e7e88458e8e843d5eaf149c3efa5/hw/femu/docs/features/nand-profiles.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/nand-profiles.md`](https://github.com/MoatLab/FEMU/blob/259d6294c5d009b55181840a6913a36d83e6a08a/hw/femu/docs/features/nand-profiles.md) at FEMU `259d6294c` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/nand-profiles.md`](https://github.com/MoatLab/FEMU/blob/4a24647f0420e7e88458e8e843d5eaf149c3efa5/hw/femu/docs/features/nand-profiles.md) at FEMU `4a24647f0` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

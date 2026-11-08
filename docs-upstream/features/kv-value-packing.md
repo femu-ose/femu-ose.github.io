@@ -3,12 +3,12 @@ title: "KV value packing"
 description: "A key-value namespace packs small values into shared NAND pages, as real KV-SSDs do. PinK (Im et al., USENIX ATC '20) appends values to a value log. The..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/259d6294c5d009b55181840a6913a36d83e6a08a/hw/femu/docs/features/kv-value-packing.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/4a24647f0420e7e88458e8e843d5eaf149c3efa5/hw/femu/docs/features/kv-value-packing.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/kv-value-packing.md`](https://github.com/MoatLab/FEMU/blob/259d6294c5d009b55181840a6913a36d83e6a08a/hw/femu/docs/features/kv-value-packing.md) at FEMU `259d6294c` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/kv-value-packing.md`](https://github.com/MoatLab/FEMU/blob/4a24647f0420e7e88458e8e843d5eaf149c3efa5/hw/femu/docs/features/kv-value-packing.md) at FEMU `4a24647f0` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -109,7 +109,8 @@ volatile write cache apply:
 | CC.SHN | programs the open page of every KV namespace |
 | the next record does not fit, or the page is full of live records | programs the open page; the Store that needs the room, or fills the page, waits for it |
 
-The DRAM time is `pg_rd_lat / 16`, the time a bbssd write buffer charges.
+The DRAM time is `pg_rd_lat / 16`, the time a bbssd write buffer charges
+when `dram_hit_ns` is 0. KV does not take `dram_hit_ns`.
 The program at Set Features and at shutdown loads the LUNs; the admin
 command and the shutdown status do not wait for it. FEMU models no power
 loss for KV, so the index in device DRAM needs no journal.

@@ -3,12 +3,12 @@ title: "Several namespaces and devices"
 description: "One FEMU controller can expose several namespaces, and each namespace can run its own mode. A controller can, for example, offer a BlackBox namespace for..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/259d6294c5d009b55181840a6913a36d83e6a08a/hw/femu/docs/features/multi-namespace.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/4a24647f0420e7e88458e8e843d5eaf149c3efa5/hw/femu/docs/features/multi-namespace.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/multi-namespace.md`](https://github.com/MoatLab/FEMU/blob/259d6294c5d009b55181840a6913a36d83e6a08a/hw/femu/docs/features/multi-namespace.md) at FEMU `259d6294c` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/multi-namespace.md`](https://github.com/MoatLab/FEMU/blob/4a24647f0420e7e88458e8e843d5eaf149c3efa5/hw/femu/docs/features/multi-namespace.md) at FEMU `4a24647f0` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
