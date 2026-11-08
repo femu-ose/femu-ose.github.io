@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/10d3b6bec3bbb3a79f08112a3b23b1e54e247e74/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/10d3b6bec3bbb3a79f08112a3b23b1e54e247e74/hw/femu/docs/reference/properties.md) at FEMU `10d3b6bec` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/reference/properties.md) at FEMU `0938cc1e9` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,7 +28,7 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 248 properties of its own and 1 QOM property listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 261 properties of its own and 2 QOM properties listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
@@ -72,6 +72,7 @@ Devices:
 | --- | --- | --- | --- |
 | `vid` | `uint16` | `7453` | PCI vendor ID, also reported as the Identify Controller PCI Vendor ID |
 | `did` | `uint16` | `7967` | PCI device ID of the controller function |
+| `pci_pm` | `bool` | `off` | a PCI Power Management capability (D0, D3hot) with No_Soft_Reset: outside D0 the PCI core turns the BARs off, and back in D0 the controller keeps its state; off (default) has no PM capability |
 | `acl` | `uint8` | `3` | Abort Command Limit reported in Identify Controller (0's based); an Abort run with more than acl others queued behind it fails |
 | `cqr` | `uint8` | `1` | CAP.CQR: 1 requires physically contiguous queues, 0 allows PRP-list queues |
 | `vwc` | `uint8` | `0` | 1 advertises a volatile write cache, which the host can turn off with feature 06h to stop bbssd buffering writes; 0 advertises none and refuses feature 06h. Flush drains the bbssd write buffer either way. On KV with 1, Flush programs the open page of packed values, and with the cache off each Store programs it; 0 or 1 |
@@ -84,6 +85,12 @@ Devices:
 | `cmbsz` | `uint32` | `0` | Controller Memory Buffer size register; 0 means no buffer, otherwise the size field times the unit must be a non-zero power of two |
 | `cmbloc` | `uint32` | `0` | Controller Memory Buffer location register; its BAR field must be 2 when cmbsz is set |
 | `fw_slots` | `uint8` | `0` | number of firmware slots, 1 to 7; 0 (default) means 1, or 3 with ocp; slot 1 is read only; with 2 or more, Firmware Image Download and Firmware Commit work and activation needs no reset; not with a femu-subsys or a CXL device |
+| `sanitize_ms` | `uint32` | `0` | bbssd, NoSSD: a Sanitize runs in the background for this many ms; while it runs, I/O and most admin commands fail with Sanitize In Progress, and its end sends Sanitize Operation Completed; up to 3600000; not with a femu-subsys or power_loss; 0 (default) finishes before the command completes |
+| `sanitize_ops` | `bool` | `off` | with Sanitize: also Crypto Erase and Overwrite (SANICAP CES, OWS); not with power_loss; off (default) offers Block Erase only |
+| `ana` | `bool` | `off` | ANA reporting (Base 2.3, 8.1.1): one ANA group per namespace, log 0Ch, CMIC bit 3 and the ANA Change notice; the runtime property ana-state sets a group's state through this controller; must match on every controller of a femu-subsys; off (default) |
+| `power_states` | `bool` | `off` | bbssd, CSD: four power states (Base 2.3, 8.1.18). PS1 and PS2 stretch NAND array time by throttle_light_pct and throttle_heavy_pct; PS3 is non-operational, and an I/O command wakes it 5 ms later; Autonomous Power State Transition (0Ch); not with ocp or a femu-subsys; off (default) keeps one power state |
+| `lockdown` | `bool` | `off` | Command and Feature Lockdown: the Lockdown command (24h), log 14h and OACS bit 10; the host can prohibit most admin commands and changeable Feature Identifiers on the admin queue until QEMU stops; not with a femu-subsys; off (default) |
+| `reservations` | `bool` | `off` | Reservations (Base 2.3, 8.1.24): Reservation Register, Report, Acquire and Release, the Host Identifier (81h), Reservation Notification Mask (82h) and Reservation Persistence (83h) features, and log 80h; ONCS bit 5; not with Open-Channel; off (default) |
 | `ps_max_watts` | `uint8` | `25` | Maximum Power of power state 0 in watts, 1 to 127 (default 25); with ocp, the lowest valid DSSD power state of C4h and C7h; FEMU does not cap its modelled power at it |
 
 ### LBA formats, metadata and protection
@@ -100,6 +107,7 @@ Devices:
 | `meta` | `uint8` | `0` | Metadata bytes per logical block, NoSSD and bbssd only, not with FDP, dpc or dps; each format is then also offered with metadata |
 | `mc` | `uint8` | `0` | Metadata Capabilities bit mask: bit 0 interleaved (extended LBAs), bit 1 separate buffer; required when meta is set |
 | `pi` | `bool` | `off` | Offer end-to-end protection information types 1 to 3, in the last 8 bytes of metadata, when meta is at least 8 bytes, and allow Format and Create to select them; not with power_loss or cxl_ssd |
+| `pif` | `uint8` | `0` | with pi: the protection information guard; 0 (default) is the 16-bit CRC with 8-byte tuples, 2 the 64-bit CRC with 16-byte tuples and 48-bit reference tags (CTRATT.ELBAS, CNS 05h); 2 needs meta of 16 or more, and Copy is refused on those namespaces |
 | `dpc` | `uint8` | `0` | Data Protection Capabilities reported in Identify Namespace when pi is off; must be 0 with meta, and bit 3 (first 8 bytes) is refused except on OCSSD |
 | `dps` | `uint8` | `0` | Data Protection Type Settings reported in Identify Namespace; a non-zero value needs 8 bytes of metadata, which meta refuses, so leave it 0 and use pi |
 | `ms` | `uint8` | `16` | No effect, kept for compatibility; meta sets the metadata size. A value other than the default warns at realize |
@@ -156,6 +164,8 @@ Devices:
 | `trim_lat_ns` | `int32` | `0` | bbssd, CSD: time in ns charged per Dataset Management deallocate range, with or without FDP |
 | `pe_suspend` | `int32` | `0` | bbssd, CSD, KV: non-zero lets a read suspend a program or erase on its LUN instead of waiting for it to finish |
 | `tsusp_ns` | `int32` | `0` | bbssd, CSD, KV: overhead in ns added to a read that suspends a program or erase, 0 or more |
+| `pe_suspend_max` | `uint32` | `0` | bbssd, CSD, KV: with pe_suspend, the suspensions one program or erase allows; a read past them waits for it; 0 (default) allows any |
+| `tresume_ns` | `int32` | `0` | bbssd, CSD, KV: with pe_suspend, ns added to a suspended program or erase each time it resumes, 0 or more (default 0) |
 | `nand_cell_type` | `uint8` | `0` | bbssd, CSD, KV: 0 uses the flat pg_rd_lat, pg_wr_lat and blk_er_lat; 1 SLC, 2 MLC, 3 TLC or 4 QLC uses built-in per-page-type timing (other values fall back to 0) |
 | `cell_pages` | `int32` | `0` | bbssd, CSD, KV: bits per cell (pages per wordline) for the pgtype_lat model, 0 to 5; 0 with pgtype_lat means 3 |
 | `pgtype_lat` | `int32` | `0` | bbssd, CSD, KV: non-zero scales the program time by page type (lower to upper) using cell_pages, when nand_cell_type is 0 |
@@ -232,6 +242,9 @@ Devices:
 | `gc_idle_ms` | `uint32` | `0` | bbssd with one namespace and page mapping: quiet time in ms after which the device collects lines in the background, one victim at a time; 0 (default) collects only on the write path |
 | `gc_idle_pcent` | `uint8` | `0` | bbssd with gc_idle_ms: idle collection runs while the line fill is above this percent, as gc_thres_pcent counts it; 0 (default) takes gc_thres_pcent, else 1 to 99 |
 | `buffer_size` | `int32` | `0` | bbssd, CSD: DRAM write buffer capacity in NAND pages, not bytes; 0 programs every write directly |
+| `l2p_dram_ns` | `int32` | `0` | bbssd, CSD: controller DRAM time in ns of each logical-to-physical lookup, added to the mapping cost of every host page read and written, 0 or more; not with onfi_cache_read or FDP; 0 (default) charges none |
+| `iu_pages` | `int32` | `0` | bbssd, CSD: the indirection unit in pages, 0 to 64; above 1, a write that covers part of a unit reads the unit's other mapped pages and programs them again (read-modify-write) on the write path, not for Write Zeroes; not with buffer_size, streams, mp_program, end-of-life read-only or FDP; 0 or 1 (default) maps each page |
+| `buffer_low_pcent` | `int32` | `0` | bbssd, CSD: with buffer_size, an idle FTL thread writes buffered pages back, one per die once all dies are free, until the fill level falls to this percent; below buffer_thres_pcent; not with shared namespaces or power_loss; 0 (default) writes back only when the buffer reaches buffer_thres_pcent |
 | `buffer_thres_pcent` | `int32` | `90` | bbssd, CSD: buffer fill level in percent at which buffered pages are written to NAND, 1 to 100 when buffer_size > 0 |
 | `fdp_trim_erase_all` | `int32` | `0` | bbssd with FDP: non-zero makes a deallocate reset every reclaim unit instead of the given ranges |
 | `debug_ftl` | `bool` | `off` | bbssd, CSD, KV: print a message when a page is programmed while not free or invalidated while not valid, and print merge counts for hybrid and fast mapping |
@@ -464,7 +477,7 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 
 These exist only when QEMU runs under qtest (`-accel qtest`) and serve FEMU's own tests. They are not part of the user interface.
 
-- `femu`: `x-cmt-slots`, `x-copy-held`, `x-copy-hold`, `x-csd-pause-stats`, `x-eol-enter`, `x-fdp-check`, `x-fdp-ns-mapped`, `x-ftl-check`, `x-ftl-hold`, `x-ftl-trace`, `x-gc-frontier`, `x-gc-idle`, `x-gc-idle-hold`, `x-gc-idle-kick`, `x-gc-idle-latch`, `x-gc-idle-order`, `x-idle-mw`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-ocp-lat-skew-ms`, `x-query-delay-ms`, `x-range-waits`, `x-rber-u`, `x-stage-hold-ms`, `x-stream-test`, `x-tier-check`, `x-tier-fold-stop`, `x-tp-hold`, `x-zone-draining`, `x-zone-held`, `x-zone-lock-hold-ms`, `x-zone-log-changes`, `x-zone-log-hold-ms`, `x-zone-report-hold-ms`, `x-zone-write-hold-ms`
+- `femu`: `x-cmt-slots`, `x-copy-held`, `x-copy-hold`, `x-csd-pause-stats`, `x-eol-enter`, `x-fdp-check`, `x-fdp-ns-mapped`, `x-ftl-check`, `x-ftl-hold`, `x-ftl-trace`, `x-gc-frontier`, `x-gc-idle`, `x-gc-idle-hold`, `x-gc-idle-kick`, `x-gc-idle-latch`, `x-gc-idle-order`, `x-idle-mw`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-ocp-lat-skew-ms`, `x-query-delay-ms`, `x-range-waits`, `x-rber-u`, `x-stage-hold-ms`, `x-stream-test`, `x-telemetry-trigger`, `x-tier-check`, `x-tier-fold-stop`, `x-tp-hold`, `x-zone-draining`, `x-zone-held`, `x-zone-lock-hold-ms`, `x-zone-log-changes`, `x-zone-log-hold-ms`, `x-zone-report-hold-ms`, `x-zone-write-hold-ms`
 - `femu-cxl-ssd`: `test-change-dpa`, `test-fault`, `test-fault-decode`, `test-fault-delivery`, `test-fault-fill`, `test-fault-repeats`, `test-fault-version`, `test-fault-walk`, `test-fill`, `test-fill-race`, `test-ftl-delay`, `test-ftl-hold`, `test-ftl-holding`, `test-guarded-write`, `test-lock-mutex`, `test-lock-wanted`, `test-map`, `test-media-disabled`, `test-nvme-after-posted`, `test-owner`, `test-posted-done`, `test-prefetch-race`, `test-prefetch-race-end`, `test-protect`, `test-protect-window`, `test-revoke-ahead`, `test-revoke-ahead-keep`, `test-rip`, `test-slot-reservation`, `test-storm`, `test-storm-ns`, `test-storm-served`, `test-storm-stops`, `test-storm-wait`, `test-thread-read`, `test-unprotect`
 
 ## Environment variables

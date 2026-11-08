@@ -3,12 +3,12 @@ title: "QMP query-femu"
 description: "query-femu is a QMP command that reports the FTL state of a FEMU NVMe controller to the host. It needs no guest tools. The schema is in qapi/femu.json, and..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/10d3b6bec3bbb3a79f08112a3b23b1e54e247e74/hw/femu/docs/reference/query-femu.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/reference/query-femu.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/10d3b6bec3bbb3a79f08112a3b23b1e54e247e74/hw/femu/docs/reference/query-femu.md) at FEMU `10d3b6bec` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/reference/query-femu.md) at FEMU `0938cc1e9` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -401,6 +401,23 @@ namespace. It needs no enabled controller.
 
 To read all lines, call again with `offset` set to `next-offset` until the
 reply has no `next-offset`.
+
+Kind `blocks` pages through every flash block of a BlackBox namespace in
+the same way. Blocks come in channel, LUN, plane and block order. Each
+record has the erase count, the block's P/E limit and whether it is
+overworn. The erase counts of all blocks add up to `block-erases`.
+
+```json
+{"execute": "query-femu", "arguments": {"kind": "blocks", "offset": 0, "limit": 2}}
+```
+
+```json
+  "blocks": [{"channel": 0, "lun": 0, "plane": 0, "block": 0, "erase-count": 3,
+              "pe-limit": 0, "overworn": false},
+             {"channel": 0, "lun": 0, "plane": 0, "block": 1, "erase-count": 2,
+              "pe-limit": 0, "overworn": false}],
+  "offset": 0, "next-offset": 2
+```
 
 An FDP namespace with four handles, just after the guest enabled it.
 Each handle has one unit open:

@@ -337,6 +337,10 @@ const sidebars = {
         },
         {
           "type": "doc",
+          "id": "reference/combinations"
+        },
+        {
+          "type": "doc",
           "id": "reference/query-femu"
         }
       ]

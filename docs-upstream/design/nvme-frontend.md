@@ -3,12 +3,12 @@ title: "NVMe frontend"
 description: "The NVMe frontend is the part of -device femu that a guest driver talks to: the PCI function, the controller registers, the admin and I/O queues, the poller..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/10d3b6bec3bbb3a79f08112a3b23b1e54e247e74/hw/femu/docs/design/nvme-frontend.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/design/nvme-frontend.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/10d3b6bec3bbb3a79f08112a3b23b1e54e247e74/hw/femu/docs/design/nvme-frontend.md) at FEMU `10d3b6bec` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/design/nvme-frontend.md) at FEMU `0938cc1e9` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -660,17 +660,21 @@ Namespace Management.
 | Changed Namespace List | 04h | namespaces whose attributes changed |
 | Commands Supported and Effects | 05h | per command set (NVM, zoned, KV) |
 | Device Self-test | 06h | tests complete at once |
-| Telemetry Host / Controller | 07h, 08h | 07h: header plus the C0h counters captured by the last Create; 08h: header only |
+| Telemetry Host / Controller | 07h, 08h | 07h: header plus the C0h counters captured by the last Create; 08h: the counters captured when a SMART warning, the temperature condition or thermal protection begins, kept until a read without RAE (header only with `ocp=on`) |
 | Endurance Group | 09h | with `femu-subsys`; Identify reports the group (CTRATT bit 4, ENDGIDMAX, ENDGID, and the Endurance Group List, CNS 19h) with it |
+| Asymmetric Namespace Access | 0Ch | with `ana=on`: one group per namespace; the state comes from the runtime property `ana-state`; RGO leaves out the namespace lists |
 | Persistent Event | 0Dh | kept in `pel_file` if set |
+| OCP Hardware Component | C6h | with `ocp=on`: the emulated controller, NAND, DRAM, PMIC and board, then the serial number, the country of origin (not available), the hardware revision and the born-on date, the day the device was realized |
 | OCP Latency Monitor | C3h | with `ocp=on`: 512 bytes, version 0005h, configured by Feature C5h; bytes 512 to 4095 read as zeros |
 | OCP SMART / Health Extended, Error Recovery | C0h, C1h | with `ocp=on`: OCP 2.7 layouts at UUID index 0 and 1 (CNS 17h lists the OCP UUID, then the FEMU UUID `2ff92965-47be-4ce0-923d-649d30079203`); the FEMU counters at C0h, UUID index 2. Fields FEMU does not model are 0, capacitor health is FFFFh (no PLP) |
 | Rotational Media Information | 16h | with `femu-subsys,rotational=on`: one actuator, one spinup and one load per QEMU run; Spinup Control (Feature 1Ah) is fixed off |
 | LBA Status | 0Eh | |
 | Feature Identifiers Supported and Effects | 12h | built from the check Get and Set Features use; per command set (CSI) when CC.CSS is 110b |
 | NVMe-MI Commands Supported and Effects | 13h | all zero: no NVMe-MI Send or Receive |
+| Command and Feature Lockdown | 14h | with `lockdown=on`: what the Lockdown command (24h) can prohibit, and what the admin queue refuses now; no Management Endpoint, so Contents 10b is Invalid Field |
 | FDP Configurations, RUH Usage, Statistics, Events | 20h-23h | with FDP |
-| Sanitize Status | 81h | |
+| Reservation Notification | 80h | with `reservations=on`: the oldest notice of the queue (32 pages), which the read removes; an empty queue reads as zeroes |
+| Sanitize Status | 81h | SPROG while a background sanitize (`sanitize_ms`) runs, estimated times, and a read without RAE clears Sanitize Operation Completed |
 | Changed Zone List | BFh | ZNS, from the mode |
 | Chunk Information | CAh | Open-Channel 2.0, from the mode |
 | FEMU media counters | C0h | WAF and FTL counters |
@@ -686,7 +690,8 @@ With FDP off there is no FDP capability, so the FDP pages are neither
 listed nor answered.
 
 Get and Set Features answer Arbitration (01h), Power Management (02h, one
-power state), LBA Range Type (03h), Temperature Threshold (04h), Error
+power state, or four with `power_states=on`, which adds Autonomous Power
+State Transition, 0Ch), LBA Range Type (03h), Temperature Threshold (04h), Error
 Recovery (05h), Volatile Write Cache (06h, only with `vwc=1`), Number of
 Queues (07h), Interrupt Coalescing (08h), Interrupt Vector Configuration
 (09h), Write Atomicity (0Ah), Asynchronous Event Configuration (0Bh),

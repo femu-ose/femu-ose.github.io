@@ -3,12 +3,12 @@ title: "Scripts and tools"
 description: "Every script and tool shipped under hw/femu/scripts/ and hw/femu/tools/: what it does, its arguments and the environment variables it reads. The top-level..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/10d3b6bec3bbb3a79f08112a3b23b1e54e247e74/hw/femu/docs/reference/scripts.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/reference/scripts.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/scripts.md`](https://github.com/MoatLab/FEMU/blob/10d3b6bec3bbb3a79f08112a3b23b1e54e247e74/hw/femu/docs/reference/scripts.md) at FEMU `10d3b6bec` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/scripts.md`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/reference/scripts.md) at FEMU `0938cc1e9` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -212,6 +212,8 @@ Python 3 and no other package.
 | --- | --- | --- |
 | `femu-config-check.py` | Starts QEMU under qtest with the given options and no guest, then reports either FEMU's refusal or the configuration it builds: capacity, geometry, over-provisioning, line or reclaim unit size, zones, mode and NAND timing per namespace, and QEMU's warnings. `--manifest FILE` also writes the host, the build and the source of each property value. See [check a configuration](../guides/debugging.md#check-a-configuration-without-a-guest). | `[--json] [--manifest FILE] [--qemu BINARY] [--timeout SEC] [--] QEMU-OPTIONS`, or the value of one `-device` option; `--self-test` checks the tool. Exits 0 accepted, 1 refused, 2 when the check failed. It loads `femu-stat.py` from its own directory. |
 | `femu-steady-state.py` | Reports the first round where a series of per-round results is at steady state, by the SNIA PTS rule: over the last 5 rounds, the spread is at most 20% and the least-squares trend at most 10% of the average. See [repeatable numbers](../guides/measuring.md#repeatable-numbers). | `[--window W] [--excursion P] [--slope P] [--column N] [--metric iops\|bw\|lat_mean] [--json] [FILE...]`: fio JSON outputs, one per round, or one value per line; `--self-test` checks the tool. Exits 0 steady, 1 not steady, 2 on an input error. |
+| `femu-trace2csv.py` | Turns the `femu_cqe` lines of a QEMU trace log (`-trace femu_cqe -D femu.log`) into a CSV I/O trace: ISO 8601 time (`-msg timestamp=on`), completion queue, command ID, opcode, starting LBA, blocks, status and modelled time. | `[LOG]` (stdin when absent); `--self-test` checks the parser. |
+| `femu-prom.py` | Serves the `query-femu` counters of every `femu` device of a running VM at `/metrics` in the Prometheus text format: page and erase counters, WAF and line counts, labelled by device and namespace. Each scrape reads the device again. It loads `femu-stat.py` from its own directory. | `SOCKET`, `--port PORT` (9813), `--bind ADDR` (127.0.0.1), `--once` prints one exposition; `--self-test` renders a canned reply without QEMU. |
 | `femu-stat.py` | Shows the FTL counters of each `femu` device of a running VM, like `top`: pages, WAF since start and over the interval, rates, line, reclaim unit and zone counts, and I/O stage times. It polls QMP `query-femu` and `query-femu-stages` and never resets the counts. See [live counters](../guides/measuring.md#live-counters-on-the-host-femu-stat). | `SOCKET` (a Unix socket path or `HOST:PORT`), `--interval SEC`, `--count N`, `--once`, `--json`, `--ns LIST`, `--path QOMPATH`; `--self-test --qemu BINARY` checks the tool under qtest. Exits 2 on a connection error. |
 
 ## Host tuning helpers
@@ -230,6 +232,7 @@ explains each.
 | Script | Arguments |
 | --- | --- |
 | `gen-property-docs.py` | `--qemu BINARY` regenerates `reference/properties.md` and `runtime-properties.md` from the binary; `--check` compares instead of writing (`--qemu` is still required) |
+| `gen-combinations.py` | rewrites `reference/combinations.md` from the refusal messages in `hw/femu`; `--check` compares instead of writing; `--self-test` checks the parser |
 | `gen-mode-table.py` | rewrites the mode tables from `docs/modes.py`; `--check` compares and checks `modes.py` against the code |
 | `check-doc-links.py` | `[--root DIR] [PATH...]`; checks every relative link and anchor |
 | `check-changelog-hashes.py` | `[--head COMMIT] [FILE]`; checks that every commit the CHANGELOG names is in the history of `--head` (needs a full clone) |
@@ -246,7 +249,7 @@ guest builds `libcca.a`, the `ccactl` command and the `cca-test` self-test.
 runs the self-test as root, logging to `cca-guest-YYYYMMDD-HHMMSS.log` by
 default.
 See [the caching API guide](../features/cxl-cca.md) and the
-[tool README](https://github.com/MoatLab/FEMU/blob/10d3b6bec3bbb3a79f08112a3b23b1e54e247e74/hw/femu/tools/cca/README.md).
+[tool README](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/tools/cca/README.md).
 
 ## Legacy scripts
 

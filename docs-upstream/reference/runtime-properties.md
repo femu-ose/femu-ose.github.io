@@ -3,12 +3,12 @@ title: "Runtime properties and counters"
 description: "QOM properties that a running device exposes. Read and set them through QMP at /machine/peripheral/<id>, where <id> is the id= given on -device:"
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/10d3b6bec3bbb3a79f08112a3b23b1e54e247e74/hw/femu/docs/reference/runtime-properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/reference/runtime-properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/runtime-properties.md`](https://github.com/MoatLab/FEMU/blob/10d3b6bec3bbb3a79f08112a3b23b1e54e247e74/hw/femu/docs/reference/runtime-properties.md) at FEMU `10d3b6bec` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/runtime-properties.md`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/reference/runtime-properties.md) at FEMU `0938cc1e9` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -30,6 +30,12 @@ or in the HMP monitor with `qom-get` and `qom-set`. Event counters are cleared b
 | Property | Type | Description |
 | --- | --- | --- |
 | `simulate-power-loss` | `bool` | Write-only: setting true on a realized controller with power_loss=on drops the write buffer and resets the controller as a power cut would |
+
+### ANA path state
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `ana-state` | `string` | with ana=on: "g:s" sets the ANA state of group g (the namespace ID) through this controller: 1 Optimized, 2 Non-Optimized, 3 Inaccessible, 4 Persistent Loss; reading lists every group |
 
 ## `femu-cxl-ssd`: CXL Type-3 SSD
 
