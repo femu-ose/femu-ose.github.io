@@ -3,12 +3,12 @@ title: "BlackBox SSD (BBSSD)"
 description: "BlackBox mode (femu_mode=1) emulates a conventional NVMe SSD: the device runs its own flash translation layer (FTL), garbage collection (GC) and NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/modes/blackbox.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/modes/blackbox.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/modes/blackbox.md) at FEMU `0938cc1e9` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/blackbox.md`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/modes/blackbox.md) at FEMU `80e58025c` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -101,6 +101,8 @@ How the time is computed: [timing model](../concepts/timing-model.md#nand-operat
   shared channel bus. It is modelled only when one of them is non-zero.
 - `pe_suspend` and `tsusp_ns` let a read suspend a program or erase on its
   LUN.
+- `read_prio` lets a read go ahead of the programs and erases queued on its
+  LUN; it waits only for the one that runs.
 - `trim_lat_ns` charges each Dataset Management deallocate range.
 
 ### Garbage collection

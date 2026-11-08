@@ -3,12 +3,12 @@ title: "Tiered NAND: a pSLC pool in front of dense NAND"
 description: "Many TLC and QLC SSDs write host data to a fast cache first. The cache is ordinary NAND that the drive programs with one bit per NAND unit (pSLC). Later the..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/features/tiered-nand.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/features/tiered-nand.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/tiered-nand.md`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/features/tiered-nand.md) at FEMU `0938cc1e9` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/tiered-nand.md`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/features/tiered-nand.md) at FEMU `80e58025c` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

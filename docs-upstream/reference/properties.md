@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/reference/properties.md) at FEMU `0938cc1e9` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/reference/properties.md) at FEMU `80e58025c` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,7 +28,7 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 261 properties of its own and 2 QOM properties listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 269 properties of its own and 2 QOM properties listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
@@ -44,6 +44,7 @@ Devices:
 | `subsys` | `link<femu-subsys>` | unset | ID of a femu-subsys device to join, created before this controller; needed for FDP, shared namespaces and the Endurance Group log |
 | `cxl_ssd` | `link<femu-cxl-ssd>` | unset | ID of a femu-cxl-ssd, listed before this controller, whose memory and FTL this bbssd controller serves as its one namespace |
 | `pel_file` | `str` | unset | Host file that keeps the Persistent Event Log and power cycle count across runs, created if missing; a corrupt or incompatible file fails realize |
+| `persist_file` | `str` | unset | bbssd, NoSSD: host file that keeps the data and the deallocated and uncorrectable blocks across runs; realize loads it, unplug or the end of QEMU saves it. A file of another mode, size, namespace layout or LBA format fails realize, and FILE.lock keeps a second user out. Format NVM keeps the LBA format. The FTL state is not kept. Not with namespace_modes, ns_mgmt, shared namespaces, cxl_ssd, metadata or sanitize_ms |
 | `serial` | `str` | unset | No effect, kept for compatibility; Identify Controller reports a serial number FEMU generates. Setting it warns at realize |
 
 ### Queues, pollers and interrupts
@@ -100,6 +101,7 @@ Devices:
 | `nlbaf` | `uint8` | `5` | Number of LBA formats, 1 to 16 (at most 8 with meta): 512-byte blocks doubling with each format |
 | `atomic_write_lbas` | `uint32` | `0` | Namespace atomic write unit in blocks: NAWUN and the boundary NABSN become N - 1, from block 0. 0 (default) keeps one block; else a power of two from 2 to 65536 that fits MDTS at the largest block size. The power-fail unit stays one block. bbssd and NoSSD only; refused with power_loss, ns_mgmt, namespace_modes and a subsystem |
 | `perf_hints` | `bool` | `off` | bbssd, CSD: report the optimal write and deallocate granularity (NPWG, NPWA, NPDG, NPDA) as one flash page and NOWS as one stripe, for the format in use; off (default) reports 0 (one block). Refused with FDP and ns_mgmt |
+| `telemetry_da4` | `bool` | `off` | report Data Area 4 in the telemetry logs (07h, 08h) when the host sets ETDAS in Host Behavior Support: one 512-byte counter block per namespace after the controller block; also the Maximum Created Data Area field of log 07h; not with FDP; off (default) |
 | `ocp` | `bool` | `off` | bbssd, CSD: report the OCP 2.7 SMART Extended (C0h) and Error Recovery (C1h) logs behind the OCP UUID; the FEMU C0h counters move to UUID index 2; not with a femu-subsys; off (default) keeps C0h as the FEMU counters |
 | `ocp_profile` | `str` | unset | with ocp=on: 13 letters, A or B, one per OCP 2.7 device profile setting DP-CFG-1 to DP-CFG-13; unset (default) is BAABABAAAABAB, the settings FEMU meets; B for DP-CFG-7 turns on Write Uncorrectable; A for DP-CFG-1, 4, 6, 11 or 13 is refused, and ocp needs lba_index 0 |
 | `lba_index` | `uint8` | `0` | LBA format the namespaces boot with, below nlbaf; ZNS needs a block size of 4 KiB or less |
@@ -147,7 +149,7 @@ Devices:
 | `cmd_addr_lat` | `int32` | `0` | bbssd, CSD, KV: command and address phase on the channel bus in ns; the bus is modelled only when this, pg_xfer_lat (or ch_xfer_lat) or status_lat is non-zero |
 | `pg_xfer_lat` | `int32` | `0` | bbssd, CSD, KV: page data transfer phase on the channel bus in ns; 0 uses ch_xfer_lat |
 | `status_lat` | `int32` | `0` | bbssd, CSD, KV: status read phase on the channel bus in ns |
-| `onfi_mode` | `int32` | `-1` | bbssd, CSD, KV: ONFI 6.0 NV-LPDDR4 timing mode 0 to 26; the channel bus phases then follow the spec for that mode and pg_rd_lat, pg_wr_lat and blk_er_lat stay the array times; -1 (default) is off. Refused with cmd_addr_lat, pg_xfer_lat, ch_xfer_lat, status_lat or pe_suspend |
+| `onfi_mode` | `int32` | `-1` | bbssd, CSD, KV: ONFI 6.0 NV-LPDDR4 timing mode 0 to 26; the channel bus phases then follow the spec for that mode and pg_rd_lat, pg_wr_lat and blk_er_lat stay the array times; -1 (default) is off. Refused with cmd_addr_lat, pg_xfer_lat, ch_xfer_lat, status_lat, pe_suspend or read_prio |
 | `onfi_mts` | `int32` | `0` | bbssd, CSD, KV: with onfi_mode, the page payload rate in MT/s in place of the mode's own rate, 1 to 100000; 0 (default) uses the mode |
 | `onfi_spare_bytes` | `int32` | `0` | bbssd, CSD, KV: with onfi_mode, the spare bytes moved with each page on the bus; the page on the bus must be an even number of bytes; 0 (default) moves the data bytes only |
 | `onfi_tccs_ns` | `int32` | `0` | bbssd, CSD, KV: with onfi_mode, tCCS in ns from a datasheet, paid before a data out when several LUNs share a channel and per plane of a multi-plane read; ONFI 6.0 gives no value, so 0 (default) pays nothing |
@@ -166,6 +168,12 @@ Devices:
 | `tsusp_ns` | `int32` | `0` | bbssd, CSD, KV: overhead in ns added to a read that suspends a program or erase, 0 or more |
 | `pe_suspend_max` | `uint32` | `0` | bbssd, CSD, KV: with pe_suspend, the suspensions one program or erase allows; a read past them waits for it; 0 (default) allows any |
 | `tresume_ns` | `int32` | `0` | bbssd, CSD, KV: with pe_suspend, ns added to a suspended program or erase each time it resumes, 0 or more (default 0) |
+| `read_prio` | `int32` | `0` | bbssd, CSD, KV: non-zero lets a read go ahead of the programs and erases queued on its LUN; it waits only for the one that runs. Plain channel model only (no bus phases or ONFI) |
+| `prog_pass2_ns` | `int32` | `0` | bbssd, CSD: time in ns of the fine program pass of a wordline; the program time is the coarse pass. The fine pass runs on the die when prog_pass2_lag later wordlines of the block are programmed, or when the block fills; until then a read of the wordline comes from the controller buffer. 0 (default) is one pass |
+| `prog_pass2_lag` | `uint32` | `0` | bbssd, CSD: with prog_pass2_ns, the wordlines programmed after one before its fine pass, 1 to 16; 0 (default) means 1 |
+| `die_parity` | `int32` | `0` | bbssd, CSD: non-zero books one parity program per full stripe, one page per die at a plane and page index, on a die that rotates with the page; it costs die time and counts in WAF, not space. Needs two dies and mapping=page; not with mp_program, mp_read, onfi_cache_read, gc_copyback, rber_ppb, KV, namespace_modes or FDP. 0 (default) is off |
+| `parity_xor_ns` | `int32` | `0` | bbssd, CSD: with die_parity, controller time in ns before each parity program and added to a read of the failed die; 0 (default) |
+| `failed_die` | `int32` | `-1` | bbssd, CSD: with die_parity, the die (channel * luns_per_ch + LUN) that has failed: a host read there reads the other dies of its stripe in parallel; -1 (default) is none |
 | `nand_cell_type` | `uint8` | `0` | bbssd, CSD, KV: 0 uses the flat pg_rd_lat, pg_wr_lat and blk_er_lat; 1 SLC, 2 MLC, 3 TLC or 4 QLC uses built-in per-page-type timing (other values fall back to 0) |
 | `cell_pages` | `int32` | `0` | bbssd, CSD, KV: bits per cell (pages per wordline) for the pgtype_lat model, 0 to 5; 0 with pgtype_lat means 3 |
 | `pgtype_lat` | `int32` | `0` | bbssd, CSD, KV: non-zero scales the program time by page type (lower to upper) using cell_pages, when nand_cell_type is 0 |
@@ -176,7 +184,7 @@ Devices:
 | --- | --- | --- | --- |
 | `ecc_step_ns` | `int32` | `0` | bbssd, CSD, KV: extra read time in ns per ECC tier, one tier per 750 erases of the block plus one per ecc_retention_sec of data age, at most 4 tiers; 0 turns the model off |
 | `ecc_retention_sec` | `int32` | `0` | bbssd, CSD, KV: data age in seconds that adds one ECC tier, with ecc_step_ns; 0 counts wear only |
-| `rber_ppb` | `uint32` | `0` | bbssd: fresh raw bit error rate of host reads in parts per 10^9; it adds read-retry and soft decode time to host reads. 0 (default) turns the model off. At most 10^9; refused with bus phase or ONFI timing, pe_suspend, mp_read, onfi_cache_read, gc_copyback, ecc_step_ns, the pSLC tier and cxl_ssd |
+| `rber_ppb` | `uint32` | `0` | bbssd: fresh raw bit error rate of host reads in parts per 10^9; it adds read-retry and soft decode time to host reads. 0 (default) turns the model off. At most 10^9; refused with bus phase or ONFI timing, pe_suspend, read_prio, mp_read, onfi_cache_read, gc_copyback, ecc_step_ns, the pSLC tier and cxl_ssd |
 | `rber_pe_double` | `uint32` | `0` | bbssd with rber_ppb: block erases that double the raw bit error rate; 0 (default) leaves wear out |
 | `rber_age_double_sec` | `uint32` | `0` | bbssd with rber_ppb: data age in seconds that doubles the raw bit error rate, from the line close, or the first program with pd_open_age; 0 (default) leaves age out |
 | `rber_read_double` | `uint32` | `0` | bbssd with rber_ppb: block reads since its erase that double the raw bit error rate; 0 (default) leaves read disturb out |
@@ -214,7 +222,7 @@ Devices:
 | `throttle_light_pct` | `uint32` | `150` | with throttle: NAND array time at the light level, in percent of nominal, 100 to throttle_heavy_pct |
 | `throttle_heavy_pct` | `uint32` | `300` | with throttle: NAND array time at the heavy level, in percent of nominal, up to 1000 |
 | `hot_k` | `uint16` | `0` | with throttle and ocp=off: autonomous protection enters the heavy level at this temperature in kelvin and leaves 2 K below; 0 (default) is off; ocp=on uses 350 K and 348 K |
-| `plane_reads` | `bool` | `off` | bbssd, CSD: reads on different planes of one die overlap; a program or erase still holds the whole die; plain channel model only (no ONFI, bus phases or pe_suspend); no effect with one plane per LUN |
+| `plane_reads` | `bool` | `off` | bbssd, CSD: reads on different planes of one die overlap; a program or erase still holds the whole die; plain channel model only (no ONFI, bus phases, pe_suspend or read_prio); no effect with one plane per LUN |
 | `err_read_unc_ppm` | `uint32` | `0` | bbssd, CSD: reads per million that fail as Unrecovered Read Error, injected at a fixed period; 0 disables |
 | `err_write_fail_ppm` | `uint32` | `0` | bbssd, CSD and ZNS: writes per million that fail, injected at a fixed period (a ZNS zone then goes read-only); 0 disables |
 | `read_reclaim_limit` | `int32` | `0` | bbssd, CSD: when a host read finds its block has taken this many reads since its erase, that line is queued and rewritten on a following write, one line at a time (under FDP, its reclaim unit); 0 disables |
@@ -232,7 +240,7 @@ Devices:
 | `gc_strategy` | `int32` | `0` | bbssd with FDP: reclaim unit victim strategy, 0 greedy, 1 cost-benefit, 2 random or 4 per-handle; a gc_policy other than greedy picks it instead |
 | `wl_spread` | `int32` | `0` | bbssd, CSD: static wear levelling starts when the erases of lines in service differ by more than this and stops at half of it; it moves the least worn full line into the most worn free line and copies at most a quarter of the host pages; 0 (default) turns it off |
 | `gc_pace` | `bool` | `off` | bbssd, CSD: collect the victim line a few pages per host page written, in proportion to its valid pages, instead of in one pass; the forced pass stays as the last resort; off (default) |
-| `gc_copyback` | `bool` | `off` | bbssd, CSD, FDP: collection moves a page on its die (copyback) when the destination is on the same channel, LUN and plane; collection takes victim pages in the order of the destination dies. A copyback skips ECC: the data never reaches the controller, so a real SSD does not correct its bit errors, and they can add up over repeated copybacks. FEMU models no bit errors, so here only the timing changes. For that reason a page whose read has extra ECC time, and every read reclaim or retention refresh, moves off-chip. Not for KV. Refused with gc_pace, pe_suspend, cxl_ssd, namespace_modes, ns_mgmt, shared namespaces and the hybrid and fast mappings; off (default) |
+| `gc_copyback` | `bool` | `off` | bbssd, CSD, FDP: collection moves a page on its die (copyback) when the destination is on the same channel, LUN and plane; collection takes victim pages in the order of the destination dies. A copyback skips ECC: the data never reaches the controller, so a real SSD does not correct its bit errors, and they can add up over repeated copybacks. FEMU models no bit errors, so here only the timing changes. For that reason a page whose read has extra ECC time, and every read reclaim or retention refresh, moves off-chip. Not for KV. Refused with gc_pace, pe_suspend, read_prio, cxl_ssd, namespace_modes, ns_mgmt, shared namespaces and the hybrid and fast mappings; off (default) |
 | `mapping` | `str` | unset | bbssd, CSD: logical-to-physical mapping scheme, one of page, dftl, hybrid or fast; unset is page, and FDP takes page or dftl |
 | `mapping_cache_mb` | `uint32` | `0` | bbssd, CSD with mapping=dftl: size of the cached mapping table in MiB; 0 means 4 |
 | `read_cache_mb` | `uint32` | `0` | bbssd, CSD: size of the DRAM read cache in MiB; 0 disables it |

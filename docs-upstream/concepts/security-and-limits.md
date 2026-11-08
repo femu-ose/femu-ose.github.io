@@ -3,12 +3,12 @@ title: "Security and limits"
 description: "What a guest can do to the host through FEMU, what QEMU features FEMU does not support, how device properties change between versions, and how much host..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/concepts/security-and-limits.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/concepts/security-and-limits.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/security-and-limits.md`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/concepts/security-and-limits.md) at FEMU `0938cc1e9` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/security-and-limits.md`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/concepts/security-and-limits.md) at FEMU `80e58025c` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -16,7 +16,7 @@ This page is [`hw/femu/docs/concepts/security-and-limits.md`](https://github.com
 What a guest can do to the host through FEMU, what QEMU features FEMU does
 not support, how device properties change between versions, and how much
 host memory a device takes. To report a vulnerability, follow
-[SECURITY.md](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/SECURITY.md).
+[SECURITY.md](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/SECURITY.md).
 
 ## Security model
 
@@ -100,6 +100,10 @@ These are chosen on the host, not by the guest:
 
 - `pel_file` keeps the Persistent Event Log in a host file that QEMU
   creates if it is missing.
+- `persist_file` keeps every byte the guest wrote to a bbssd or NoSSD
+  device in a host file, readable by anyone who can read that file.
+  Unplug or the end of QEMU writes it; a QEMU that is killed writes
+  nothing, and the file keeps the data of the last clean end.
 - `FEMU_DUMP_LPN` (BlackBox) hex-dumps the contents of one logical page to
   QEMU's standard error on every read, which `run-blackbox.sh` copies into
   its log file. `FEMU_EXP_LOG` traces only the addresses of pages that

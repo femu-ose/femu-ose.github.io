@@ -3,12 +3,12 @@ title: "NAND media and timing model"
 description: "This chapter describes the component that decides how long a flash operation takes in FEMU. It covers the geometry the model works on, the time it charges..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/design/nand-timing.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/design/nand-timing.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nand-timing.md`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/design/nand-timing.md) at FEMU `0938cc1e9` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nand-timing.md`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/design/nand-timing.md) at FEMU `80e58025c` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -813,6 +813,93 @@ serialized. BBSSD and ZNS run them on the single FTL thread. A device
 with suspend on also leaves the lock-free fast path described in
 [Concurrency](#concurrency).
 
+## Read priority
+
+With `read_prio` (BBSSD, CSD, KV), a read goes ahead of the programs and
+erases queued on its LUN. It waits only for the one that runs when it
+arrives, and for reads that went ahead before it. The layer keeps, per
+position, up to 16 program and erase windows `[start, end)`, sorted by
+start. `prio_read_start()` decides:
+
+```text
+ read arrives at t, rule busy until B
+ drop windows with end <= t
+ rs = max(t, rd_end, end of the windows the full list dropped)
+ for each window: start < rs (or start == t == rs)  ->  rs = max(rs, end)
+ no window starts at or after rs, or rs >= B:  ordinary rule
+ else: done = rs + tR; cur = done
+       each later window: push it to start at cur if it starts before;
+                          cur = its end (a gap absorbs the push)
+       every rule busy-until > rs += the push of the last window
+       rd_end = done
+```
+
+```text
+ off:  [P1 run][P2][P3][R]          read waits 3 programs
+ on:   [P1 run][R][P2][P3]          read waits P1; P2, P3 slide by tR
+ on:   [R]..gap..[P1]               the gap absorbs the read; P1 stays
+```
+
+With `pe_suspend` on as well, a suspension comes first. Read priority
+takes the read only when the suspend rule declines it, for example past
+`pe_suspend_max`. A slid program keeps the completion time the host was
+given, as with a suspension. Multi-plane reads keep the ordinary rule.
+
+Realize refuses `read_prio` with the bus phases (`cmd_addr_lat`,
+`pg_xfer_lat`, `ch_xfer_lat`, `status_lat`) and ONFI timing. Their status
+phases stay booked at the old end of a slid operation. It also refuses
+`gc_copyback`, `plane_reads`, `rber_ppb` and the dynamic pSLC tier.
+
+## Die parity
+
+Datacenter drives keep one parity page per stripe across dies, so a
+failed die loses no data. With `die_parity` (BBSSD, CSD), a stripe is one
+page per die at a plane and page index of a line. The write pointer steps
+the channel first, then the LUN, so a program on the last die completes
+the stripe. The FTL then books a parity program on die `(pg + pl) % dies`,
+after `parity_xor_ns`.
+
+```text
+ page pg, plane pl:  ch0/lun0  ch1/lun0 ... chN/lunM
+                     data      data         data   <- completes the stripe
+                     parity program on die (pg + pl) % dies, + XOR time
+```
+
+The parity program takes die time and counts in WAF (log C0h). It takes
+no page: the over-provisioning stays as configured. With `failed_die`, a
+read of that die reads the same page of every other die in parallel and
+adds `parity_xor_ns`. Those reads add no read count to their blocks. The
+data itself stays in the backend, so a failed die loses nothing in FEMU.
+`failed_die` is set at device creation; there is no runtime failure yet.
+`query-femu` reports `parity-write-pages` and `degraded-reads`, and its
+WAF counts the parity programs.
+
+## Two-pass program
+
+QLC drives program a wordline twice: a coarse pass, then a fine pass after
+later wordlines. The data of a wordline is not readable from the array
+until its fine pass ends, so the controller keeps it in its buffer.
+
+With `prog_pass2_ns` (BBSSD, CSD), the program time of a page is the coarse
+pass. When a program completes a wordline `w`, the FTL books the fine pass
+of wordline `w - prog_pass2_lag` on the same die with `nand_media_hold()`.
+That call books array time only, after the coarse program. A block that
+fills books the fine passes still due. A read of a wordline before its fine
+pass returns at once, as a buffer hit, and the die does no work for it.
+
+```text
+ lag 1, one page per wordline
+ program:  [c0]  [c1][f0]  [c2][f1]  [c3][f2][f3]   block full after c3
+ read wl1 after c1:   buffer, no array time
+ read wl1 after c2:   array read, after f1 on the die
+```
+
+Pages per wordline come from `nand_cell_type` (or `cell_pages`), as for
+the program disturb terms. Realize refuses the paths that program or read
+in batches or through another allocator: `mp_program`, `mp_read`,
+`onfi_cache_read`, `gc_copyback`, KV, FDP, the pSLC tier and the hybrid
+and fast mappings.
+
 ## ECC read time
 
 `ecc_step_ns` adds read time for worn or old data (`ecc_extra_ns()`):
@@ -1416,18 +1503,18 @@ make -C hw/femu/tests check
 
 | File | What it holds |
 | --- | --- |
-| [`hw/femu/nand/nand-media.h`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/nand/nand-media.h) | Media layer types and API: `NandLoc`, `NandMediaTiming`, `NandMediaPolicy`, `NandTimelineOps`, `nand_media_op()`, `nand_media_multiplane()`, `nand_media_copyback()` |
-| [`hw/femu/nand/nand-media.c`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/nand/nand-media.c) | Array time, rules, bus booking (`bus_now()`, `bus_later()`), suspend, ECC, multi-plane, copyback |
-| [`hw/femu/nand/nand.h`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/nand/nand.h), [`nand.c`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/nand/nand.c) | Cell-type timing tables, page pairing tables, rated P/E cycles |
-| [`hw/femu/bbssd/ftl-media.c`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/bbssd/ftl-media.c) | BBSSD adapter: `bb_decode_loc()`, `bb_nand_media_init()`, `ssd_advance_status()`, `ssd_advance_status_multiplane()`, `bb_nand_media_refresh_timing()` |
-| [`hw/femu/bbssd/ftl-geom.c`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/bbssd/ftl-geom.c) | Geometry checks and parameter copy (`bb_check_geometry()`, `ssd_init_params()`) |
-| [`hw/femu/bbssd/ftl-datapath.c`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/bbssd/ftl-datapath.c) | Host read and write: per-page operations and max latency |
-| [`hw/femu/bbssd/ftl-line-gc.c`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/bbssd/ftl-line-gc.c) | Write pointer order, GC reads, programs and multi-plane erase |
-| [`hw/femu/bbssd/bb.c`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/bbssd/bb.c) | 0xEF handler (`bb_flip()`, `bb_flip_apply()`) |
-| [`hw/femu/zns/zftl.c`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/zns/zftl.c) | ZNS adapter, write cache flush, zone reset erase |
-| [`hw/femu/zns/zns.c`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/zns/zns.c), [`zns.h`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/zns/zns.h) | ZNS timing values and property overrides (`zns_init_params()`) |
-| [`hw/femu/ocssd/oc-timing.c`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/ocssd/oc-timing.c) | OCSSD `flash_type` times, geometry check, 0xEE |
-| [`hw/femu/ocssd/oc12.c`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/ocssd/oc12.c), [`oc20.c`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/ocssd/oc20.c) | OCSSD per-command timing (`oc12_advance_status()`, `oc20_advance_status()`) |
-| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/femu.c) | FTL thread: `expire_time += latency`; timing properties |
-| [`hw/femu/nvme-io.c`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/nvme-io.c) | `stime` stamp, host link and firmware CPU models, priority queue and completion |
-| [`hw/femu/tests/unit/test-nand-media.c`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/tests/unit/test-nand-media.c) | Media layer unit tests |
+| [`hw/femu/nand/nand-media.h`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/nand/nand-media.h) | Media layer types and API: `NandLoc`, `NandMediaTiming`, `NandMediaPolicy`, `NandTimelineOps`, `nand_media_op()`, `nand_media_multiplane()`, `nand_media_copyback()` |
+| [`hw/femu/nand/nand-media.c`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/nand/nand-media.c) | Array time, rules, bus booking (`bus_now()`, `bus_later()`), suspend, ECC, multi-plane, copyback |
+| [`hw/femu/nand/nand.h`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/nand/nand.h), [`nand.c`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/nand/nand.c) | Cell-type timing tables, page pairing tables, rated P/E cycles |
+| [`hw/femu/bbssd/ftl-media.c`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/bbssd/ftl-media.c) | BBSSD adapter: `bb_decode_loc()`, `bb_nand_media_init()`, `ssd_advance_status()`, `ssd_advance_status_multiplane()`, `bb_nand_media_refresh_timing()` |
+| [`hw/femu/bbssd/ftl-geom.c`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/bbssd/ftl-geom.c) | Geometry checks and parameter copy (`bb_check_geometry()`, `ssd_init_params()`) |
+| [`hw/femu/bbssd/ftl-datapath.c`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/bbssd/ftl-datapath.c) | Host read and write: per-page operations and max latency |
+| [`hw/femu/bbssd/ftl-line-gc.c`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/bbssd/ftl-line-gc.c) | Write pointer order, GC reads, programs and multi-plane erase |
+| [`hw/femu/bbssd/bb.c`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/bbssd/bb.c) | 0xEF handler (`bb_flip()`, `bb_flip_apply()`) |
+| [`hw/femu/zns/zftl.c`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/zns/zftl.c) | ZNS adapter, write cache flush, zone reset erase |
+| [`hw/femu/zns/zns.c`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/zns/zns.c), [`zns.h`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/zns/zns.h) | ZNS timing values and property overrides (`zns_init_params()`) |
+| [`hw/femu/ocssd/oc-timing.c`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/ocssd/oc-timing.c) | OCSSD `flash_type` times, geometry check, 0xEE |
+| [`hw/femu/ocssd/oc12.c`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/ocssd/oc12.c), [`oc20.c`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/ocssd/oc20.c) | OCSSD per-command timing (`oc12_advance_status()`, `oc20_advance_status()`) |
+| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/femu.c) | FTL thread: `expire_time += latency`; timing properties |
+| [`hw/femu/nvme-io.c`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/nvme-io.c) | `stime` stamp, host link and firmware CPU models, priority queue and completion |
+| [`hw/femu/tests/unit/test-nand-media.c`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/tests/unit/test-nand-media.c) | Media layer unit tests |

@@ -3,12 +3,12 @@ title: "NVMe frontend"
 description: "The NVMe frontend is the part of -device femu that a guest driver talks to: the PCI function, the controller registers, the admin and I/O queues, the poller..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/design/nvme-frontend.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/design/nvme-frontend.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/design/nvme-frontend.md) at FEMU `0938cc1e9` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/design/nvme-frontend.md) at FEMU `80e58025c` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -700,6 +700,36 @@ Timestamp (0Eh), Host Behavior Support (16h), Command Set Profile (19h), FDP
 a KV namespace) and Software Progress Marker (80h). Any other identifier, or
 one of these without what it needs, fails with Invalid Field in Command, and
 log 12h lists exactly the identifiers that answer.
+
+With `ocp=on` the OCP 2.7 features answer through UUID index 0 or 1 (OCP
+4.15). C5h configures the latency monitor, C7h selects a DSSD power state
+and C9h configures the DSSD events. C6h, C8h and CAh hold one value each,
+with a current, default and saved value. FEMU only stores them: it models
+no PLP circuit or idle mode. Device profile B, the only one FEMU takes,
+disables C2h (DP-CFG-6) and prohibits CBh (DP-CFG-13), so both fail.
+
+```text
+ FID  name                         CDW11 bits  default  note
+ C3h  clear PCIe error counters    31          -        not saveable; reads 0
+ C6h  PLP health check interval    31:16       0        minutes
+ C8h  telemetry profile            7:0         0        saved without SV
+ CAh  idle wake up time            15:0        0        ms
+```
+
+The NVM subsystem features (C6h, C7h, C8h, CAh) take NSID 0 or FFFFFFFFh
+only.
+
+With `ocp=on` the PCIe function also has Function Level Reset (OCP PCI-6),
+Advanced Error Reporting (PCI-26) and the Device Serial Number (PCI-25).
+The serial number is a 64-bit FNV-1a hash of `serial`. An FLR, or a
+system reset, is a Controller Level Reset that also clears CC, CSTS, AQA,
+ASQ, ACQ and the interrupt mask. Without `ocp` none of this is there, and
+a system reset leaves the controller as it was.
+
+```text
+ config space   80h PCIe capability (DEVCAP.FLR with ocp)
+                100h AER (48h bytes)  -->  148h Device Serial Number
+```
 Only the FDP features report a saved value: FDP Mode is fixed at realize,
 FDP Events can be changed at run time. A controller reset
 (`nvme_reset_features()`) restores Arbitration, Power Management, the

@@ -3,12 +3,12 @@ title: "Supported combinations"
 description: "Each section is a device property and the refusals that name it: the messages realize, or a runtime setter, gives for a combination FEMU does not support. A..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/reference/combinations.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/reference/combinations.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/reference/combinations.md) at FEMU `0938cc1e9` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/reference/combinations.md) at FEMU `80e58025c` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -78,6 +78,7 @@ own description allows. A message keeps its format directives (`%s`,
 
 ## `ch_xfer_lat`
 
+- FEMU bbssd: read_prio needs the plain channel model: no cmd_addr_lat, pg_xfer_lat, ch_xfer_lat or status_lat
 - OC 1.2 ch_xfer_lat must be nonnegative
 
 ## `cmbloc`
@@ -87,6 +88,10 @@ own description allows. A message keeps its format directives (`%s`,
 ## `cmbsz`
 
 - cmbsz describes a %
+
+## `cmd_addr_lat`
+
+- FEMU bbssd: read_prio needs the plain channel model: no cmd_addr_lat, pg_xfer_lat, ch_xfer_lat or status_lat
 
 ## `cqr`
 
@@ -153,6 +158,10 @@ own description allows. A message keeps its format directives (`%s`,
 
 - the FTL thread did not take the query; the controller may be paused or disabled
 
+## `die_parity`
+
+- FEMU bbssd: die_parity needs two dies at least and mapping=page, and does not work with mp_program, mp_read, onfi_cache_read, gc_copyback, rber_ppb, KV, namespace_modes or FDP; parity_xor_ns (0 or more) and failed_die (-1 to dies - 1) need die_parity
+
 ## `dpc`
 
 - dpc: bit 3 (protection information in the first eight bytes of metadata) is not allowed by NVM 1.1
@@ -188,6 +197,10 @@ own description allows. A message keeps its format directives (`%s`,
 
 - meta/extended need a matching metadata capability (mc)
 - vwc, intc, cqr and extended are single bits
+
+## `failed_die`
+
+- FEMU bbssd: die_parity needs two dies at least and mapping=page, and does not work with mp_program, mp_read, onfi_cache_read, gc_copyback, rber_ppb, KV, namespace_modes or FDP; parity_xor_ns (0 or more) and failed_die (-1 to dies - 1) need die_parity
 
 ## `fdm_size`
 
@@ -241,6 +254,8 @@ own description allows. A message keeps its format directives (`%s`,
 
 ## `gc_copyback`
 
+- FEMU bbssd: die_parity needs two dies at least and mapping=page, and does not work with mp_program, mp_read, onfi_cache_read, gc_copyback, rber_ppb, KV, namespace_modes or FDP; parity_xor_ns (0 or more) and failed_die (-1 to dies - 1) need die_parity
+- FEMU bbssd: prog_pass2_ns must not be negative, prog_pass2_lag is 0 to 16 and needs it, and neither works with mp_program, mp_read, onfi_cache_read, gc_copyback, KV, FDP, the pSLC tier or a mapping other than page or dftl
 - femu: gc_copyback is not supported with %s
 
 ## `gc_frontier`
@@ -398,6 +413,8 @@ own description allows. A message keeps its format directives (`%s`,
 ## `mapping`
 
 - FEMU %s: mapping=%s is not supported under FDP: the log-block mappings write and merge through lines that are not FDP-aware; use page or dftl
+- FEMU bbssd: die_parity needs two dies at least and mapping=page, and does not work with mp_program, mp_read, onfi_cache_read, gc_copyback, rber_ppb, KV, namespace_modes or FDP; parity_xor_ns (0 or more) and failed_die (-1 to dies - 1) need die_parity
+- FEMU bbssd: prog_pass2_ns must not be negative, prog_pass2_lag is 0 to 16 and needs it, and neither works with mp_program, mp_read, onfi_cache_read, gc_copyback, KV, FDP, the pSLC tier or a mapping other than page or dftl
 - FEMU bbssd: unknown mapping "%s"
 - Streams requires page or dftl mapping
 - femu: pd_open_read_limit and pd_open_close_sec are not supported with mapping=%s
@@ -429,7 +446,14 @@ own description allows. A message keeps its format directives (`%s`,
 
 ## `mp_program`
 
+- FEMU bbssd: die_parity needs two dies at least and mapping=page, and does not work with mp_program, mp_read, onfi_cache_read, gc_copyback, rber_ppb, KV, namespace_modes or FDP; parity_xor_ns (0 or more) and failed_die (-1 to dies - 1) need die_parity
 - FEMU bbssd: iu_pages is 0 to 64, and above 1 not with buffer_size, streams, mp_program, end-of-life read-only or FDP
+- FEMU bbssd: prog_pass2_ns must not be negative, prog_pass2_lag is 0 to 16 and needs it, and neither works with mp_program, mp_read, onfi_cache_read, gc_copyback, KV, FDP, the pSLC tier or a mapping other than page or dftl
+
+## `mp_read`
+
+- FEMU bbssd: die_parity needs two dies at least and mapping=page, and does not work with mp_program, mp_read, onfi_cache_read, gc_copyback, rber_ppb, KV, namespace_modes or FDP; parity_xor_ns (0 or more) and failed_die (-1 to dies - 1) need die_parity
+- FEMU bbssd: prog_pass2_ns must not be negative, prog_pass2_lag is 0 to 16 and needs it, and neither works with mp_program, mp_read, onfi_cache_read, gc_copyback, KV, FDP, the pSLC tier or a mapping other than page or dftl
 
 ## `mpsmax`
 
@@ -449,6 +473,7 @@ own description allows. A message keeps its format directives (`%s`,
 
 ## `namespace_modes`
 
+- FEMU bbssd: die_parity needs two dies at least and mapping=page, and does not work with mp_program, mp_read, onfi_cache_read, gc_copyback, rber_ppb, KV, namespace_modes or FDP; parity_xor_ns (0 or more) and failed_die (-1 to dies - 1) need die_parity
 - kv_index=lsm and the kv_lsm_* knobs need a key-value namespace (femu_mode=5 or kvssd in namespace_modes)
 - kv_max_keys needs a key-value namespace (femu_mode=5 or kvssd in namespace_modes)
 - kv_pack=off needs a key-value namespace (femu_mode=5 or kvssd in namespace_modes)
@@ -585,9 +610,11 @@ own description allows. A message keeps its format directives (`%s`,
 
 ## `onfi_cache_read`
 
+- FEMU bbssd: die_parity needs two dies at least and mapping=page, and does not work with mp_program, mp_read, onfi_cache_read, gc_copyback, rber_ppb, KV, namespace_modes or FDP; parity_xor_ns (0 or more) and failed_die (-1 to dies - 1) need die_parity
 - FEMU bbssd: l2p_dram_ns must not be negative, and does not work with onfi_cache_read or FDP
+- FEMU bbssd: prog_pass2_ns must not be negative, prog_pass2_lag is 0 to 16 and needs it, and neither works with mp_program, mp_read, onfi_cache_read, gc_copyback, KV, FDP, the pSLC tier or a mapping other than page or dftl
 - femu: onfi_cache_read is refused with %s
-- plane_reads needs the plain channel model: no ONFI profile, onfi_cache_read, bus phases or pe_suspend
+- plane_reads needs the plain channel model: no ONFI profile, onfi_cache_read, bus phases, pe_suspend or read_prio
 
 ## `onfi_mode`
 
@@ -598,6 +625,7 @@ own description allows. A message keeps its format directives (`%s`,
 - femu: onfi_mode needs an even page size on the bus (secsz * secs_per_pg + onfi_spare_bytes)
 - femu: onfi_mode needs bbssd, CSD or KV namespaces; namespace %u is not one
 - femu: pe_suspend is refused with onfi_mode
+- femu: read_prio is refused with onfi_mode
 
 ## `onfi_mts`
 
@@ -616,6 +644,10 @@ own description allows. A message keeps its format directives (`%s`,
 ## `onfi_tccs_ns`
 
 - femu: onfi_spare_bytes and onfi_tccs_ns must not be negative
+
+## `parity_xor_ns`
+
+- FEMU bbssd: die_parity needs two dies at least and mapping=page, and does not work with mp_program, mp_read, onfi_cache_read, gc_copyback, rber_ppb, KV, namespace_modes or FDP; parity_xor_ns (0 or more) and failed_die (-1 to dies - 1) need die_parity
 
 ## `pd_edge_tiers`
 
@@ -655,15 +687,32 @@ own description allows. A message keeps its format directives (`%s`,
 
 - FEMU bbssd: pe_suspend_max and tresume_ns need pe_suspend
 - femu: pe_suspend is refused with onfi_mode
-- plane_reads needs the plain channel model: no ONFI profile, onfi_cache_read, bus phases or pe_suspend
+- plane_reads needs the plain channel model: no ONFI profile, onfi_cache_read, bus phases, pe_suspend or read_prio
 
 ## `pe_suspend_max`
 
 - FEMU bbssd: pe_suspend_max and tresume_ns need pe_suspend
 
+## `pel_file`
+
+- persist_file and pel_file name one file
+
 ## `perf_hints`
 
 - perf_hints: %s
+
+## `persist_file`
+
+- persist_file '%s' cannot be read in full
+- persist_file '%s' does not match this device: the mode, the backend size (%
+- persist_file '%s' is in use by another device
+- persist_file and pel_file name one file
+- persist_file is not supported with %s
+- persist_file must not be empty
+
+## `pg_xfer_lat`
+
+- FEMU bbssd: read_prio needs the plain channel model: no cmd_addr_lat, pg_xfer_lat, ch_xfer_lat or status_lat
 
 ## `pgs_per_blk`
 
@@ -680,7 +729,7 @@ own description allows. A message keeps its format directives (`%s`,
 
 ## `plane_reads`
 
-- plane_reads needs the plain channel model: no ONFI profile, onfi_cache_read, bus phases or pe_suspend
+- plane_reads needs the plain channel model: no ONFI profile, onfi_cache_read, bus phases, pe_suspend or read_prio
 - plane_reads works with bbssd, CSD or KV namespaces only (KV keeps the LUN rule)
 
 ## `poller_ratio`
@@ -703,6 +752,14 @@ own description allows. A message keeps its format directives (`%s`,
 - power_states needs 100 <= throttle_light_pct <= throttle_heavy_pct <= 1000
 - power_states works with bbssd or CSD namespaces only
 
+## `prog_pass2_lag`
+
+- FEMU bbssd: prog_pass2_ns must not be negative, prog_pass2_lag is 0 to 16 and needs it, and neither works with mp_program, mp_read, onfi_cache_read, gc_copyback, KV, FDP, the pSLC tier or a mapping other than page or dftl
+
+## `prog_pass2_ns`
+
+- FEMU bbssd: prog_pass2_ns must not be negative, prog_pass2_lag is 0 to 16 and needs it, and neither works with mp_program, mp_read, onfi_cache_read, gc_copyback, KV, FDP, the pSLC tier or a mapping other than page or dftl
+
 ## `ps_max_watts`
 
 - ps_max_watts must be 1 to 127
@@ -716,8 +773,15 @@ own description allows. A message keeps its format directives (`%s`,
 ## `rber_ppb`
 
 - FEMU %s: rber_ppb is not supported with %s
+- FEMU bbssd: die_parity needs two dies at least and mapping=page, and does not work with mp_program, mp_read, onfi_cache_read, gc_copyback, rber_ppb, KV, namespace_modes or FDP; parity_xor_ns (0 or more) and failed_die (-1 to dies - 1) need die_parity
 - FEMU: rber_ppb is not supported with %s
 - x-rber-u requires rber_ppb
+
+## `read_prio`
+
+- FEMU bbssd: read_prio needs the plain channel model: no cmd_addr_lat, pg_xfer_lat, ch_xfer_lat or status_lat
+- femu: read_prio is refused with onfi_mode
+- plane_reads needs the plain channel model: no ONFI profile, onfi_cache_read, bus phases, pe_suspend or read_prio
 
 ## `read_reclaim_limit`
 
@@ -761,6 +825,10 @@ own description allows. A message keeps its format directives (`%s`,
 - femu: spare_lines (%u) must be below blks_per_pl (%d)
 - femu: spare_lines needs blk_pe_limit
 
+## `status_lat`
+
+- FEMU bbssd: read_prio needs the plain channel model: no cmd_addr_lat, pg_xfer_lat, ch_xfer_lat or status_lat
+
 ## `streams`
 
 - FEMU bbssd: iu_pages is 0 to 64, and above 1 not with buffer_size, streams, mp_program, end-of-life read-only or FDP
@@ -783,6 +851,10 @@ own description allows. A message keeps its format directives (`%s`,
 - power_states does not work with a femu-subsys yet
 - reservations must be the same on every controller of a femu-subsys
 - sanitize_ms does not work with a femu-subsys yet
+
+## `telemetry_da4`
+
+- telemetry_da4 is not supported with FDP
 
 ## `thermal_r`
 

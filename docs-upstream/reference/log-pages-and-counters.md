@@ -3,12 +3,12 @@ title: "Log pages and counters"
 description: "How to read FEMU's own counters from the guest. Device properties are in properties.md, and the counters of femu-cxl-ssd are QOM properties listed in..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/reference/log-pages-and-counters.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/reference/log-pages-and-counters.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/0938cc1e93845a95e9e1a006d1e0b1e261a5ade9/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `0938cc1e9` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `80e58025c` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -98,7 +98,21 @@ The same counters can be captured through the standard Telemetry Host-Initiated
 log (07h): `nvme telemetry-log /dev/nvme0 --output-file=telemetry.bin` takes a
 snapshot and saves it. Data Area 1 is one 512-byte block laid out as above, and
 it stays as captured until the next capture. The Controller-Initiated log (08h)
-never holds data, because the controller does not capture on its own.
+holds a capture that a SMART warning or a temperature event started.
+
+With `telemetry_da4=on` and ETDAS set in Host Behavior Support, each capture
+also has Data Area 4: one 512-byte block per namespace, in the same layout.
+Block 1 + NSID holds that namespace; the host command counters stay zero there.
+Realize refuses `telemetry_da4` with FDP, whose namespaces share one FTL.
+
+```text
+ block   0        1             2          3               1 + NN
+        [header] [controller]  [nsid 1]   [nsid 2]   ...  [nsid NN]
+         DA1, DA2, DA3 end at block 1; DA4 ends at block 1 + NN
+```
+
+The Maximum Created Data Area field (MCDA, Get Log Page CDW10 bits 11:9)
+of log 07h then works too: 1 to 3 creates no Data Area 4.
 
 `nvme get-log /dev/nvme0 --log-id=0 --log-len=1024 -b` lists every log page the
 controller answers, four bytes per identifier with bit 0 set for the ones it
