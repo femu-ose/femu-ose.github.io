@@ -3,12 +3,12 @@ title: "Tiered NAND: a pSLC pool in front of dense NAND"
 description: "Many TLC and QLC SSDs write host data to a fast cache first. The cache is ordinary NAND that the drive programs with one bit per NAND unit (pSLC). Later the..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/e82281c8dc3e2056b039bd2d15fde9b5e9b0fe42/hw/femu/docs/features/tiered-nand.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/743b0972b67c504a0bcfd74fc13419381b81fe36/hw/femu/docs/features/tiered-nand.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/tiered-nand.md`](https://github.com/MoatLab/FEMU/blob/e82281c8dc3e2056b039bd2d15fde9b5e9b0fe42/hw/femu/docs/features/tiered-nand.md) at FEMU `e82281c8d` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/tiered-nand.md`](https://github.com/MoatLab/FEMU/blob/743b0972b67c504a0bcfd74fc13419381b81fe36/hw/femu/docs/features/tiered-nand.md) at FEMU `743b0972b` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -299,13 +299,19 @@ the channel too, set a bus profile such as `pg_xfer_lat` or `onfi_mode`.
 
 ## Limits
 
-- bbssd only, with one namespace and page mapping.
+- bbssd only, with one namespace and `page` or `dftl` mapping.
+- With `dftl`, translation pages stay on dense lines. They do not count in
+  the fill, and the dense room for host pages leaves their lines out.
 - Realize refuses the tier with FDP, KV, ZNS, CSD, OCSSD, `mapping` other
-  than `page`, `power_loss`, Streams, `hot_cold_sep`,
+  than `page` or `dftl`, `power_loss`, Streams, `hot_cold_sep`,
   `gc_pace` and `gc_copyback`.
 - Realize also refuses it with `blk_pe_limit`, `wl_spread`,
   `read_reclaim_limit`, `retention_limit_sec`, the `pd_*` properties,
-  `mp_program`, `onfi_cache_read`, `pe_suspend` and `ecc_step_ns`.
+  `onfi_cache_read`, `pe_suspend` and `ecc_step_ns`.
+- With `mp_program`, pool pages program as multi-plane commands, as dense
+  pages do. A fold first charges the programs that the multi-plane batches
+  still hold, so it never reads a page before its program. That charge
+  goes to the request that holds them.
 - With `pe_suspend`, a read could move the end of a fold program past the
   time the erase waits for, so the tier refuses it.
 - `tier_full_policy=through` needs `tier_static_mb` above 0. A static pool

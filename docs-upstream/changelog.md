@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/e82281c8dc3e2056b039bd2d15fde9b5e9b0fe42/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/743b0972b67c504a0bcfd74fc13419381b81fe36/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/e82281c8dc3e2056b039bd2d15fde9b5e9b0fe42/hw/femu/docs/CHANGELOG.md) at FEMU `e82281c8d` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/743b0972b67c504a0bcfd74fc13419381b81fe36/hw/femu/docs/CHANGELOG.md) at FEMU `743b0972b` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -189,6 +189,8 @@ listed one by one.
 - `tier_mode=dynamic` lets the pSLC pool borrow free dense lines while the device has room, with `tier_max_mb` as a cap and `tier_shrink_pct` as the fill where the pool starts to shrink. A borrowed line goes back to the dense free list after its fold, and the dense lines always keep room for every valid page. See [tiered NAND](features/tiered-nand.md#dynamic-pool).
 - `tier_idle_ms` lets the pSLC tier fold pool lines in idle time, one bounded step at a time, so the next burst finds free pool lines. `tier_lazy_pct` folds only while the pool use is above a percent. Both are off by default. See [tiered NAND](features/tiered-nand.md#idle-folds).
 - The pSLC tier now works with `buffer_size`. A write-back places buffered pages in the pool. The idle write-back runs no fold; when the pool is full, the idle FTL thread folds one bounded step at a time until a pool line is free. See [tiered NAND](features/tiered-nand.md#write-buffer).
+- The pSLC tier now works with `mp_program`. A fold first charges the multi-plane programs still held, so it never reads a page before its program.
+- The pSLC tier now works with `mapping=dftl`. Translation pages stay on dense lines and do not count as host data in the pool's fill rules.
 - `gc_frontier=on` writes the pages garbage collection copies to lines of their own, apart from host writes, as real drives do; under a skewed overwrite this lowers the pages copied. Off by default; refused with FDP, `cxl_ssd`, `gc_pace`, Streams, and `retention_limit_sec` without `pd_open_close_sec`.
 - `nand_profile=FILE` reads a versioned NAND profile: the base read, program and erase times and the bus phases of a chip, in one format for bbssd, CSD, KV and ZNS. ZNS programs a wordline, so it takes the page program time times the pages of a wordline. `query-femu` reports the times the media uses and the profile. Two profiles in `hw/femu/profiles/` give today's defaults. Off by default.
 - Controller-initiated telemetry: a SMART warning that begins, the temperature condition starting, or autonomous thermal protection captures the FEMU statistics once into log 08h (TCDA 1, TCDGN up, a reason). The Telemetry Log Changed notice follows when AEC bit 10 is set, also when it is set later. A read without RAE hands the capture over. A reset keeps it; a QEMU restart does not. Off with `ocp=on` until the OCP layout exists.

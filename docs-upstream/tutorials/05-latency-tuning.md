@@ -3,12 +3,12 @@ title: "Tutorial 05: latency tuning"
 description: "You change the parts of FEMU's timing model one at a time: the flat NAND times, the cell type, the channel bus, the host link and the controller firmware..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/e82281c8dc3e2056b039bd2d15fde9b5e9b0fe42/hw/femu/docs/tutorials/05-latency-tuning.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/743b0972b67c504a0bcfd74fc13419381b81fe36/hw/femu/docs/tutorials/05-latency-tuning.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/tutorials/05-latency-tuning.md`](https://github.com/MoatLab/FEMU/blob/e82281c8dc3e2056b039bd2d15fde9b5e9b0fe42/hw/femu/docs/tutorials/05-latency-tuning.md) at FEMU `e82281c8d` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/tutorials/05-latency-tuning.md`](https://github.com/MoatLab/FEMU/blob/743b0972b67c504a0bcfd74fc13419381b81fe36/hw/femu/docs/tutorials/05-latency-tuning.md) at FEMU `743b0972b` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

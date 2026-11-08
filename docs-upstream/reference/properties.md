@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/e82281c8dc3e2056b039bd2d15fde9b5e9b0fe42/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/743b0972b67c504a0bcfd74fc13419381b81fe36/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/e82281c8dc3e2056b039bd2d15fde9b5e9b0fe42/hw/femu/docs/reference/properties.md) at FEMU `e82281c8d` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/743b0972b67c504a0bcfd74fc13419381b81fe36/hw/femu/docs/reference/properties.md) at FEMU `743b0972b` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -270,7 +270,7 @@ Devices:
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| `tier_mode` | `str` | unset | bbssd: off (unset), static or dynamic; static keeps a pool of lines in pSLC mode in front of the dense lines, and host writes go there first. dynamic also borrows free dense lines for the pool while the device has room. Needs nand_cell_type 2, 3 or 4 and page mapping; refused with FDP, more than one namespace, buffer_size, Streams and the wear, refresh and pd_* features |
+| `tier_mode` | `str` | unset | bbssd: off (unset), static or dynamic; static keeps a pool of lines in pSLC mode in front of the dense lines, and host writes go there first. dynamic also borrows free dense lines for the pool while the device has room. Needs nand_cell_type 2, 3 or 4 and page or dftl mapping; refused with FDP, more than one namespace, Streams and the wear, refresh and pd_* features |
 | `tier_full_policy` | `str` | unset | bbssd with a tier_mode: what a host page does when the pool has no free page; direct (unset) writes it to the dense lines, through folds the oldest pool line first and writes it to the pool |
 | `tier_static_mb` | `uint32` | `0` | bbssd with a tier_mode: host data in MiB the static pSLC pool holds; the pool takes enough whole lines out of the over-provisioning, and realize refuses a pool that leaves the namespace too little room. Above 0 for static and for through; with dynamic it is the floor the pool keeps |
 | `tier_pslc_read_ns` | `uint64` | `25000` | bbssd with a tier_mode: time in ns of one pSLC page read, at most 10 s |
