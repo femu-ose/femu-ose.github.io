@@ -3,12 +3,12 @@ title: "Scripts and tools"
 description: "Every script and tool shipped under hw/femu/scripts/ and hw/femu/tools/: what it does, its arguments and the environment variables it reads. The top-level..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/reference/scripts.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/6fa7eb1fa6ff4e2e049949bc732f678bd6285c92/hw/femu/docs/reference/scripts.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/scripts.md`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/reference/scripts.md) at FEMU `80e58025c` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/scripts.md`](https://github.com/MoatLab/FEMU/blob/6fa7eb1fa6ff4e2e049949bc732f678bd6285c92/hw/femu/docs/reference/scripts.md) at FEMU `6fa7eb1fa` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -249,7 +249,7 @@ guest builds `libcca.a`, the `ccactl` command and the `cca-test` self-test.
 runs the self-test as root, logging to `cca-guest-YYYYMMDD-HHMMSS.log` by
 default.
 See [the caching API guide](../features/cxl-cca.md) and the
-[tool README](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/tools/cca/README.md).
+[tool README](https://github.com/MoatLab/FEMU/blob/6fa7eb1fa6ff4e2e049949bc732f678bd6285c92/hw/femu/tools/cca/README.md).
 
 ## Legacy scripts
 

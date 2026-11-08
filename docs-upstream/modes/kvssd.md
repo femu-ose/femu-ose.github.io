@@ -3,12 +3,12 @@ title: "Key-value SSD (KV)"
 description: "KV mode (femu_mode=5) emulates an SSD with the NVMe Key Value command set. The namespace stores values under keys instead of blocks at addresses: the host..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/modes/kvssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/6fa7eb1fa6ff4e2e049949bc732f678bd6285c92/hw/femu/docs/modes/kvssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/kvssd.md`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/modes/kvssd.md) at FEMU `80e58025c` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/kvssd.md`](https://github.com/MoatLab/FEMU/blob/6fa7eb1fa6ff4e2e049949bc732f678bd6285c92/hw/femu/docs/modes/kvssd.md) at FEMU `6fa7eb1fa` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

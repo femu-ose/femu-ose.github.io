@@ -3,12 +3,12 @@ title: "QMP query-femu"
 description: "query-femu is a QMP command that reports the FTL state of a FEMU NVMe controller to the host. It needs no guest tools. The schema is in qapi/femu.json, and..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/reference/query-femu.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/6fa7eb1fa6ff4e2e049949bc732f678bd6285c92/hw/femu/docs/reference/query-femu.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/reference/query-femu.md) at FEMU `80e58025c` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/6fa7eb1fa6ff4e2e049949bc732f678bd6285c92/hw/femu/docs/reference/query-femu.md) at FEMU `6fa7eb1fa` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -590,3 +590,24 @@ without the FTL ring (NoSSD with `hiops_inline` on, CSD programs) count in
 retired are not counted, and admin commands are not timed. Without `reset`,
 a reply taken during I/O can differ by the commands in flight. Without
 `io_stages=on` the command fails.
+
+## femu-save-data
+
+`femu-save-data` writes a checkpoint of a bbssd or NoSSD device while it
+runs. The file has the `persist_file` format: the data, each namespace's
+slice and LBA format, and the deallocated and uncorrectable blocks. A
+later run loads it with `-device femu,...,persist_file=FILE`. The FTL state
+is not in the file.
+
+```text
+ {"execute": "femu-save-data", "arguments": {"file": "/vm/femu-ckpt"}}
+   pollers and FTL thread pause --> write file.XXXXXX, fsync, rename --> resume
+```
+
+The write runs under QEMU's main lock, so the whole QEMU waits for it, not
+only this device. Commands queued but not yet run may or may not be in the
+file; a completed write is in it. The file must not be the `persist_file`
+of another device (its lock file keeps the two apart), a `pel_file`, a
+name that ends in `.lock`, or a link to nothing. A namespace formatted to
+another LBA format than `lba_index` cannot take a checkpoint, because a
+later run could not load it.

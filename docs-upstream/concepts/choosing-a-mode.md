@@ -3,12 +3,12 @@ title: "Choosing a mode"
 description: "An NVMe femu device emulates one kind of SSD, chosen with femu_mode. Features such as Flexible Data Placement or several namespaces are added on top of a..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/concepts/choosing-a-mode.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/6fa7eb1fa6ff4e2e049949bc732f678bd6285c92/hw/femu/docs/concepts/choosing-a-mode.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/choosing-a-mode.md`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/concepts/choosing-a-mode.md) at FEMU `80e58025c` (2026-11-07), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/choosing-a-mode.md`](https://github.com/MoatLab/FEMU/blob/6fa7eb1fa6ff4e2e049949bc732f678bd6285c92/hw/femu/docs/concepts/choosing-a-mode.md) at FEMU `6fa7eb1fa` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -128,7 +128,7 @@ medium's size.
 
 *Figure: Modes against layers: the interface each mode offers, where its FTL runs, which timing model it uses, where its data lives and which thread charges its time; below, the features each mode supports (CUs are CSD compute units).*
 
-Generated from [`modes.py`](https://github.com/MoatLab/FEMU/blob/80e58025c0256aacd270a00705c22caa317a05ea/hw/femu/docs/modes.py): how to turn each mode or feature
+Generated from [`modes.py`](https://github.com/MoatLab/FEMU/blob/6fa7eb1fa6ff4e2e049949bc732f678bd6285c92/hw/femu/docs/modes.py): how to turn each mode or feature
 on, the guest kernel and tools it needs, what the host needs, and what CI
 checks. [requirements.md](../getting-started/requirements.md#kernel-per-mode)
 has the guest kernel configuration in more detail.
