@@ -3,12 +3,12 @@ title: "Timing model"
 description: "FEMU makes an emulated SSD take as long as a real one would. This page explains how it computes that time, how it makes the guest wait for it, which..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/6fa7eb1fa6ff4e2e049949bc732f678bd6285c92/hw/femu/docs/concepts/timing-model.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/854e7f10e21223b78554b501f337a062c9e6f802/hw/femu/docs/concepts/timing-model.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/timing-model.md`](https://github.com/MoatLab/FEMU/blob/6fa7eb1fa6ff4e2e049949bc732f678bd6285c92/hw/femu/docs/concepts/timing-model.md) at FEMU `6fa7eb1fa` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/timing-model.md`](https://github.com/MoatLab/FEMU/blob/854e7f10e21223b78554b501f337a062c9e6f802/hw/femu/docs/concepts/timing-model.md) at FEMU `854e7f10e` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -125,6 +125,10 @@ for when it will happen, so other LUNs can use the bus in the meantime.
 
 ### Program and erase suspend, ECC
 
+- `crypto_mbps` adds an inline encryption engine of that throughput, shared
+  by every queue. A command holds it for the bytes it reads or programs: a
+  Copy pays twice (decrypt, then encrypt), and a failed command pays nothing.
+  Commands take the engine in the order the poller sees them.
 - `pe_suspend` (`zns_pe_suspend` for ZNS) lets a read go ahead of a program or
   erase that is running on its LUN (plane for ZNS). The first such read pays
   `tsusp_ns` (`zns_tsusp_ns`); the suspended operation then ends later by
