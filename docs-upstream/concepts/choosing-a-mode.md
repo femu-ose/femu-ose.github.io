@@ -3,12 +3,12 @@ title: "Choosing a mode"
 description: "An NVMe femu device emulates one kind of SSD, chosen with femu_mode. Features such as Flexible Data Placement or several namespaces are added on top of a..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/87d812eea39ba5f529ba8a538ec9be1b9e10d1f2/hw/femu/docs/concepts/choosing-a-mode.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/259d6294c5d009b55181840a6913a36d83e6a08a/hw/femu/docs/concepts/choosing-a-mode.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/choosing-a-mode.md`](https://github.com/MoatLab/FEMU/blob/87d812eea39ba5f529ba8a538ec9be1b9e10d1f2/hw/femu/docs/concepts/choosing-a-mode.md) at FEMU `87d812eea` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/choosing-a-mode.md`](https://github.com/MoatLab/FEMU/blob/259d6294c5d009b55181840a6913a36d83e6a08a/hw/femu/docs/concepts/choosing-a-mode.md) at FEMU `259d6294c` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -34,6 +34,13 @@ If you set nothing, you get NoSSD: `femu_mode` defaults to 2.
 Any other value fails realize with "femu_mode must be 0 (OpenChannel), 1
 (black-box), 2 (no-SSD), 3 (zoned), 4 (computational storage) or 5
 (key-value)". With `femu_mode=0`, an `lver` other than 1 or 2 fails too.
+
+`mode` takes the name instead of the number: `ocssd`, `bbssd`, `nossd`,
+`zns`, `csd` or `kv` (`znssd` and `kvssd` work too), in any letter case.
+So `mode=bbssd` is `femu_mode=1`. A `femu_mode` other than 2 must name
+the same mode as `mode`. FEMU cannot tell an explicit `femu_mode=2` from
+the default, so `femu_mode=2` never overrides `mode`. query-femu reports
+the modes as `znssd` and `kvssd`.
 
 ## Decision table
 
@@ -128,7 +135,7 @@ medium's size.
 
 *Figure: Modes against layers: the interface each mode offers, where its FTL runs, which timing model it uses, where its data lives and which thread charges its time; below, the features each mode supports (CUs are CSD compute units).*
 
-Generated from [`modes.py`](https://github.com/MoatLab/FEMU/blob/87d812eea39ba5f529ba8a538ec9be1b9e10d1f2/hw/femu/docs/modes.py): how to turn each mode or feature
+Generated from [`modes.py`](https://github.com/MoatLab/FEMU/blob/259d6294c5d009b55181840a6913a36d83e6a08a/hw/femu/docs/modes.py): how to turn each mode or feature
 on, the guest kernel and tools it needs, what the host needs, and what CI
 checks. [requirements.md](../getting-started/requirements.md#kernel-per-mode)
 has the guest kernel configuration in more detail.

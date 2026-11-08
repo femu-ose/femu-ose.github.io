@@ -3,12 +3,12 @@ title: "Measuring"
 description: "How to read FEMU's counters, measure latency and throughput from the guest, and get numbers that repeat from run to run. Commands in sh blocks run inside..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/87d812eea39ba5f529ba8a538ec9be1b9e10d1f2/hw/femu/docs/guides/measuring.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/259d6294c5d009b55181840a6913a36d83e6a08a/hw/femu/docs/guides/measuring.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/guides/measuring.md`](https://github.com/MoatLab/FEMU/blob/87d812eea39ba5f529ba8a538ec9be1b9e10d1f2/hw/femu/docs/guides/measuring.md) at FEMU `87d812eea` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/guides/measuring.md`](https://github.com/MoatLab/FEMU/blob/259d6294c5d009b55181840a6913a36d83e6a08a/hw/femu/docs/guides/measuring.md) at FEMU `259d6294c` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -220,6 +220,38 @@ Options: `--interval SEC` (default 1), `--count N`, `--once`, `--json`
 QMP member names. The tool exits with status 2 when it cannot connect, finds
 no `femu` device, or loses the connection. On a terminal it redraws the
 screen; in a pipe it prints one block per sample.
+
+## Per-command I/O trace (io_trace)
+
+`io_trace=FILE` writes one CSV line for each I/O command whose completion
+FEMU posts, in every mode. FEMU creates the file and refuses one that
+exists, so it never writes over a file.
+
+```text
+t_submit_ns,t_cqe_ns,sqid,cid,nsid,opcode,slba,nlb,status
+1053200417,1053313090,1,7,1,0x01,0,8,0x0
+ |          |          | |  | |    | |  status: SCT and SC, with DNR
+ |          |          | |  | |    | +- blocks (Read, Write, Compare,
+ |          |          | |  | |    +--- SLBA     Write Zeroes, Verify)
+ |          |          | |  | +-------- opcode
+ |          |          | |  +---------- NSID of the command
+ |          |          | +------------- command ID
+ |          |          +--------------- submission queue
+ |          +-------------------------- CQE written (device clock, ns)
+ +------------------------------------- command fetched (device clock, ns)
+```
+
+`t_cqe_ns - t_submit_ns` runs from the fetch of the command to the CQE
+write, every model stage included. Time in the SQ before the fetch and
+the interrupt after the CQE are not in it. Only NVM and zoned namespaces
+get a range. Admin commands are not in the trace.
+
+The file is written through a 1 MiB buffer. QEMU exit flushes it, and
+lines that come after are dropped and counted. Unplug closes it. A
+device refuses a trace path that is any device's `persist_file`,
+`pel_file` or `io_trace`. `femu-trace2csv.py` in
+[scripts](../reference/scripts.md) gives another format from QEMU
+tracing: no NSID and no submit time.
 
 ## CXL SSD counters
 

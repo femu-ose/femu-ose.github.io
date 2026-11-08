@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/87d812eea39ba5f529ba8a538ec9be1b9e10d1f2/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/259d6294c5d009b55181840a6913a36d83e6a08a/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/87d812eea39ba5f529ba8a538ec9be1b9e10d1f2/hw/femu/docs/reference/properties.md) at FEMU `87d812eea` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/259d6294c5d009b55181840a6913a36d83e6a08a/hw/femu/docs/reference/properties.md) at FEMU `259d6294c` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,17 +28,18 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 275 properties of its own and 2 QOM properties listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 277 properties of its own and 2 QOM properties listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `femu_mode` | `uint8` | `2` | Emulated SSD type: 0 OCSSD (Open-Channel), 1 bbssd (black-box FTL), 2 NoSSD (no media timing), 3 ZNS, 4 CSD (computational), 5 KV; other values fail realize |
+| `mode` | `str` | unset | the emulated SSD type by name: ocssd, bbssd, nossd, zns (or znssd), csd or kv (or kvssd); it sets femu_mode, and a femu_mode other than 2 must name the same type; unset (default) leaves femu_mode |
 | `devsz_mb` | `uint32` | `1024` | Size of the host memory backend in MiB, split across namespaces unless namespace_sizes is set; bbssd with op_pcent sizes from the NAND geometry instead |
 | `namespaces` | `uint32` | `1` | Number of namespaces created at boot, 1 to 256; OCSSD supports only 1, and FDP more than 1 only when all are bbssd or all nossd |
 | `namespace_sizes` | `str` | unset | Comma-separated size in bytes of each namespace (QEMU size syntax such as 4G,2G), one non-empty entry per namespace, summing to at most the backend; unset splits the backend evenly |
-| `namespace_modes` | `str` | unset | Comma-separated mode of each namespace from nossd, bbssd, znssd, ocssd, csd and kvssd, one entry per namespace; unset gives every namespace femu_mode |
+| `namespace_modes` | `str` | unset | Comma-separated mode of each namespace from nossd, bbssd, znssd (or zns), ocssd, csd and kvssd (or kv), one entry per namespace; unset gives every namespace femu_mode |
 | `namespace_phls` | `str` | unset | FDP placement handle list of each namespace: comma-separated entries, one per namespace, each a ':'-separated list of reclaim unit handle IDs such as 0:1,,2 (placement handle i selects entry i); needs fdp=on, and unset gives every namespace every handle |
 | `op_pcent` | `uint32` | `0` | Over-provisioning in percent for bbssd: back the device with the full NAND capacity and expose capacity/(1 + op_pcent/100); 0 keeps devsz_mb sizing, not with cxl_ssd |
 | `subsys` | `link<femu-subsys>` | unset | ID of a femu-subsys device to join, created before this controller; needed for FDP, shared namespaces and the Endurance Group log |
@@ -46,6 +47,7 @@ Devices:
 | `pel_file` | `str` | unset | Host file that keeps the Persistent Event Log and power cycle count across runs, created if missing; a corrupt or incompatible file fails realize |
 | `persist_file` | `str` | unset | bbssd, NoSSD: host file that keeps the data and the deallocated and uncorrectable blocks across runs; realize loads it, unplug or the end of QEMU saves it. A file of another mode, size, namespace layout or LBA format fails realize, and FILE.lock keeps a second user out. Format NVM keeps the LBA format. The FTL state is kept only with persist_ftl. Not with namespace_modes, ns_mgmt, shared namespaces, cxl_ssd, metadata or sanitize_ms |
 | `persist_ftl` | `bool` | `off` | bbssd with mapping=page: persist_file keeps the FTL state too (mapping, page and block state, lines, write pointer, counters), so a restarted drive continues as it was; a file of other geometry, mapping, GC or NAND timing properties fails realize. Not with FDP or the FTL features whose state it does not keep (realize names the property); off (default) |
+| `io_trace` | `str` | unset | host file for an I/O trace: one CSV line per completed I/O command (t_submit_ns, t_cqe_ns, sqid, cid, nsid, opcode, slba, nlb, status), in every mode; the file must not exist; unset (default) is off |
 | `serial` | `str` | unset | No effect, kept for compatibility; Identify Controller reports a serial number FEMU generates. Setting it warns at realize |
 
 ### Queues, pollers and interrupts

@@ -3,12 +3,12 @@ title: "Supported combinations"
 description: "Each section is a device property and the refusals that name it: the messages realize, or a runtime setter, gives for a combination FEMU does not support. A..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/87d812eea39ba5f529ba8a538ec9be1b9e10d1f2/hw/femu/docs/reference/combinations.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/259d6294c5d009b55181840a6913a36d83e6a08a/hw/femu/docs/reference/combinations.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/87d812eea39ba5f529ba8a538ec9be1b9e10d1f2/hw/femu/docs/reference/combinations.md) at FEMU `87d812eea` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/259d6294c5d009b55181840a6913a36d83e6a08a/hw/femu/docs/reference/combinations.md) at FEMU `259d6294c` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -237,6 +237,7 @@ own description allows. A message keeps its format directives (`%s`,
 - kv_max_keys needs a key-value namespace (femu_mode=5 or kvssd in namespace_modes)
 - kv_pack=off needs a key-value namespace (femu_mode=5 or kvssd in namespace_modes)
 - kv_timing=model and kv_model_coeffs need a key-value namespace (femu_mode=5 or kvssd in namespace_modes)
+- mode=%s and femu_mode=%u name different modes
 - ocssd is a controller mode: femu_mode and namespace_modes must both select it, or neither
 - persist_ftl needs femu_mode=1 (bbssd)
 
@@ -327,6 +328,14 @@ own description allows. A message keeps its format directives (`%s`,
 ## `io_stages`
 
 - the femu device does not time I/O stages; set io_stages=on
+
+## `io_trace`
+
+- femu-save-data: '%s' is a device's io_trace
+- io_trace must not be empty
+- io_trace: '%s' is a persist_file, pel_file or io_trace of a device
+- io_trace: cannot write '%s'
+- io_trace: no directory for '%s'
 
 ## `iu_pages`
 
@@ -465,6 +474,25 @@ own description allows. A message keeps its format directives (`%s`,
 - meta: not supported with placement (fdp)
 - meta: protection information (dpc, dps) is not supported
 - pif is 0 or 2; 2 needs pi=on and meta of 16 or more
+
+## `mode`
+
+- CSD mode requires fdm_size to be non-zero
+- FDP with more than one namespace needs every namespace in bbssd mode or every one in nossd mode
+- FEMU kvssd: gc_policy=%s is not supported; KV mode always reclaims the emptiest line
+- csd_pause: namespace %d runs a mode other than bbssd or CSD
+- der=cylon requires cylon-kernel-ack=on after reviewing the host dual-mode leaf lifetime fix
+- meta: namespace %d runs a mode without metadata support (block or no-SSD only)
+- mode '%s' is not one of ocssd, bbssd, nossd, zns, csd or kv
+- mode=%s and femu_mode=%u name different modes
+- namespace lifecycle is unsupported for this mode
+- namespace lifecycle requires a homogeneous mode
+- namespace_modes: unknown mode '%s'
+- ocp needs bbssd or CSD namespaces; namespace %d is mode %u
+- ocssd is a controller mode: femu_mode and namespace_modes must both select it, or neither
+- persist_file '%s' does not match this device: the mode, the backend size (%
+- shared namespace mode and capabilities must match
+- test-storm is threads,pages,iters,mode,seed with at most one thread per vCPU
 
 ## `mp_program`
 
@@ -720,6 +748,7 @@ own description allows. A message keeps its format directives (`%s`,
 ## `pel_file`
 
 - femu-save-data: '%s' is a device's pel_file
+- io_trace: '%s' is a persist_file, pel_file or io_trace of a device
 - persist_file and pel_file name one file
 
 ## `perf_hints`
@@ -729,6 +758,7 @@ own description allows. A message keeps its format directives (`%s`,
 ## `persist_file`
 
 - FEMU: rrl is not supported with persist_file
+- io_trace: '%s' is a persist_file, pel_file or io_trace of a device
 - persist_file '%s' cannot be read in full
 - persist_file '%s' does not match this device: the mode, the backend size (%
 - persist_file '%s' has a short FTL section
