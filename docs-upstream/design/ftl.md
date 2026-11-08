@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/854e7f10e21223b78554b501f337a062c9e6f802/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/87d812eea39ba5f529ba8a538ec9be1b9e10d1f2/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/854e7f10e21223b78554b501f337a062c9e6f802/hw/femu/docs/design/ftl.md) at FEMU `854e7f10e` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/87d812eea39ba5f529ba8a538ec9be1b9e10d1f2/hw/femu/docs/design/ftl.md) at FEMU `87d812eea` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -991,6 +991,29 @@ seeded with `rber_seed`. Each pass adds to the block read count, so read
 stress and read reclaim see it. GC reads, translation reads and FDP map
 reads are left out. Log page C0h counts the outcomes at offsets 296 to 320.
 
+With `rrl=on` the host sets a Read Recovery Level (Feature 12h). The level
+bounds the recovery of host reads; GC reads keep full recovery.
+
+```text
+ level 4 (default)    attempts 0 .. rr_steps, then soft decode (as above);
+                      a codeword still uncorrected changes time only
+ level 9              attempts 0 .. rr_steps, no soft decode
+ level 15 (Fast Fail) attempt 0 only, per codeword
+ level 9 or 15, a codeword left uncorrected --> Unrecovered Read Error with DNR
+                                 (Linux does not retry it), a SMART
+                                 media error; the page leaves the read cache
+```
+
+The level applies to host Read commands only: Compare, Verify and Copy
+keep full recovery, and GC reads stay outside the retry model. Without
+soft bits, levels 9 and 4 make the same attempts, but level 9 fails the
+read where level 4 does not. Realize refuses `rrl` with `persist_file`:
+the level must survive a power cycle, and the file does not keep it. Identify Controller sets CTRATT bit 3 and RRLS bits
+4, 9 and 15. Feature 12h has NVM subsystem scope: it takes NSID 0 only,
+and realize refuses `rrl` in a subsystem. It is not saveable, and the
+level persists across resets. A Set of another level fails with Invalid
+Field.
+
 ### Read-only end of life (`eol_read_only`)
 
 With `blk_pe_limit`, a block wears out on the erase that takes it to its
@@ -1426,6 +1449,7 @@ never changes in a mode means the mode is not reached.
 | `hw/femu/bbssd/ftl-datapath.c` | read, write, write buffer, deallocate, Write Zeroes, power-loss rollback |
 | `hw/femu/bbssd/ftl-line-gc.c` | lines, write pointers, Streams pointers, GC, victim policies, read reclaim |
 | `hw/femu/bbssd/ftl-map.c` | `maptbl`, `rmap`, page and DFTL schemes, scheme registry |
+| `hw/femu/bbssd/ftl-persist.c` | `persist_ftl`: the FTL section of a persist file, its checks and its load |
 | `hw/femu/bbssd/ftl-map-cmt.c` | DFTL cached mapping table |
 | `hw/femu/bbssd/ftl-map-tp.c` | DFTL translation pages on flash: GTD, TP pointer, publication, TP moves, checks |
 | `hw/femu/bbssd/ftl-map-hybrid.c` | BAST log-block scheme and its C0h counters |

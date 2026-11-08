@@ -3,12 +3,12 @@ title: "NVMe frontend"
 description: "The NVMe frontend is the part of -device femu that a guest driver talks to: the PCI function, the controller registers, the admin and I/O queues, the poller..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/854e7f10e21223b78554b501f337a062c9e6f802/hw/femu/docs/design/nvme-frontend.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/87d812eea39ba5f529ba8a538ec9be1b9e10d1f2/hw/femu/docs/design/nvme-frontend.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/854e7f10e21223b78554b501f337a062c9e6f802/hw/femu/docs/design/nvme-frontend.md) at FEMU `854e7f10e` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/87d812eea39ba5f529ba8a538ec9be1b9e10d1f2/hw/femu/docs/design/nvme-frontend.md) at FEMU `87d812eea` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -695,7 +695,8 @@ State Transition, 0Ch), LBA Range Type (03h), Temperature Threshold (04h), Error
 Recovery (05h), Volatile Write Cache (06h, only with `vwc=1`), Number of
 Queues (07h), Interrupt Coalescing (08h), Interrupt Vector Configuration
 (09h), Write Atomicity (0Ah), Asynchronous Event Configuration (0Bh),
-Timestamp (0Eh), Host Behavior Support (16h), Command Set Profile (19h), FDP
+Timestamp (0Eh), Read Recovery Level (12h, only with `rrl=on`), Host
+Behavior Support (16h), Command Set Profile (19h), FDP
 (1Dh, 1Eh, only with FDP on), Key Value Configuration (20h, only with
 a KV namespace) and Software Progress Marker (80h). Any other identifier, or
 one of these without what it needs, fails with Invalid Field in Command, and

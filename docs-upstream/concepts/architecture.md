@@ -3,12 +3,12 @@ title: "FEMU architecture"
 description: "FEMU is QEMU with a set of emulated storage devices under hw/femu/. This page describes those devices as a stack of layers, from what the guest sees down to..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/854e7f10e21223b78554b501f337a062c9e6f802/hw/femu/docs/concepts/architecture.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/87d812eea39ba5f529ba8a538ec9be1b9e10d1f2/hw/femu/docs/concepts/architecture.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/architecture.md`](https://github.com/MoatLab/FEMU/blob/854e7f10e21223b78554b501f337a062c9e6f802/hw/femu/docs/concepts/architecture.md) at FEMU `854e7f10e` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/architecture.md`](https://github.com/MoatLab/FEMU/blob/87d812eea39ba5f529ba8a538ec9be1b9e10d1f2/hw/femu/docs/concepts/architecture.md) at FEMU `87d812eea` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -222,7 +222,8 @@ Features that are not modes:
   (`hw/femu/nvme-pel.c`).
 - **Data persistence**: `persist_file`, bbssd and NoSSD
   (`hw/femu/femu-persist.c`). The data backend is saved at unplug or QEMU
-  exit and loaded at realize; the FTL state starts fresh.
+  exit and loaded at realize; the FTL state starts fresh. `persist_ftl`
+  keeps a page-mapped bbssd FTL too (`hw/femu/bbssd/ftl-persist.c`).
 
 [Choosing a mode](choosing-a-mode.md) lists which of these combine.
 
