@@ -3,12 +3,12 @@ title: "NVMe frontend"
 description: "The NVMe frontend is the part of -device femu that a guest driver talks to: the PCI function, the controller registers, the admin and I/O queues, the poller..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/743b0972b67c504a0bcfd74fc13419381b81fe36/hw/femu/docs/design/nvme-frontend.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/f8fb4b96344cbea68dc0922ad3abe0d855d9dd4d/hw/femu/docs/design/nvme-frontend.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/743b0972b67c504a0bcfd74fc13419381b81fe36/hw/femu/docs/design/nvme-frontend.md) at FEMU `743b0972b` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/f8fb4b96344cbea68dc0922ad3abe0d855d9dd4d/hw/femu/docs/design/nvme-frontend.md) at FEMU `f8fb4b963` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -740,9 +740,15 @@ and writes move no translation page. A disable, a Controller Level Reset
 or a system reset returns the lookups to the DFTL cache. FEMU stores
 nothing in the buffer.
 
+When the buffer goes off, the controller owns the table again. Each
+translation page whose mappings changed while it was on goes dirty in the
+cache, or pending if the cache does not hold it. The next request writes
+the pending ones, as for any other change.
+
 ```text
  lookup, HMB off: CMT hit, or a translation page read from flash on a miss
  lookup, HMB on:  hmb_ns (PCIe round trip), no flash read
+ HMB on --> off:  TPs changed under the HMB --> dirty (cached) or pending
 ```
 
 With `ocp=on` the PCIe function also has Function Level Reset (OCP PCI-6),

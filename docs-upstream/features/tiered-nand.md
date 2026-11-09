@@ -3,12 +3,12 @@ title: "Tiered NAND: a pSLC pool in front of dense NAND"
 description: "Many TLC and QLC SSDs write host data to a fast cache first. The cache is ordinary NAND that the drive programs with one bit per NAND unit (pSLC). Later the..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/743b0972b67c504a0bcfd74fc13419381b81fe36/hw/femu/docs/features/tiered-nand.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/f8fb4b96344cbea68dc0922ad3abe0d855d9dd4d/hw/femu/docs/features/tiered-nand.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/tiered-nand.md`](https://github.com/MoatLab/FEMU/blob/743b0972b67c504a0bcfd74fc13419381b81fe36/hw/femu/docs/features/tiered-nand.md) at FEMU `743b0972b` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/tiered-nand.md`](https://github.com/MoatLab/FEMU/blob/f8fb4b96344cbea68dc0922ad3abe0d855d9dd4d/hw/femu/docs/features/tiered-nand.md) at FEMU `f8fb4b963` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -302,6 +302,11 @@ the channel too, set a bus profile such as `pg_xfer_lat` or `onfi_mode`.
 - bbssd only, with one namespace and `page` or `dftl` mapping.
 - With `dftl`, translation pages stay on dense lines. They do not count in
   the fill, and the dense room for host pages leaves their lines out.
+- With `dftl`, a fold changes mappings, so translation pages wait to be
+  written. After a request, the request writes them. After an idle or
+  upkeep fold step, the step writes at most as many as there are LUNs, and
+  the next step waits for these programs. If no page is free for them, the
+  step tries again after a quiet time.
 - Realize refuses the tier with FDP, KV, ZNS, CSD, OCSSD, `mapping` other
   than `page` or `dftl`, `power_loss`, Streams, `hot_cold_sep`,
   `gc_pace` and `gc_copyback`.
