@@ -3,12 +3,12 @@ title: "NVMe frontend"
 description: "The NVMe frontend is the part of -device femu that a guest driver talks to: the PCI function, the controller registers, the admin and I/O queues, the poller..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/design/nvme-frontend.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/design/nvme-frontend.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/design/nvme-frontend.md) at FEMU `7bf21cb70` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/design/nvme-frontend.md) at FEMU `766f11822` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -886,8 +886,12 @@ The documentation example above (`frontend-sharded-pollers`) is started by
 - One controller per PCI function. No SR-IOV, no NVM Subsystem Reset, no
   controller memory for PMR.
 - No interrupt coalescing; the coalescing features only store values.
-- Weighted round robin arbitration is not implemented: CAP.AMS advertises it,
-  but each poller sweeps its queues in id order.
+- Arbitration is round robin only (CAP.AMS 0). Each poller sweeps its
+  queues in id order and takes at most 2^AB commands from each, AB being
+  the Arbitration Burst of feature 01h; AB 7, the reset value, is no
+  limit. The feature stores the weights; the queue priority of Create
+  I/O SQ is ignored. Admin commands run at their doorbell write, outside
+  the pollers.
 - A queue can have at most `size` commands outstanding, and a poller's rings
   hold 65535 requests each.
 - Abort only reaches commands not yet fetched.

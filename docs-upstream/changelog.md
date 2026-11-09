@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/CHANGELOG.md) at FEMU `7bf21cb70` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/CHANGELOG.md) at FEMU `766f11822` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -193,6 +193,9 @@ listed one by one.
 - The pSLC tier now works with `mapping=dftl`. Translation pages stay on dense lines and do not count as host data in the pool's fill rules. Idle and upkeep folds write the translation pages they change, at most as many as there are LUNs a step.
 - The pSLC tier now works under FDP with `tier_mode=static`: each reclaim group keeps pSLC reclaim units that persistently isolated handles write first, and a fold collects a full one into its handle's dense collection unit. See [tiered NAND](features/tiered-nand.md#fdp).
 - `events_file` runs ANA state changes and power cuts at fixed or seeded times after the first enable, and `query-femu-events` reports each one. See [timed actions](guides/measuring.md#timed-actions-events_file).
+- `die_slow=on` and the runtime property `die-slow` make one LUN slow: its array time grows by a percent, so later ops on it wait. `events_file` can do it at set times with `slow=`. See [a slow die](guides/measuring.md#a-slow-die-die_slow).
+- `ready_ms` and `recovery_ms` delay CSTS.RDY after CC.EN, the longer time on the first start after a power cut. Admin commands sent before ready run at ready. See [ready and recovery time](guides/measuring.md#ready-and-recovery-time).
+- The Arbitration Burst of feature 01h now limits how many commands a poller takes from one submission queue per sweep. The reset value of feature 01h is 0x1f0f0707 (AB 7, no limit), so the default path is as before.
 - `gc_frontier=on` writes the pages garbage collection copies to lines of their own, apart from host writes, as real drives do; under a skewed overwrite this lowers the pages copied. Off by default; refused with FDP, `cxl_ssd`, `gc_pace`, Streams, and `retention_limit_sec` without `pd_open_close_sec`.
 - `nand_profile=FILE` reads a versioned NAND profile: the base read, program and erase times and the bus phases of a chip, in one format for bbssd, CSD, KV and ZNS. ZNS programs a wordline, so it takes the page program time times the pages of a wordline. `query-femu` reports the times the media uses and the profile. Two profiles in `hw/femu/profiles/` give today's defaults. Off by default.
 - Controller-initiated telemetry: a SMART warning that begins, the temperature condition starting, or autonomous thermal protection captures the FEMU statistics once into log 08h (TCDA 1, TCDGN up, a reason). The Telemetry Log Changed notice follows when AEC bit 10 is set, also when it is set later. A read without RAE hands the capture over. A reset keeps it; a QEMU restart does not. Off with `ocp=on` until the OCP layout exists.

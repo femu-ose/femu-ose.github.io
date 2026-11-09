@@ -3,12 +3,12 @@ title: "QMP query-femu"
 description: "query-femu is a QMP command that reports the FTL state of a FEMU NVMe controller to the host. It needs no guest tools. The schema is in qapi/femu.json, and..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/reference/query-femu.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/reference/query-femu.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/reference/query-femu.md) at FEMU `7bf21cb70` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/reference/query-femu.md) at FEMU `766f11822` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -238,6 +238,7 @@ fallbacks. Times are in ns.
 | `staged-bus` | true when the channel bus phases are charged |
 | `array-timing`, `read-ns`, `program-ns`, `erase-ns` | `flat` (one time each) or `table` (per NAND type and page type), and the base array times the media uses, before ECC and other additions; with `table`, page 0 of the media's table row. A ZNS program covers the pages of a wordline |
 | `nand-profile`, `nand-profile-file` | the name in the `nand_profile` file and the file as given; absent without a profile |
+| `slow-luns` | each LUN that `die-slow` made slow: `channel`, `lun`, `percent`; absent when no LUN is slow |
 | `onfi-profile`, `onfi-mode` | true when `onfi_mode` 0 to 26 or `onfi_param_page` sets the bus phases; `onfi-mode` is present only then, and with a parameter page and `onfi_mode=-1` it is the highest mode the page lists |
 | `column-cycles`, `row-cycles` | the address cycles of each command with the profile: 2 and 3, or the page's byte 101; 0 without the profile |
 | `page-transfer-ns` | one page on the bus |

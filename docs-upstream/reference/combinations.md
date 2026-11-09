@@ -3,12 +3,12 @@ title: "Supported combinations"
 description: "Each section is a device property and the refusals that name it: the messages realize, or a runtime setter, gives for a combination FEMU does not support. A..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/reference/combinations.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/reference/combinations.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/reference/combinations.md) at FEMU `7bf21cb70` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/reference/combinations.md) at FEMU `766f11822` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -152,6 +152,7 @@ own description allows. A message keeps its format directives (`%s`,
 - cxl_ssd must name a realized femu-cxl-ssd
 - cxl_ssd requires %s
 - cxl_ssd requires the femu-cxl-ssd to have ftl=on
+- die_slow requires bbssd or CSD with one namespace, and no ns_mgmt, namespace_modes, subsystem or cxl_ssd
 - femu: onfi_mode is not supported with cxl_ssd
 - femu: the pd_* properties are not supported with cxl_ssd
 - hmb_mb is not supported with cxl_ssd
@@ -167,6 +168,13 @@ own description allows. A message keeps its format directives (`%s`,
 ## `die_parity`
 
 - FEMU bbssd: die_parity needs two dies at least and mapping=page, and does not work with mp_program, mp_read, onfi_cache_read, gc_copyback, rber_ppb, KV, namespace_modes or FDP; parity_xor_ns (0 or more) and failed_die (-1 to dies - 1) need die_parity
+
+## `die_slow`
+
+- action slow needs die_slow=on
+- die-slow needs a realized controller with die_slow=on
+- die_slow requires bbssd or CSD with one namespace, and no ns_mgmt, namespace_modes, subsystem or cxl_ssd
+- die_slow: nchs must be 1 to %d and luns_per_ch 1 to %d
 
 ## `dpc`
 
@@ -453,6 +461,7 @@ own description allows. A message keeps its format directives (`%s`,
 ## `luns_per_ch`
 
 - FEMU bbssd: fdp.nrg (%u) must divide nchs (%d), or be a multiple of nchs that divides the %u dies of nchs x luns_per_ch: a reclaim group is a set of whole channels, or of LUNs of one channel
+- die_slow: nchs must be 1 to %d and luns_per_ch 1 to %d
 
 ## `lver`
 
@@ -547,6 +556,7 @@ own description allows. A message keeps its format directives (`%s`,
 ## `namespace_modes`
 
 - FEMU bbssd: die_parity needs two dies at least and mapping=page, and does not work with mp_program, mp_read, onfi_cache_read, gc_copyback, rber_ppb, KV, namespace_modes or FDP; parity_xor_ns (0 or more) and failed_die (-1 to dies - 1) need die_parity
+- die_slow requires bbssd or CSD with one namespace, and no ns_mgmt, namespace_modes, subsystem or cxl_ssd
 - kv_index=lsm and the kv_lsm_* knobs need a key-value namespace (femu_mode=5 or kvssd in namespace_modes)
 - kv_max_keys needs a key-value namespace (femu_mode=5 or kvssd in namespace_modes)
 - kv_pack=off needs a key-value namespace (femu_mode=5 or kvssd in namespace_modes)
@@ -631,6 +641,7 @@ own description allows. A message keeps its format directives (`%s`,
 ## `nchs`
 
 - FEMU bbssd: fdp.nrg (%u) must divide nchs (%d), or be a multiple of nchs that divides the %u dies of nchs x luns_per_ch: a reclaim group is a set of whole channels, or of LUNs of one channel
+- die_slow: nchs must be 1 to %d and luns_per_ch 1 to %d
 
 ## `nlbaf`
 
@@ -648,6 +659,7 @@ own description allows. A message keeps its format directives (`%s`,
 ## `ns_mgmt`
 
 - csd_slm_size and csd_cp cannot be used with ns_mgmt, power_loss or a CXL link
+- die_slow requires bbssd or CSD with one namespace, and no ns_mgmt, namespace_modes, subsystem or cxl_ssd
 - femu: onfi_mode is not supported with ns_mgmt or shared namespaces
 - femu: the pd_* properties are not supported with ns_mgmt or shared namespaces
 - ns_mgmt=on does not support subsys; use a standalone controller
@@ -886,6 +898,16 @@ own description allows. A message keeps its format directives (`%s`,
 
 - FEMU bbssd: read_reclaim_limit must not be negative
 - femu: pd_open_read_limit must not be above read_reclaim_limit
+
+## `ready_ms`
+
+- ready_ms and recovery_ms must be below 7500, the CAP.TO the host reads
+- recovery_ms must be 0 or at least ready_ms
+
+## `recovery_ms`
+
+- ready_ms and recovery_ms must be below 7500, the CAP.TO the host reads
+- recovery_ms must be 0 or at least ready_ms
 
 ## `reservations`
 

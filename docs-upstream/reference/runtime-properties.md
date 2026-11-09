@@ -3,12 +3,12 @@ title: "Runtime properties and counters"
 description: "QOM properties that a running device exposes. Read and set them through QMP at /machine/peripheral/<id>, where <id> is the id= given on -device:"
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/reference/runtime-properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/reference/runtime-properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/runtime-properties.md`](https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/reference/runtime-properties.md) at FEMU `7bf21cb70` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/runtime-properties.md`](https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/reference/runtime-properties.md) at FEMU `766f11822` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -36,6 +36,12 @@ or in the HMP monitor with `qom-get` and `qom-set`. Event counters are cleared b
 | Property | Type | Description |
 | --- | --- | --- |
 | `ana-state` | `string` | with ana=on: "g:s" sets the ANA state of group g (the namespace ID) through this controller: 1 Optimized, 2 Non-Optimized, 3 Inaccessible, 4 Persistent Loss; reading lists every group |
+
+### Slow die
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `die-slow` | `string` | with die_slow=on: "&lt;ch&gt;:&lt;lun&gt;:&lt;pct&gt;" sets the array time of one LUN to pct percent of nominal (100 to 10000), for ops booked from then on; reading lists the LUNs not at 100 |
 
 ## `femu-cxl-ssd`: CXL Type-3 SSD
 

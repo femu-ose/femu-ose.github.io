@@ -3,12 +3,12 @@ title: "Measuring"
 description: "How to read FEMU's counters, measure latency and throughput from the guest, and get numbers that repeat from run to run. Commands in sh blocks run inside..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/guides/measuring.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/guides/measuring.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/guides/measuring.md`](https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/guides/measuring.md) at FEMU `7bf21cb70` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/guides/measuring.md`](https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/guides/measuring.md) at FEMU `766f11822` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -277,7 +277,8 @@ reads and checks the whole file and names the line of any error.
 ```
 
 - Actions: `ana=<group>:<state>` with state 1, 2 or 3 (needs `ana=on`),
-  and `power-loss` (needs `power_loss=on`).
+  `power-loss` (needs `power_loss=on`), and `slow=<ch>:<lun>:<pct>`
+  (needs `die_slow=on`, see below).
 - A window `<ms>+<window>~<seed>` draws its time once from the seed with
   splitmix64, so the same file and seed give the same time.
 - The times are host time. Events also run while the VM is stopped.
@@ -285,6 +286,58 @@ reads and checks the whole file and names the line of any error.
   its result. A failed action stops the events after it.
 - Limits: 1024 lines, each of at most 256 bytes, and 64 KiB a file. Not
   with `csd_pause`.
+
+## A slow die (die_slow)
+
+With `die_slow=on`, the QOM property `die-slow` (or a `slow=` action of
+`events_file`) sets the array time of one LUN in percent of nominal.
+The LUN stays busy longer, so later ops on it wait: real contention,
+not a delay added at completion.
+
+```text
+ die-slow "0:1:500"  --> LUN 1 of channel 0: tR, tPROG, tBERS x 5
+ thermal throttle first, then the die factor; ECC and bus phases unchanged
+ die-slow "0:1:100"  --> back to nominal, for ops booked from then on
+```
+
+- The factor applies when an op is booked. Work booked before a change
+  keeps its length, so a backlog stays after the die is fast again.
+- It covers host, GC, fold, translation page, multi-plane, copyback and
+  two-pass ops of bbssd and CSD namespaces. GC with its delay off stays
+  untimed. The CSD NVM-to-AFDM copy takes a fixed `pg_rd_lat`, not this.
+- A controller reset keeps the factors: they model the media.
+- One namespace only: `<ch>:<lun>` names no namespace, so `namespaces`
+  above 1 and `ns_mgmt` are refused.
+- `query-femu` lists each slow LUN and its factor under `media`,
+  `slow-luns`.
+
+## Ready and recovery time
+
+A real SSD takes time to come ready after CC.EN, and longer after an
+unsafe power cut, while it rebuilds its state. `ready_ms` and
+`recovery_ms` model this. Both are 0 by default: ready at once.
+
+```text
+ CC.EN 0 -> 1 --> admin queues set up, CSTS.RDY = 0
+              --> ready_ms later (recovery_ms after a power cut) --> RDY = 1
+ admin doorbells before RDY: the value is kept, the commands run at RDY
+ CC.EN 1 -> 0 or a power cut before RDY --> the start ends; enable again
+```
+
+- The time is guest time (the QEMU virtual clock). It stops while the VM
+  is stopped. An `events_file` power cut runs on host time, so it can
+  end a start while the VM is stopped.
+- Every power cut (`simulate-power-loss` or an `events_file`
+  `power-loss`) makes the next successful start a recovery. A start that
+  a reset or another cut ends does not count.
+- `recovery_ms` 0 uses `ready_ms`. Both are nominal times below
+  7500 ms, the CAP.TO and CRTO the host reads. Start-up work and timer
+  latency add to them, so a value near 7500 ms can exceed the host limit.
+- Recovery only delays CSTS.RDY. The roll back of buffered writes still
+  happens at the cut.
+- A system reset ends a start under way, with or without `ocp`.
+- A failed start (CSTS.CFS) does not take part: the admin queue then
+  behaves as before.
 
 ## CXL SSD counters
 
