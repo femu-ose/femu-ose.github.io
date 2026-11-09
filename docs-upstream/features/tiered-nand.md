@@ -3,12 +3,12 @@ title: "Tiered NAND: a pSLC pool in front of dense NAND"
 description: "Many TLC and QLC SSDs write host data to a fast cache first. The cache is ordinary NAND that the drive programs with one bit per NAND unit (pSLC). Later the..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/f8fb4b96344cbea68dc0922ad3abe0d855d9dd4d/hw/femu/docs/features/tiered-nand.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/features/tiered-nand.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/tiered-nand.md`](https://github.com/MoatLab/FEMU/blob/f8fb4b96344cbea68dc0922ad3abe0d855d9dd4d/hw/femu/docs/features/tiered-nand.md) at FEMU `f8fb4b963` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/tiered-nand.md`](https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/features/tiered-nand.md) at FEMU `7bf21cb70` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -213,6 +213,37 @@ each page as a direct write does: in the pool when it has room, else by
 - x-tier-check reports the upkeep steps and the idle write-backs that
   stopped for a fold.
 
+## FDP
+
+Under Flexible Data Placement the pool is a set of pSLC reclaim units in
+each reclaim group. FDP keeps the placement: a unit belongs to one handle
+from its first program, and the tier only sets the mode of the unit.
+
+```
+ realize: tier_static_mb of pSLC units per group, on a free list of their own
+ host write unit of a persistently isolated handle: a free pSLC unit first
+ initially isolated handle and every collection unit: dense units only
+ a pSLC unit fills --> closed list (never a collection victim)
+ end of a request, group has no free pSLC unit
+     --> fold: collect the oldest closed pSLC unit into its handle's
+         collection unit --> erase --> back to the pSLC free list
+```
+
+- A pSLC unit holds the pSLC pages of its blocks. RUAMW, MBMW and MBE
+  count those pages. A fold counts as collection writes (MBMW) of the
+  unit's handle, and its erase as MBE, as FDP collection does.
+- Under FDP the tier takes only `tier_mode=static` with the direct
+  policy. Dynamic pools, `tier_full_policy=through` and `tier_idle_ms` are
+  refused.
+- Collection thresholds count the whole group, so collection starts a
+  little earlier with the pool than without it.
+- A fold takes FDP collection timing. It charges every read, copy and
+  erase, but a copy on another die does not wait for its read, and the
+  erase does not wait for the copies, as in FDP collection today. The
+  line tier orders them; the FDP fold does not yet.
+- A logical block must fit in a pSLC unit as well as a dense one, at
+  realize and at Format.
+
 ## Capacity
 
 The exported capacity does not change. Realize checks that the dense lines
@@ -307,7 +338,7 @@ the channel too, set a bus profile such as `pg_xfer_lat` or `onfi_mode`.
   upkeep fold step, the step writes at most as many as there are LUNs, and
   the next step waits for these programs. If no page is free for them, the
   step tries again after a quiet time.
-- Realize refuses the tier with FDP, KV, ZNS, CSD, OCSSD, `mapping` other
+- Realize refuses the tier with KV, ZNS, CSD, OCSSD, `mapping` other
   than `page` or `dftl`, `power_loss`, Streams, `hot_cold_sep`,
   `gc_pace` and `gc_copyback`.
 - Realize also refuses it with `blk_pe_limit`, `wl_spread`,

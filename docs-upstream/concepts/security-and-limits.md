@@ -3,12 +3,12 @@ title: "Security and limits"
 description: "What a guest can do to the host through FEMU, what QEMU features FEMU does not support, how device properties change between versions, and how much host..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/f8fb4b96344cbea68dc0922ad3abe0d855d9dd4d/hw/femu/docs/concepts/security-and-limits.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/concepts/security-and-limits.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/security-and-limits.md`](https://github.com/MoatLab/FEMU/blob/f8fb4b96344cbea68dc0922ad3abe0d855d9dd4d/hw/femu/docs/concepts/security-and-limits.md) at FEMU `f8fb4b963` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/security-and-limits.md`](https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/concepts/security-and-limits.md) at FEMU `7bf21cb70` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -16,7 +16,7 @@ This page is [`hw/femu/docs/concepts/security-and-limits.md`](https://github.com
 What a guest can do to the host through FEMU, what QEMU features FEMU does
 not support, how device properties change between versions, and how much
 host memory a device takes. To report a vulnerability, follow
-[SECURITY.md](https://github.com/MoatLab/FEMU/blob/f8fb4b96344cbea68dc0922ad3abe0d855d9dd4d/SECURITY.md).
+[SECURITY.md](https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/SECURITY.md).
 
 ## Security model
 

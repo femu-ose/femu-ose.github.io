@@ -3,12 +3,12 @@ title: "Performance tuning"
 description: "FEMU's timing model computes when each command should complete, and a poller thread posts the completion once the host clock passes that time (timing..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/f8fb4b96344cbea68dc0922ad3abe0d855d9dd4d/hw/femu/docs/guides/performance-tuning.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/guides/performance-tuning.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/guides/performance-tuning.md`](https://github.com/MoatLab/FEMU/blob/f8fb4b96344cbea68dc0922ad3abe0d855d9dd4d/hw/femu/docs/guides/performance-tuning.md) at FEMU `f8fb4b963` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/guides/performance-tuning.md`](https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/guides/performance-tuning.md) at FEMU `7bf21cb70` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

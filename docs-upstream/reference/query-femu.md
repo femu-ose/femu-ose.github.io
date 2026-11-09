@@ -3,12 +3,12 @@ title: "QMP query-femu"
 description: "query-femu is a QMP command that reports the FTL state of a FEMU NVMe controller to the host. It needs no guest tools. The schema is in qapi/femu.json, and..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/f8fb4b96344cbea68dc0922ad3abe0d855d9dd4d/hw/femu/docs/reference/query-femu.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/reference/query-femu.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/f8fb4b96344cbea68dc0922ad3abe0d855d9dd4d/hw/femu/docs/reference/query-femu.md) at FEMU `f8fb4b963` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/reference/query-femu.md) at FEMU `7bf21cb70` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -529,6 +529,15 @@ group once per call, also for a summary. The command fails with an error in thes
 - A namespace changes during the query.
 
 Only one query at a time can wait on a device.
+
+## Timed actions: query-femu-events
+
+QMP command `query-femu-events` returns the `events_file` schedule of a
+controller: its state (`waiting`, `running` or `done`) and, for each event,
+the file line, the action, its time and when it ran, in ms after the
+first enable, and its result (`pending`, `done` or `failed`). It works
+before the first enable and after a power cut. See
+[timed actions](../guides/measuring.md#timed-actions-events_file).
 
 ## I/O stage times: query-femu-stages
 

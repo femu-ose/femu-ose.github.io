@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/f8fb4b96344cbea68dc0922ad3abe0d855d9dd4d/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/f8fb4b96344cbea68dc0922ad3abe0d855d9dd4d/hw/femu/docs/CHANGELOG.md) at FEMU `f8fb4b963` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/CHANGELOG.md) at FEMU `7bf21cb70` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -191,6 +191,8 @@ listed one by one.
 - The pSLC tier now works with `buffer_size`. A write-back places buffered pages in the pool. The idle write-back runs no fold; when the pool is full, the idle FTL thread folds one bounded step at a time until a pool line is free. See [tiered NAND](features/tiered-nand.md#write-buffer).
 - The pSLC tier now works with `mp_program`. A fold first charges the multi-plane programs still held, so it never reads a page before its program.
 - The pSLC tier now works with `mapping=dftl`. Translation pages stay on dense lines and do not count as host data in the pool's fill rules. Idle and upkeep folds write the translation pages they change, at most as many as there are LUNs a step.
+- The pSLC tier now works under FDP with `tier_mode=static`: each reclaim group keeps pSLC reclaim units that persistently isolated handles write first, and a fold collects a full one into its handle's dense collection unit. See [tiered NAND](features/tiered-nand.md#fdp).
+- `events_file` runs ANA state changes and power cuts at fixed or seeded times after the first enable, and `query-femu-events` reports each one. See [timed actions](guides/measuring.md#timed-actions-events_file).
 - `gc_frontier=on` writes the pages garbage collection copies to lines of their own, apart from host writes, as real drives do; under a skewed overwrite this lowers the pages copied. Off by default; refused with FDP, `cxl_ssd`, `gc_pace`, Streams, and `retention_limit_sec` without `pd_open_close_sec`.
 - `nand_profile=FILE` reads a versioned NAND profile: the base read, program and erase times and the bus phases of a chip, in one format for bbssd, CSD, KV and ZNS. ZNS programs a wordline, so it takes the page program time times the pages of a wordline. `query-femu` reports the times the media uses and the profile. Two profiles in `hw/femu/profiles/` give today's defaults. Off by default.
 - Controller-initiated telemetry: a SMART warning that begins, the temperature condition starting, or autonomous thermal protection captures the FEMU statistics once into log 08h (TCDA 1, TCDGN up, a reason). The Telemetry Log Changed notice follows when AEC bit 10 is set, also when it is set later. A read without RAE hands the capture over. A reset keeps it; a QEMU restart does not. Off with `ocp=on` until the OCP layout exists.
@@ -418,6 +420,7 @@ The shared namespace model behind `femu-subsys,ns_mgmt=on` is described in
 
 #### Data correctness
 
+- `io_trace`, `io_stages` and the OCP latency monitor now share one completion time, taken right after the CQE write. Before, each read the clock later, so one could count the bookkeeping of another.
 - `hmb_mb`: when the host turns the Host Memory Buffer off, or a reset does, the translation pages changed while it was on are written again. Before, their flash copies stayed stale with no record of the change.
 - Write buffer: a page leaves the buffer only after it finds a place on the media. Before, a failed placement dropped the page. An FUA write or a Write Zeroes whose page finds no place now fails with Capacity Exceeded.
 - Write buffer: a Flush now waits for the programs of the idle write-back, and it fails when a page finds no line. Disabling the volatile write cache writes back the buffer first.

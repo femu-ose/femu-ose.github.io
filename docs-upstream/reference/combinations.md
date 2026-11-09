@@ -3,12 +3,12 @@ title: "Supported combinations"
 description: "Each section is a device property and the refusals that name it: the messages realize, or a runtime setter, gives for a combination FEMU does not support. A..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/f8fb4b96344cbea68dc0922ad3abe0d855d9dd4d/hw/femu/docs/reference/combinations.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/reference/combinations.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/f8fb4b96344cbea68dc0922ad3abe0d855d9dd4d/hw/femu/docs/reference/combinations.md) at FEMU `f8fb4b963` (2026-11-08), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/7bf21cb70cf066662a7ac2fae674ede73796d321/hw/femu/docs/reference/combinations.md) at FEMU `7bf21cb70` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -26,7 +26,11 @@ own description allows. A message keeps its format directives (`%s`,
 
 ## `ana`
 
+- action ana needs ana=on
+- ana group %u is not a namespace
 - ana must be the same on every controller of a femu-subsys
+- ana state must be 1, 2 or 3
+- ana takes &lt;group&gt;:&lt;state&gt;
 - ana-state needs a realized controller with ana=on
 - ana-state takes "group:state", a group of an allocated namespace and a state 1 to 4
 - ana-state: group %u is in Persistent Loss
@@ -121,6 +125,7 @@ own description allows. A message keeps its format directives (`%s`,
 - csd_pause needs the guest TSC at the host rate; do not set tsc-frequency
 - csd_pause supports KVM only on x86
 - csd_pause: namespace %d runs a mode other than bbssd or CSD
+- events_file does not work with csd_pause
 
 ## `csd_pause_max_ms`
 
@@ -197,6 +202,18 @@ own description allows. A message keeps its format directives (`%s`,
 - femu: eol_read_only needs mdts 1 to %d
 - femu: eol_read_only needs queues x (entries + 1) of at most %d
 - x-eol-enter requires eol_read_only on namespace 1
+
+## `events_file`
+
+- events_file does not work with csd_pause
+- events_file line %d: %s
+- events_file line %d: longer than %d bytes
+- events_file: a text file of at most %d KiB
+- events_file: more than %d events
+- events_file: more than %d lines
+- test clock does not work with events_file
+- the femu device has no events_file
+- x-events-now needs an events_file
 
 ## `extended`
 
@@ -520,6 +537,8 @@ own description allows. A message keeps its format directives (`%s`,
 ## `ms`
 
 - %s is at most 60000 ms
+- a time in ms
+- a window is &lt;ms&gt;+&lt;window&gt;~&lt;seed&gt;, window > 0
 
 ## `multipoller_enabled`
 
@@ -817,6 +836,7 @@ own description allows. A message keeps its format directives (`%s`,
 ## `power_loss`
 
 - FEMU bbssd: buffer_low_pcent needs buffer_size, must be below buffer_thres_pcent, and does not work with shared namespaces or power_loss, got %d
+- action power-loss needs power_loss=on
 - csd_slm_size and csd_cp cannot be used with ns_mgmt, power_loss or a CXL link
 - power_loss requires bbssd, buffer_size > 0, and no metadata, namespace management or subsystem
 - power_loss requires page-aligned namespaces and whole LBAs per NAND page
