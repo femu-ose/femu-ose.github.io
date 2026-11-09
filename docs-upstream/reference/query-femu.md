@@ -3,12 +3,12 @@ title: "QMP query-femu"
 description: "query-femu is a QMP command that reports the FTL state of a FEMU NVMe controller to the host. It needs no guest tools. The schema is in qapi/femu.json, and..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/reference/query-femu.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/785fe5a63e54228482168d62fc746045df4d1533/hw/femu/docs/reference/query-femu.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/reference/query-femu.md) at FEMU `766f11822` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/785fe5a63e54228482168d62fc746045df4d1533/hw/femu/docs/reference/query-femu.md) at FEMU `785fe5a63` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -61,7 +61,7 @@ query works. The NVMe driver does this when it binds to the device. A
 | --- | --- | --- | --- |
 | `path` | string | the only `femu` device | QOM path of the device, for example `/machine/peripheral/femu0` |
 | `nsid` | integer | every attached namespace | the namespace to report |
-| `kind` | `summary`, `lines`, `zones` or `reclaim-units` | `summary` | `lines` adds one record per line of a `bbssd` namespace; `zones` adds one record per zone of a `znssd` namespace; `reclaim-units` adds one record per reclaim unit of an FDP namespace |
+| `kind` | `summary`, `lines`, `zones`, `reclaim-units`, `blocks` or `dies` | `summary` | `lines` adds one record per line of a `bbssd` namespace; `zones` adds one record per zone of a `znssd` namespace; `reclaim-units` adds one record per reclaim unit of an FDP namespace; `blocks` one per flash block of a `bbssd` namespace; `dies` the wait counters of each LUN of a `bbssd` namespace with `die_stats=on` |
 | `offset` | integer | 0 | with a listing kind, the first record to report |
 | `limit` | integer | 256 | with a listing kind, the most records to report, 1 to 4096 |
 
@@ -75,6 +75,8 @@ listing kind fits one namespace type:
  lines           yes     error         error   error
  reclaim-units   error   yes           error   error
  zones           error   error         yes     error
+ blocks          yes     yes           error   error
+ dies            yes (die_stats=on; FDP not yet)   error   error
 ```
 
 ## Reply
@@ -417,6 +419,27 @@ overworn. The erase counts of all blocks add up to `block-erases`.
               "pe-limit": 0, "overworn": false},
              {"channel": 0, "lun": 0, "plane": 0, "block": 1, "erase-count": 2,
               "pe-limit": 0, "overworn": false}],
+  "offset": 0, "next-offset": 2
+```
+
+Kind `dies` (with `die_stats=on`) pages through the LUNs in channel and
+LUN order. A booking is one array operation: a multi-plane group is one,
+a copyback two. `waits` counts the bookings that found the LUN busy,
+`wait-ns` sums how long they waited, and `array-ns` sums the array time
+booked. `most-waited` is the LUN of the whole media with the largest
+`wait-ns`, also outside the window.
+
+```json
+{"execute": "query-femu", "arguments": {"kind": "dies", "nsid": 1, "limit": 2}}
+```
+
+```json
+  "dies": [{"channel": 0, "lun": 0, "ops": 3, "waits": 1,
+            "wait-ns": 19800000, "array-ns": 40200000},
+           {"channel": 0, "lun": 1, "ops": 0, "waits": 0, "wait-ns": 0,
+            "array-ns": 0}],
+  "most-waited": {"channel": 0, "lun": 0, "ops": 3, "waits": 1,
+                  "wait-ns": 19800000, "array-ns": 40200000},
   "offset": 0, "next-offset": 2
 ```
 

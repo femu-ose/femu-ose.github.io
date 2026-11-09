@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/785fe5a63e54228482168d62fc746045df4d1533/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/reference/properties.md) at FEMU `766f11822` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/785fe5a63e54228482168d62fc746045df4d1533/hw/femu/docs/reference/properties.md) at FEMU `785fe5a63` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,7 +28,7 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 282 properties of its own and 3 QOM properties listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 286 properties of its own and 3 QOM properties listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
@@ -50,6 +50,7 @@ Devices:
 | `io_trace` | `str` | unset | host file for an I/O trace: one CSV line per completed I/O command (t_submit_ns, t_cqe_ns, sqid, cid, nsid, opcode, slba, nlb, status), in every mode; the file must not exist; unset (default) is off |
 | `events_file` | `str` | unset | host file of timed actions, read at realize: lines '&lt;ms&gt; &lt;action&gt;' or '&lt;ms&gt;+&lt;window&gt;~&lt;seed&gt; &lt;action&gt;', the action ana=&lt;group&gt;:&lt;state&gt; (state 1 to 3, needs ana=on), power-loss (needs power_loss=on) or slow=&lt;ch&gt;:&lt;lun&gt;:&lt;pct&gt; (needs die_slow=on); times count from the first enable and survive resets; see query-femu-events; not with csd_pause; unset (default) is off |
 | `die_slow` | `bool` | `off` | bbssd, CSD: on makes the array time of each LUN settable at run time with the die-slow property or a slow= action of events_file, for a die that turns slow; one namespace only, not with ns_mgmt, namespace_modes, subsys or cxl_ssd; query-femu lists slow LUNs; off (default) adds nothing to the media path |
+| `die_stats` | `bool` | `off` | bbssd: count, per LUN, the array bookings, the ones that waited for a busy LUN, the wait and the array time, for query-femu kind dies; not with plane_reads, pe_suspend, read priority, cache reads or bus timing yet; off (default) adds nothing to the media path |
 | `serial` | `str` | unset | No effect, kept for compatibility; Identify Controller reports a serial number FEMU generates. Setting it warns at realize |
 
 ### Queues, pollers and interrupts
@@ -65,6 +66,7 @@ Devices:
 | `poller_ratio` | `uint32` | `1` | I/O queues per poller thread when multipoller_enabled=1; 0 is treated as 1, one poller per queue |
 | `hiops_inline` | `bool` | `on` | NoSSD only: performance option, on by default; set off only when debugging |
 | `io_stages` | `bool` | `off` | Time each I/O command in five stages (submit, ftl, hold, post-delay, total) for the QMP command query-femu-stages; off by default |
+| `wrr` | `bool` | `off` | weighted round robin with an urgent class: CAP.AMS offers it and the host may set CC.AMS 001b; needs one poller (multipoller_enabled=0, or poller_ratio of at least queues); off (default) is round robin only |
 | `aerl` | `uint8` | `3` | Asynchronous Event Request Limit (Identify AERL, 0's based): the controller holds up to aerl + 1 outstanding requests |
 | `elpe` | `uint8` | `3` | Error Log Page Entries (Identify ELPE, 0's based): the Error Information log keeps the newest elpe + 1 entries |
 | `mdts` | `uint8` | `10` | Maximum Data Transfer Size as a power of two of the minimum memory page size (2^(12 + mpsmin + mdts) bytes); 0 means no limit |
@@ -135,6 +137,7 @@ Devices:
 | `power_loss` | `bool` | `off` | bbssd: roll back writes still in the write buffer on a simulated power cut and enable simulate-power-loss; needs buffer_size > 0, vwc=1, page-aligned namespaces, and no meta, pi, ns_mgmt, subsys, namespace_modes or cxl_ssd |
 | `ready_ms` | `uint32` | `0` | time from CC.EN to CSTS.RDY in ms of guest time, below 7500; admin commands queued before ready run then; 0 (default) is ready at once |
 | `recovery_ms` | `uint32` | `0` | time from CC.EN to CSTS.RDY for the first start after a power cut, in ms, 0 or ready_ms to 7499; 0 (default) uses ready_ms |
+| `shutdown_ms` | `uint32` | `0` | time in ms of guest time CSTS.SHST reads 01b (in progress) after a shutdown, below 5000; the shutdown work is done before it; 0 (default) is complete at once |
 
 ### NAND geometry (bbssd, CSD, KV)
 
@@ -261,6 +264,7 @@ Devices:
 | `gc_frontier` | `bool` | `off` | bbssd, CSD: write the pages garbage collection copies to lines of their own, apart from host writes; refused with FDP, cxl_ssd, gc_pace, Streams, and retention_limit_sec without pd_open_close_sec |
 | `gc_idle_ms` | `uint32` | `0` | bbssd with one namespace and page mapping: quiet time in ms after which the device collects lines in the background, one victim at a time; 0 (default) collects only on the write path |
 | `gc_idle_pcent` | `uint8` | `0` | bbssd with gc_idle_ms: idle collection runs while the line fill is above this percent, as gc_thres_pcent counts it; 0 (default) takes gc_thres_pcent, else 1 to 99 |
+| `maint_idle` | `bool` | `off` | bbssd with gc_idle_ms: idle steps also run the queued read reclaim and scan closed lines for retention age, 16 line ids a step, in turns with idle collection; a reclaim that waits for free lines lets collection run first; off (default) leaves both to the write path |
 | `buffer_size` | `int32` | `0` | bbssd, CSD: DRAM write buffer capacity in NAND pages, not bytes; 0 programs every write directly |
 | `l2p_dram_ns` | `int32` | `0` | bbssd, CSD: controller DRAM time in ns of each logical-to-physical lookup, added to the mapping cost of every host page read and written, 0 or more; not with onfi_cache_read or FDP; 0 (default) charges none |
 | `dram_hit_ns` | `int32` | `0` | bbssd, CSD: controller DRAM time in ns of one page that the write buffer or the read cache answers, 0 or more; a read takes the most of its pages, and a buffered write pays it once; 0 (default) is pg_rd_lat / 16 (1 ns at least), or 1000 ns when pg_rd_lat is 0 |
@@ -498,7 +502,7 @@ QEMU's internal compatibility properties (`x-max-bounce-buffer-size`, `x-pcie-ar
 
 These exist only when QEMU runs under qtest (`-accel qtest`) and serve FEMU's own tests. They are not part of the user interface.
 
-- `femu`: `x-cmt-slots`, `x-copy-held`, `x-copy-hold`, `x-csd-pause-stats`, `x-eol-enter`, `x-events-now`, `x-fdp-check`, `x-fdp-ns-mapped`, `x-fdp-slc`, `x-fetch-hold`, `x-ftl-check`, `x-ftl-hold`, `x-ftl-trace`, `x-gc-frontier`, `x-gc-idle`, `x-gc-idle-hold`, `x-gc-idle-kick`, `x-gc-idle-latch`, `x-gc-idle-order`, `x-idle-mw`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-ocp-lat-skew-ms`, `x-place-fail`, `x-query-delay-ms`, `x-range-waits`, `x-rber-u`, `x-stage-hold-ms`, `x-stream-test`, `x-telemetry-trigger`, `x-tier-check`, `x-tier-fold-stop`, `x-tp-hold`, `x-zone-draining`, `x-zone-held`, `x-zone-lock-hold-ms`, `x-zone-log-changes`, `x-zone-log-hold-ms`, `x-zone-report-hold-ms`, `x-zone-write-hold-ms`
+- `femu`: `x-cmt-slots`, `x-copy-held`, `x-copy-hold`, `x-csd-pause-stats`, `x-eol-enter`, `x-events-now`, `x-fdp-check`, `x-fdp-ns-mapped`, `x-fdp-slc`, `x-fetch-hold`, `x-ftl-check`, `x-ftl-hold`, `x-ftl-trace`, `x-gc-frontier`, `x-gc-idle`, `x-gc-idle-hold`, `x-gc-idle-kick`, `x-gc-idle-latch`, `x-gc-idle-order`, `x-idle-mw`, `x-maint-idle`, `x-ns-test`, `x-oc12-clock`, `x-oc12-trace`, `x-ocp-lat-skew-ms`, `x-place-fail`, `x-query-delay-ms`, `x-range-waits`, `x-rber-u`, `x-stage-hold-ms`, `x-stream-test`, `x-telemetry-trigger`, `x-tier-check`, `x-tier-fold-stop`, `x-tp-hold`, `x-zone-draining`, `x-zone-held`, `x-zone-lock-hold-ms`, `x-zone-log-changes`, `x-zone-log-hold-ms`, `x-zone-report-hold-ms`, `x-zone-write-hold-ms`
 - `femu-cxl-ssd`: `test-change-dpa`, `test-fault`, `test-fault-decode`, `test-fault-delivery`, `test-fault-fill`, `test-fault-repeats`, `test-fault-version`, `test-fault-walk`, `test-fill`, `test-fill-race`, `test-ftl-delay`, `test-ftl-hold`, `test-ftl-holding`, `test-guarded-write`, `test-lock-mutex`, `test-lock-wanted`, `test-map`, `test-media-disabled`, `test-nvme-after-posted`, `test-owner`, `test-posted-done`, `test-prefetch-race`, `test-prefetch-race-end`, `test-protect`, `test-protect-window`, `test-revoke-ahead`, `test-revoke-ahead-keep`, `test-rip`, `test-slot-reservation`, `test-storm`, `test-storm-ns`, `test-storm-served`, `test-storm-stops`, `test-storm-wait`, `test-thread-read`, `test-unprotect`
 
 ## Environment variables

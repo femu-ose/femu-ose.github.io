@@ -3,12 +3,12 @@ title: "Supported combinations"
 description: "Each section is a device property and the refusals that name it: the messages realize, or a runtime setter, gives for a combination FEMU does not support. A..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/reference/combinations.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/785fe5a63e54228482168d62fc746045df4d1533/hw/femu/docs/reference/combinations.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/reference/combinations.md) at FEMU `766f11822` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/785fe5a63e54228482168d62fc746045df4d1533/hw/femu/docs/reference/combinations.md) at FEMU `785fe5a63` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -153,6 +153,7 @@ own description allows. A message keeps its format directives (`%s`,
 - cxl_ssd requires %s
 - cxl_ssd requires the femu-cxl-ssd to have ftl=on
 - die_slow requires bbssd or CSD with one namespace, and no ns_mgmt, namespace_modes, subsystem or cxl_ssd
+- die_stats requires bbssd, with no namespace_modes, subsystem or cxl_ssd
 - femu: onfi_mode is not supported with cxl_ssd
 - femu: the pd_* properties are not supported with cxl_ssd
 - hmb_mb is not supported with cxl_ssd
@@ -175,6 +176,12 @@ own description allows. A message keeps its format directives (`%s`,
 - die-slow needs a realized controller with die_slow=on
 - die_slow requires bbssd or CSD with one namespace, and no ns_mgmt, namespace_modes, subsystem or cxl_ssd
 - die_slow: nchs must be 1 to %d and luns_per_ch 1 to %d
+
+## `die_stats`
+
+- die_stats does not count plane_reads, pe_suspend, read priority, cache reads or bus timing yet
+- die_stats requires bbssd, with no namespace_modes, subsystem or cxl_ssd
+- namespace %u: kind 'dies' needs die_stats=on
 
 ## `dpc`
 
@@ -298,6 +305,7 @@ own description allows. A message keeps its format directives (`%s`,
 ## `gc_idle_ms`
 
 - FEMU %s: gc_idle_ms is not supported with %s
+- FEMU %s: maint_idle needs gc_idle_ms
 - FEMU: gc_idle_ms is not supported with %s
 - FEMU: gc_idle_ms is not supported with shared namespaces
 - gc idle check requires gc_idle_ms
@@ -305,6 +313,8 @@ own description allows. A message keeps its format directives (`%s`,
 - gc idle kick requires gc_idle_ms
 - gc idle latch requires gc_idle_ms
 - gc idle order requires gc_idle_ms
+- maint_idle needs gc_idle_ms
+- maintenance check requires gc_idle_ms
 
 ## `gc_policy`
 
@@ -467,6 +477,11 @@ own description allows. A message keeps its format directives (`%s`,
 
 - lver must be 1 (Open-Channel 1.2) or 2 (Open-Channel 2.0)
 
+## `maint_idle`
+
+- FEMU %s: maint_idle needs gc_idle_ms
+- maint_idle needs gc_idle_ms
+
 ## `mapping`
 
 - FEMU %s: mapping=%s is not supported under FDP: the log-block mappings write and merge through lines that are not FDP-aware; use page or dftl
@@ -552,11 +567,13 @@ own description allows. A message keeps its format directives (`%s`,
 ## `multipoller_enabled`
 
 - multipoller_enabled must be 0 (one poller for all queues) or 1 (each poller owns poller_ratio queues)
+- wrr needs one poller: multipoller_enabled=0, or poller_ratio of at least queues
 
 ## `namespace_modes`
 
 - FEMU bbssd: die_parity needs two dies at least and mapping=page, and does not work with mp_program, mp_read, onfi_cache_read, gc_copyback, rber_ppb, KV, namespace_modes or FDP; parity_xor_ns (0 or more) and failed_die (-1 to dies - 1) need die_parity
 - die_slow requires bbssd or CSD with one namespace, and no ns_mgmt, namespace_modes, subsystem or cxl_ssd
+- die_stats requires bbssd, with no namespace_modes, subsystem or cxl_ssd
 - kv_index=lsm and the kv_lsm_* knobs need a key-value namespace (femu_mode=5 or kvssd in namespace_modes)
 - kv_max_keys needs a key-value namespace (femu_mode=5 or kvssd in namespace_modes)
 - kv_pack=off needs a key-value namespace (femu_mode=5 or kvssd in namespace_modes)
@@ -773,6 +790,7 @@ own description allows. A message keeps its format directives (`%s`,
 ## `pe_suspend`
 
 - FEMU bbssd: pe_suspend_max and tresume_ns need pe_suspend
+- die_stats does not count plane_reads, pe_suspend, read priority, cache reads or bus timing yet
 - femu: pe_suspend is refused with onfi_mode
 - plane_reads needs the plain channel model: no ONFI profile, onfi_cache_read, bus phases, pe_suspend or read_prio
 
@@ -838,12 +856,14 @@ own description allows. A message keeps its format directives (`%s`,
 
 ## `plane_reads`
 
+- die_stats does not count plane_reads, pe_suspend, read priority, cache reads or bus timing yet
 - plane_reads needs the plain channel model: no ONFI profile, onfi_cache_read, bus phases, pe_suspend or read_prio
 - plane_reads works with bbssd, CSD or KV namespaces only (KV keeps the LUN rule)
 
 ## `poller_ratio`
 
 - multipoller_enabled must be 0 (one poller for all queues) or 1 (each poller owns poller_ratio queues)
+- wrr needs one poller: multipoller_enabled=0, or poller_ratio of at least queues
 
 ## `power_loss`
 
@@ -879,6 +899,7 @@ own description allows. A message keeps its format directives (`%s`,
 - femu: eol_read_only needs queues x (entries + 1) of at most %d
 - multipoller_enabled must be 0 (one poller for all queues) or 1 (each poller owns poller_ratio queues)
 - queues must be in [1, %d]
+- wrr needs one poller: multipoller_enabled=0, or poller_ratio of at least queues
 
 ## `rber_ppb`
 
@@ -946,6 +967,10 @@ own description allows. A message keeps its format directives (`%s`,
 ## `secsz`
 
 - femu: onfi_mode needs an even page size on the bus (secsz * secs_per_pg + onfi_spare_bytes)
+
+## `shutdown_ms`
+
+- shutdown_ms must be below 5000, the time a Linux host waits for a shutdown by default
 
 ## `spare_lines`
 
@@ -1076,6 +1101,10 @@ own description allows. A message keeps its format directives (`%s`,
 ## `wl_spread`
 
 - FEMU bbssd: wl_spread must not be negative
+
+## `wrr`
+
+- wrr needs one poller: multipoller_enabled=0, or poller_ratio of at least queues
 
 ## `zns_blk_er_lat`
 

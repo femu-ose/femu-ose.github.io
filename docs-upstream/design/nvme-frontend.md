@@ -3,12 +3,12 @@ title: "NVMe frontend"
 description: "The NVMe frontend is the part of -device femu that a guest driver talks to: the PCI function, the controller registers, the admin and I/O queues, the poller..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/design/nvme-frontend.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/785fe5a63e54228482168d62fc746045df4d1533/hw/femu/docs/design/nvme-frontend.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/design/nvme-frontend.md) at FEMU `766f11822` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/785fe5a63e54228482168d62fc746045df4d1533/hw/femu/docs/design/nvme-frontend.md) at FEMU `785fe5a63` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -140,9 +140,26 @@ A shutdown with CC.EN still 1 runs `nvme_clear_ctrl()` but leaves RDY set
 and resets neither the Timestamp nor the Persistent Event Log context.
 
 Pollers are created once and survive a reset; a reset only clears
-`dataplane_started` until the next enable. With `power_loss=on`, a normal
-shutdown (CC.SHN = 01b) first flushes the BBSSD write buffer, and a failed
-flush sets CSTS.CFS.
+`dataplane_started` until the next enable. With `power_loss=on`, a
+shutdown of any kind (CC.SHN 01b, 10b or 11b) first flushes the BBSSD
+write buffer: a completed shutdown leaves nothing the host was told is
+written in the buffer. A failed BBSSD or KV flush sets CSTS.CFS and
+leaves SHST at 00b.
+
+The shutdown has its own state, apart from CC.SHN:
+
+```text
+ CC.SHN 00b -> nonzero, no shutdown yet --> flush, clear, SHST = 10b
+                                             (01b for shutdown_ms first)
+ CC.SHN changes again                    --> CC readback only
+ CC.SHN -> 00b                           --> SHST stays as it is
+ next CC.EN 0 -> 1, a controller reset, a power cut, a PCI or
+   system reset                          --> SHST = 00b
+ a power cut after SHST 10b: no unsafe shutdown, no new recovery
+ a failed flush: CFS, SHST 00b, and no shutdown until a reset or the
+   next enable, which also clears that CFS
+ CC.EN 0 -> 1 with a new SHN in the same write: no start, a shutdown
+```
 
 ## Queues
 
@@ -886,12 +903,18 @@ The documentation example above (`frontend-sharded-pollers`) is started by
 - One controller per PCI function. No SR-IOV, no NVM Subsystem Reset, no
   controller memory for PMR.
 - No interrupt coalescing; the coalescing features only store values.
-- Arbitration is round robin only (CAP.AMS 0). Each poller sweeps its
-  queues in id order and takes at most 2^AB commands from each, AB being
-  the Arbitration Burst of feature 01h; AB 7, the reset value, is no
-  limit. The feature stores the weights; the queue priority of Create
-  I/O SQ is ignored. Admin commands run at their doorbell write, outside
-  the pollers.
+- Arbitration is round robin by default (CAP.AMS 0). Each poller sweeps
+  its queues in id order and takes at most 2^AB commands from each, AB
+  being the Arbitration Burst of feature 01h; AB 7, the reset value, is
+  no limit. The queue priority of Create I/O SQ is ignored.
+- With `wrr=on` (one poller only), CAP.AMS offers weighted round robin
+  with an urgent class, and the host selects it with CC.AMS 001b. Each
+  poller pass makes one grant: an urgent queue first, else high, medium
+  and low by credits of HPW + 1, MPW + 1 and LPW + 1. A grant takes at
+  most 2^AB commands (no limit for AB 7) and at most what the queue held
+  when the grant chose it. A queue that can take none is passed over
+  without a charge. No I/O grant starts while admin commands run; a
+  grant already under way finishes.
 - A queue can have at most `size` commands outstanding, and a poller's rings
   hold 65535 requests each.
 - Abort only reaches commands not yet fetched.

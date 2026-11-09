@@ -3,12 +3,12 @@ title: "Measuring"
 description: "How to read FEMU's counters, measure latency and throughput from the guest, and get numbers that repeat from run to run. Commands in sh blocks run inside..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/guides/measuring.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/785fe5a63e54228482168d62fc746045df4d1533/hw/femu/docs/guides/measuring.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/guides/measuring.md`](https://github.com/MoatLab/FEMU/blob/766f11822067e1d46b0ccf9ae5d8c92a50f1a98b/hw/femu/docs/guides/measuring.md) at FEMU `766f11822` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/guides/measuring.md`](https://github.com/MoatLab/FEMU/blob/785fe5a63e54228482168d62fc746045df4d1533/hw/femu/docs/guides/measuring.md) at FEMU `785fe5a63` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -311,6 +311,29 @@ not a delay added at completion.
 - `query-femu` lists each slow LUN and its factor under `media`,
   `slow-luns`.
 
+## Waits per die (die_stats)
+
+With `die_stats=on`, the media counts, for each LUN, the array bookings,
+the ones that waited for a busy LUN, the wait and the array time.
+`query-femu` kind `dies` lists them, and names the LUN with the most
+wait.
+
+```text
+ booking: one array op (a multi-plane group 1, a copyback 2)
+ could start at e, started at s, holds the array for a
+   ops += 1 ; s > e --> waits += 1, wait-ns += s - e ; array-ns += a
+```
+
+- The counters cover every booked op: host, GC, folds and translation
+  pages. GC that is not timed books nothing.
+- `array-ns` can exceed the elapsed time when planes overlap.
+- Plane reads (with more than one plane), suspend, read priority, cache
+  reads and the bus phases choose their starts another way;
+  `die_stats` refuses them for now. FDP and a `femu-subsys` are refused
+  too. A setting that has no effect (`plane_reads` with one plane) is
+  accepted.
+- Off, the media gets no table and the timing is as before.
+
 ## Ready and recovery time
 
 A real SSD takes time to come ready after CC.EN, and longer after an
@@ -327,15 +350,23 @@ unsafe power cut, while it rebuilds its state. `ready_ms` and
 - The time is guest time (the QEMU virtual clock). It stops while the VM
   is stopped. An `events_file` power cut runs on host time, so it can
   end a start while the VM is stopped.
-- Every power cut (`simulate-power-loss` or an `events_file`
-  `power-loss`) makes the next successful start a recovery. A start that
-  a reset or another cut ends does not count.
+- A power cut (`simulate-power-loss` or an `events_file`
+  `power-loss`) makes the next successful start a recovery, unless the
+  shutdown had completed (SHST 10b). A completed shutdown does not end a
+  recovery an earlier cut asked for. A start that a reset or another cut
+  ends does not count.
 - `recovery_ms` 0 uses `ready_ms`. Both are nominal times below
   7500 ms, the CAP.TO and CRTO the host reads. Start-up work and timer
   latency add to them, so a value near 7500 ms can exceed the host limit.
 - Recovery only delays CSTS.RDY. The roll back of buffered writes still
   happens at the cut.
 - A system reset ends a start under way, with or without `ocp`.
+- `shutdown_ms` holds CSTS.SHST at 01b (in progress) that long after a
+  shutdown, then 10b. The flush and the teardown are done before 01b,
+  so a power cut during 01b loses nothing, but it counts as an unsafe
+  shutdown. A reset or a power cut ends the 01b time; a second
+  notification does not restart it. Keep it below 5000 ms, the time a
+  Linux host waits by default.
 - A failed start (CSTS.CFS) does not take part: the admin queue then
   behaves as before.
 
