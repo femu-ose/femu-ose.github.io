@@ -3,12 +3,12 @@ title: "NVMe frontend"
 description: "The NVMe frontend is the part of -device femu that a guest driver talks to: the PCI function, the controller registers, the admin and I/O queues, the poller..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/efcb8079a630699e5bf3aa4c7238f0dc783c61a8/hw/femu/docs/design/nvme-frontend.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/44f58aaaee89caa651ffa0ca915b78743e81da1f/hw/femu/docs/design/nvme-frontend.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/efcb8079a630699e5bf3aa4c7238f0dc783c61a8/hw/femu/docs/design/nvme-frontend.md) at FEMU `efcb8079a` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/44f58aaaee89caa651ffa0ca915b78743e81da1f/hw/femu/docs/design/nvme-frontend.md) at FEMU `44f58aaae` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -749,6 +749,71 @@ are always the first states; the rest are renumbered from 0.
   not cap the energy that the thermal model and log 25h count.
 - Not with `ocp=on`: OCP 2.7 NVMe-OPT-21 forbids 23h, and
   `power_states` is refused with `ocp` already.
+
+With `ns_wp=on`, Namespace Write Protection (84h, Base 2.3 8.1.17) takes
+the No Write Protect (0) and Write Protect (1) states of a namespace, or
+of all for NSID FFFFFFFFh. The other two states need an RPMB, which FEMU
+does not have, so they fail with Feature Not Changeable.
+
+```text
+ Set 84h, WPS 1: refuse new writes --> wait for fetched requests to reach
+   the FTL (1 s at most, else Command Interrupted, state unchanged)
+   --> destage the namespace's write buffer --> release its Streams
+ I/O to a protected namespace (Figure 671):
+   Read, Compare, Verify, Reservations, DSM without AD   as before
+   Flush                                                 success, no effect
+   Write, Write Zeroes, Write Uncorrectable, DSM with AD,
+   Copy into it, I/O Management, others                  20h
+ Admin: Format NVM or Sanitize that covers it, Get LBA Status on it,
+   Streams Allocate Resources on it                      20h
+```
+
+- Identify reports NWPC bit 0, and NSATTR bit 0 (CWP) for a protected
+  namespace in CNS 00h and 08h. SMART does not report the media as
+  read-only.
+- A reset and a power cut keep the state. Default and Saved read the
+  current state, since the spec gives 84h no default.
+- A Copy from a protected namespace into another one works.
+- bbssd and NoSSD namespaces only. Not with FDP (its namespaces share
+  one write buffer), `ns_mgmt`, shared namespaces, `cxl_ssd` or
+  `persist_file`.
+- Logs 12h and 05h report NCC and NIC for 84h and Set Features: one
+  Set can change CWP of several namespaces.
+
+With `sanitize_ops=on` and `sanitize_ns=on`, Sanitize Namespace (8Ch,
+Base 2.3 5.2.23) runs a Crypto Erase of one namespace. One runs at a
+time (MNSOIP 1).
+
+```text
+ 8Ch, NSID n, SANACT 100b, dataplane paused:
+   refuse n's new commands --> mark n's queued commands and retire its
+   unfinished ones (each completes with 2Ch) --> erase n: backend slice,
+   metadata, bitmaps, FTL mappings, buffered pages --> SOS 010b
+ sanitize_ms later, or at once: SOS 001b, NDE --> event (log 81h, NSID)
+ while it runs: I/O to n but Flush, a Copy from n, Format of n or of
+   all, Get LBA Status of n --> Sanitize Namespace In Progress (2Ch)
+```
+
+- The buffered pages are dropped, not written back, so the operation
+  cannot fail. Work that finished before the start keeps its status.
+- NDE clears before a write moves data, so a write that fails part way
+  also clears it.
+- Log 81h with NSID n reports that namespace: its SOS, NDE (bit 10),
+  the subsystem's GDE, STNSID n. NSID 0 or FFFFFFFFh reports the
+  subsystem, with MNSOIP 1.
+- A second namespace sanitize fails with SCT 1, SC 12h (Figure 392;
+  Figure 103 lists 3Ch for the same status). A Sanitize (84h) fails with
+  2Ch while one runs, and 8Ch fails with 1Dh during a Sanitize.
+- NDE is set for a new namespace and by a sanitize, and cleared by a
+  write. The state lives in memory: `persist_file` is refused.
+- Admin commands while it runs (Figures 144 and 145) fail with 2Ch:
+  Firmware Commit and Download and Lockdown always; Device Self-test
+  and the Directives for n or for all; Get Log Page for n, except log
+  81h; Get or Set Features of a namespace-scoped feature for n, and Set
+  for all.
+- Log 7Fh lists NSIDs: NLT 0 the namespaces in progress, NLT 1 the idle
+  ones with NDE set. GENCTR counts every change of either list.
+- Not with a femu-subsys, `ns_mgmt` or `cxl_ssd`; bbssd and NoSSD only.
 
 With `ocp=on` the OCP 2.7 features answer through UUID index 0 or 1 (OCP
 4.15). C5h configures the latency monitor, C7h selects a DSSD power state

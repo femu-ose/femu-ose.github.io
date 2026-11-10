@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/efcb8079a630699e5bf3aa4c7238f0dc783c61a8/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/44f58aaaee89caa651ffa0ca915b78743e81da1f/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/efcb8079a630699e5bf3aa4c7238f0dc783c61a8/hw/femu/docs/CHANGELOG.md) at FEMU `efcb8079a` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/44f58aaaee89caa651ffa0ca915b78743e81da1f/hw/femu/docs/CHANGELOG.md) at FEMU `44f58aaae` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -198,6 +198,9 @@ listed one by one.
 - The Arbitration Burst of feature 01h now limits how many commands a poller takes from one submission queue per sweep. The reset value of feature 01h is 0x1f0f0707 (AB 7, no limit), so the default path is as before.
 - `wrr=on` adds weighted round robin with an urgent class (CC.AMS 001b): the queue priority of Create I/O SQ and the weights of feature 01h choose which queue the poller serves next. It needs one poller.
 - `die_stats=on` counts, for each LUN, the array bookings, the ones that waited for a busy LUN, the wait and the array time; `query-femu` kind `dies` lists them. See [waits per die](guides/measuring.md#waits-per-die-die_stats).
+- `sanitize_ns=on` (with `sanitize_ops`) adds Sanitize Namespace (8Ch): a crypto erase of one namespace, while I/O to it fails with Sanitize Namespace In Progress and other namespaces keep working. Log 81h reports each namespace by NSID, with the Namespace Data Erased bit, and log 7Fh lists the namespaces in progress or erased. See [features](design/nvme-frontend.md#log-pages-and-features-at-a-glance).
+- A command with a nonzero FUSE field (a fused operation) now fails with Invalid Field. FEMU reports no fused operation (FUSES 0); before, it ran each half alone, so the Write of a Compare and Write pair ran after a miscompare.
+- `ns_wp=on` adds Namespace Write Protection (feature 84h): a protected namespace refuses every command that would change it with Namespace Is Write Protected, and keeps the state across resets and power cuts. bbssd and NoSSD. See [features](design/nvme-frontend.md#log-pages-and-features-at-a-glance).
 - `power_limit=on` (with `power_states`) adds Power Limit (TP4190, feature 23h): a host limit prohibits the power states above it, renumbers the rest in Identify, 02h and 0Ch, and moves the controller out of a prohibited state. Saveable; off with `ocp`. See [features](design/nvme-frontend.md#log-pages-and-features-at-a-glance).
 - `power_meas=on` adds the Power Measurement capability (TP4199): log page 25h and feature 25h, with the power estimated from `idle_mw` and `energy_*_nj` once a second. See [power measurement](reference/log-pages-and-counters.md#power-measurement-log-25h-feature-25h).
 - `maint_idle=on` (with `gc_idle_ms`) runs the queued read reclaim and a bounded retention scan in idle time, so a read-only workload and unread data are refreshed too. See [maintenance in idle time](design/ftl.md#maintenance-in-idle-time-maint_idle).

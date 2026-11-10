@@ -3,12 +3,12 @@ title: "Tutorial 09: configuration files"
 description: "You describe a device in a short INI-style file instead of a long -device femu,... line, expand it with ssd-config.sh, let the script catch a misspelled..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/efcb8079a630699e5bf3aa4c7238f0dc783c61a8/hw/femu/docs/tutorials/09-ssd-config-files.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/44f58aaaee89caa651ffa0ca915b78743e81da1f/hw/femu/docs/tutorials/09-ssd-config-files.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/tutorials/09-ssd-config-files.md`](https://github.com/MoatLab/FEMU/blob/efcb8079a630699e5bf3aa4c7238f0dc783c61a8/hw/femu/docs/tutorials/09-ssd-config-files.md) at FEMU `efcb8079a` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/tutorials/09-ssd-config-files.md`](https://github.com/MoatLab/FEMU/blob/44f58aaaee89caa651ffa0ca915b78743e81da1f/hw/femu/docs/tutorials/09-ssd-config-files.md) at FEMU `44f58aaae` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

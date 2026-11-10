@@ -3,12 +3,12 @@ title: "Supported combinations"
 description: "Each section is a device property and the refusals that name it: the messages realize, or a runtime setter, gives for a combination FEMU does not support. A..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/efcb8079a630699e5bf3aa4c7238f0dc783c61a8/hw/femu/docs/reference/combinations.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/44f58aaaee89caa651ffa0ca915b78743e81da1f/hw/femu/docs/reference/combinations.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/efcb8079a630699e5bf3aa4c7238f0dc783c61a8/hw/femu/docs/reference/combinations.md) at FEMU `efcb8079a` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/44f58aaaee89caa651ffa0ca915b78743e81da1f/hw/femu/docs/reference/combinations.md) at FEMU `44f58aaae` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -682,6 +682,10 @@ own description allows. A message keeps its format directives (`%s`,
 - ns_mgmt=on does not support subsys; use a standalone controller
 - ocp is not supported with ns_mgmt
 
+## `ns_wp`
+
+- femu: ns_wp is not supported with %s
+
 ## `oacs`
 
 - oacs may only set Format NVM (0x%x)
@@ -968,8 +972,14 @@ own description allows. A message keeps its format directives (`%s`,
 - sanitize_ms does not work with a femu-subsys yet
 - sanitize_ms is at most 3600000 (one hour)
 
+## `sanitize_ns`
+
+- femu: sanitize_ns is not supported with %s
+- femu: sanitize_ns needs sanitize_ops
+
 ## `sanitize_ops`
 
+- femu: sanitize_ns needs sanitize_ops
 - sanitize_ms and sanitize_ops do not work with power_loss yet
 
 ## `secs_per_pg`
