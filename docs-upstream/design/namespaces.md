@@ -3,12 +3,12 @@ title: "Subsystems, controllers and namespaces"
 description: "This chapter describes how FEMU arranges NVMe subsystems, controllers and namespaces: how a controller's memory backend is split between namespaces, how..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/55421a76c0b1d7c809032e0a933f9e49ffc82c0e/hw/femu/docs/design/namespaces.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8bf76c8abe65d9a5160a332f6de74b9c4ec2917f/hw/femu/docs/design/namespaces.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/namespaces.md`](https://github.com/MoatLab/FEMU/blob/55421a76c0b1d7c809032e0a933f9e49ffc82c0e/hw/femu/docs/design/namespaces.md) at FEMU `55421a76c` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/namespaces.md`](https://github.com/MoatLab/FEMU/blob/8bf76c8abe65d9a5160a332f6de74b9c4ec2917f/hw/femu/docs/design/namespaces.md) at FEMU `8bf76c8ab` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -171,6 +171,42 @@ key space.
 | no `kvssd` with FDP | placement takes every line, leaving the KV store none | `nvme_init_namespaces()` |
 | `meta` and `streams` need every namespace to be `nossd` or `bbssd` | only the block data path carries them | `nvme_init_namespaces()` |
 | with FDP and more than one namespace: all `bbssd` in whole NAND pages, or all `nossd`; no `fdp_trim_erase_all` | the namespaces share one FTL, one slice each, and the endurance group's handles ([FDP](fdp.md#several-namespaces)) | `nvme_check_fdp_namespaces()` |
+| `shared_ftl`: all `bbssd` in whole NAND pages, `mapping=page`, no femu-subsys | the namespaces share one FTL, one slice each (see below) | `nvme_check_shared_ftl()` |
+
+### One FTL for several namespaces
+
+With `shared_ftl=on`, namespaces 2 and up place into the FTL of namespace
+1, as FDP namespaces do. Each namespace keeps the slice of logical pages
+at its backend offset. The namespaces then share the NAND array, the write
+buffer and GC, so the writes of one namespace slow the reads of another.
+
+```text
+ ns1 --+
+       +--> FTL of ns1: one NAND array, one buffer, one GC
+ ns2 --+    ns1 pages [0, a)   ns2 pages [a, b)
+```
+
+- The sum of the namespace sizes must fit the geometry with room for GC.
+- Format of one namespace unmaps only its slice and drops only its
+  buffered pages. The Flush of another namespace still waits for its own
+  write-back.
+- query-femu reports the same device counters for each namespace and
+  names the FTL's namespace in `shared-ftl-nsid`.
+- `namespace-counters` in query-femu holds the pages of one namespace:
+  host, NAND and GC pages, and its WAF. A page counts for the namespace
+  whose slice holds its LPN, so a GC move counts for the owner of the
+  data, not for the namespace whose write started GC. Map, pad and
+  parity pages count for the device only. FDP with several namespaces
+  reports the same field.
+
+```text
+ host write to ns2 --> lpn in slice 2 --> ns2 host and NAND pages
+ GC moves lpn      --> owner of lpn   --> that namespace's GC pages
+```
+- Not with a femu-subsys (FDP shares its FTL already), `ns_mgmt`,
+  `power_loss`, `persist_ftl`, `ns_wp`, `sanitize_ns` or `telemetry_da4`.
+  The options that refuse several namespaces (idle GC, the pSLC tier,
+  wear limits) still refuse them.
 
 ## Namespace management
 

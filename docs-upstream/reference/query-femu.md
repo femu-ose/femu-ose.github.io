@@ -3,12 +3,12 @@ title: "QMP query-femu"
 description: "query-femu is a QMP command that reports the FTL state of a FEMU NVMe controller to the host. It needs no guest tools. The schema is in qapi/femu.json, and..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/55421a76c0b1d7c809032e0a933f9e49ffc82c0e/hw/femu/docs/reference/query-femu.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8bf76c8abe65d9a5160a332f6de74b9c4ec2917f/hw/femu/docs/reference/query-femu.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/55421a76c0b1d7c809032e0a933f9e49ffc82c0e/hw/femu/docs/reference/query-femu.md) at FEMU `55421a76c` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/8bf76c8abe65d9a5160a332f6de74b9c4ec2917f/hw/femu/docs/reference/query-femu.md) at FEMU `8bf76c8ab` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -623,6 +623,26 @@ without the FTL ring (NoSSD with `hiops_inline` on, CSD programs) count in
 retired are not counted, and admin commands are not timed. Without `reset`,
 a reply taken during I/O can differ by the commands in flight. Without
 `io_stages=on` the command fails.
+
+With `stage_ns=on`, each poller also keeps sets for NSID 1 to 8: one for
+Read, one for the write commands (Write, Write Zeroes, Zone Append, and
+Copy at its destination). `nsid` adds `read` and `write` to the reply,
+each with its stages, bands and `returned-after-due`.
+
+```json
+{"execute": "query-femu-stages", "arguments": {"nsid": 2, "reset": true}}
+```
+
+- Only NVM (bbssd, NoSSD) and zoned namespaces have classes. Other
+  commands and command sets count only in the controller's stages, so
+  the classes need not add up to them.
+- `reset` with `nsid` clears only that namespace's two classes; without
+  `nsid` it clears only the controller's stages.
+- `nsid` must be 1 to 8 and name an attached namespace. `stage_ns` is
+  refused with `ns_mgmt`, so an NSID names one namespace for the life of
+  the controller.
+- With `shared_ftl`, the read class of one namespace shows how long its
+  reads wait while another namespace writes and collects.
 
 ## femu-save-data
 

@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/55421a76c0b1d7c809032e0a933f9e49ffc82c0e/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8bf76c8abe65d9a5160a332f6de74b9c4ec2917f/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/55421a76c0b1d7c809032e0a933f9e49ffc82c0e/hw/femu/docs/reference/properties.md) at FEMU `55421a76c` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/8bf76c8abe65d9a5160a332f6de74b9c4ec2917f/hw/femu/docs/reference/properties.md) at FEMU `8bf76c8ab` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,7 +28,7 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 291 properties of its own and 3 QOM properties listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 293 properties of its own and 3 QOM properties listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
@@ -66,6 +66,7 @@ Devices:
 | `poller_ratio` | `uint32` | `1` | I/O queues per poller thread when multipoller_enabled=1; 0 is treated as 1, one poller per queue |
 | `hiops_inline` | `bool` | `on` | NoSSD only: performance option, on by default; set off only when debugging |
 | `io_stages` | `bool` | `off` | Time each I/O command in five stages (submit, ftl, hold, post-delay, total) for the QMP command query-femu-stages; off by default |
+| `stage_ns` | `bool` | `off` | with io_stages: also time the Read and the write commands of each NVM or zoned namespace, NSID 1 to 8, apart, in ns; query-femu-stages returns them with nsid; not with ns_mgmt; off (default) |
 | `wrr` | `bool` | `off` | weighted round robin with an urgent class: CAP.AMS offers it and the host may set CC.AMS 001b; needs one poller (multipoller_enabled=0, or poller_ratio of at least queues); off (default) is round robin only |
 | `aerl` | `uint8` | `3` | Asynchronous Event Request Limit (Identify AERL, 0's based): the controller holds up to aerl + 1 outstanding requests |
 | `elpe` | `uint8` | `3` | Error Log Page Entries (Identify ELPE, 0's based): the Error Information log keeps the newest elpe + 1 entries |
@@ -104,6 +105,7 @@ Devices:
 | `ns_wp` | `bool` | `off` | bbssd, NoSSD: Namespace Write Protection (feature 84h, Base 2.3 8.1.17), the No Write Protect and Write Protect states; writes to a protected namespace fail with Namespace Is Write Protected; not with FDP, ns_mgmt, shared namespaces, cxl_ssd or persist_file; off (default) |
 | `sanitize_ns` | `bool` | `off` | bbssd, NoSSD with sanitize_ops: Sanitize Namespace (8Ch, Base 2.3 5.2.23), a crypto erase of one namespace while other namespaces keep their data, one at a time; log 81h by NSID; not with a femu-subsys, ns_mgmt, cxl_ssd or persist_file; off (default) |
 | `cancel` | `bool` | `off` | bbssd, NoSSD: Cancel (I/O 18h, Base 2.3 7.1) aborts commands of its own submission queue, one by CID or all of a namespace; commands past the FTL step abort at once (CMDA), the others when the step ends (CEDA); needs mapping=page; not with buffer_size, cxl_ssd, ocp, power_loss or a femu-subsys; off (default) |
+| `shared_ftl` | `bool` | `off` | bbssd: the namespaces share the FTL and NAND array of namespace 1, each in its own slice of the logical pages, so writes and GC of one slow the I/O of another; sizes in whole NAND pages; needs mapping=page; not with a femu-subsys, ns_mgmt, power_loss, persist_ftl, ns_wp, sanitize_ns or telemetry_da4; off (default) |
 
 ### LBA formats, metadata and protection
 

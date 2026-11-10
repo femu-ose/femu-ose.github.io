@@ -3,12 +3,12 @@ title: "Supported combinations"
 description: "Each section is a device property and the refusals that name it: the messages realize, or a runtime setter, gives for a combination FEMU does not support. A..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/55421a76c0b1d7c809032e0a933f9e49ffc82c0e/hw/femu/docs/reference/combinations.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/8bf76c8abe65d9a5160a332f6de74b9c4ec2917f/hw/femu/docs/reference/combinations.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/55421a76c0b1d7c809032e0a933f9e49ffc82c0e/hw/femu/docs/reference/combinations.md) at FEMU `55421a76c` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/8bf76c8abe65d9a5160a332f6de74b9c4ec2917f/hw/femu/docs/reference/combinations.md) at FEMU `8bf76c8ab` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -370,6 +370,7 @@ own description allows. A message keeps its format directives (`%s`,
 
 ## `io_stages`
 
+- stage_ns needs io_stages=on
 - the femu device does not time I/O stages; set io_stages=on
 
 ## `io_trace`
@@ -541,6 +542,7 @@ own description allows. A message keeps its format directives (`%s`,
 - ocssd is a controller mode: femu_mode and namespace_modes must both select it, or neither
 - persist_file '%s' does not match this device: the mode, the backend size (%
 - shared namespace mode and capabilities must match
+- shared_ftl needs every namespace in bbssd mode; namespace %d is not
 - test-storm is threads,pages,iters,mode,seed with at most one thread per vCPU
 
 ## `mp_program`
@@ -610,6 +612,7 @@ own description allows. A message keeps its format directives (`%s`,
 - FEMU bbssd: buffer_low_pcent needs buffer_size, must be below buffer_thres_pcent, and does not work with shared namespaces or power_loss, got %d
 - FEMU bbssd: hmb_mb is at most 65536 and needs mapping=dftl without FDP, KV or shared namespaces; hmb_ns must not be negative
 - FEMU bbssd: the %u namespaces expose %
+- FEMU bbssd: the %u namespaces share one FTL and expose %
 - FEMU: gc_idle_ms is not supported with shared namespaces
 - a rotational subsystem needs NVM namespaces; namespace %d is %s
 - bbssd_ns_limit must be between 1 and %u and cover the boot namespaces
@@ -685,6 +688,7 @@ own description allows. A message keeps its format directives (`%s`,
 - femu: the pd_* properties are not supported with ns_mgmt or shared namespaces
 - ns_mgmt=on does not support subsys; use a standalone controller
 - ocp is not supported with ns_mgmt
+- stage_ns is not supported with ns_mgmt
 
 ## `ns_wp`
 
@@ -994,6 +998,13 @@ own description allows. A message keeps its format directives (`%s`,
 
 - femu: onfi_mode needs an even page size on the bus (secsz * secs_per_pg + onfi_spare_bytes)
 
+## `shared_ftl`
+
+- shared_ftl is not supported with %s
+- shared_ftl is not supported with a femu-subsys (FDP shares its FTL already)
+- shared_ftl needs every namespace in bbssd mode; namespace %d is not
+- shared_ftl needs namespace sizes in whole NAND pages (%
+
 ## `shutdown_ms`
 
 - shutdown_ms must be below 5000, the time a Linux host waits for a shutdown by default
@@ -1002,6 +1013,13 @@ own description allows. A message keeps its format directives (`%s`,
 
 - femu: spare_lines (%u) must be below blks_per_pl (%d)
 - femu: spare_lines needs blk_pe_limit
+
+## `stage_ns`
+
+- nsid %u: stage_ns times NSID 1 to %d
+- nsid needs stage_ns=on
+- stage_ns is not supported with ns_mgmt
+- stage_ns needs io_stages=on
 
 ## `status_lat`
 
@@ -1029,6 +1047,7 @@ own description allows. A message keeps its format directives (`%s`,
 - power_states does not work with a femu-subsys yet
 - reservations must be the same on every controller of a femu-subsys
 - sanitize_ms does not work with a femu-subsys yet
+- shared_ftl is not supported with a femu-subsys (FDP shares its FTL already)
 
 ## `telemetry_da4`
 
