@@ -3,12 +3,12 @@ title: "Supported combinations"
 description: "Each section is a device property and the refusals that name it: the messages realize, or a runtime setter, gives for a combination FEMU does not support. A..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/785fe5a63e54228482168d62fc746045df4d1533/hw/femu/docs/reference/combinations.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/efcb8079a630699e5bf3aa4c7238f0dc783c61a8/hw/femu/docs/reference/combinations.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/785fe5a63e54228482168d62fc746045df4d1533/hw/femu/docs/reference/combinations.md) at FEMU `785fe5a63` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/efcb8079a630699e5bf3aa4c7238f0dc783c61a8/hw/femu/docs/reference/combinations.md) at FEMU `efcb8079a` (2026-11-09), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -825,6 +825,7 @@ own description allows. A message keeps its format directives (`%s`,
 - persist_file: '%s' ends in .lock, which names a lock file
 - persist_file: '%s' is a link to nothing
 - persist_ftl needs persist_file
+- power_limit is not supported with persist_file
 
 ## `persist_ftl`
 
@@ -865,6 +866,11 @@ own description allows. A message keeps its format directives (`%s`,
 - multipoller_enabled must be 0 (one poller for all queues) or 1 (each poller owns poller_ratio queues)
 - wrr needs one poller: multipoller_enabled=0, or poller_ratio of at least queues
 
+## `power_limit`
+
+- power_limit is not supported with persist_file
+- power_limit needs power_states
+
 ## `power_loss`
 
 - FEMU bbssd: buffer_low_pcent needs buffer_size, must be below buffer_thres_pcent, and does not work with shared namespaces or power_loss, got %d
@@ -875,8 +881,14 @@ own description allows. A message keeps its format directives (`%s`,
 - sanitize_ms and sanitize_ops do not work with power_loss yet
 - simulated power loss requires a realized power_loss device
 
+## `power_meas`
+
+- a power_meas subsystem takes a single controller
+- femu: power_meas is not supported with %s
+
 ## `power_states`
 
+- power_limit needs power_states
 - power_states does not work with a femu-subsys yet
 - power_states does not work with ocp yet (OCP C7h maps DSSD power states to PS0)
 - power_states needs 100 <= throttle_light_pct <= throttle_heavy_pct <= 1000
