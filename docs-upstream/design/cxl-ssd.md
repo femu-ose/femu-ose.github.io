@@ -3,12 +3,12 @@ title: "CXL SSD (femu-cxl-ssd)"
 description: "The device comes from Cylon (FAST '26); the user guide has its citation."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/22b92832e8071f05befba429378bc8c508e13a73/hw/femu/docs/design/cxl-ssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/939e70d9a4de6361c8153166c0d4b1f350ad43ea/hw/femu/docs/design/cxl-ssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/cxl-ssd.md`](https://github.com/MoatLab/FEMU/blob/22b92832e8071f05befba429378bc8c508e13a73/hw/femu/docs/design/cxl-ssd.md) at FEMU `22b92832e` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/cxl-ssd.md`](https://github.com/MoatLab/FEMU/blob/939e70d9a4de6361c8153166c0d4b1f350ad43ea/hw/femu/docs/design/cxl-ssd.md) at FEMU `939e70d9a` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

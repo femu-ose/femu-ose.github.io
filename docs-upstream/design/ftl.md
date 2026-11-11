@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/22b92832e8071f05befba429378bc8c508e13a73/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/939e70d9a4de6361c8153166c0d4b1f350ad43ea/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/22b92832e8071f05befba429378bc8c508e13a73/hw/femu/docs/design/ftl.md) at FEMU `22b92832e` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/939e70d9a4de6361c8153166c0d4b1f350ad43ea/hw/femu/docs/design/ftl.md) at FEMU `939e70d9a` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -994,6 +994,10 @@ so no die holds all the parity.
   the last one. `rain_rebuild=on` moves the older lines: each write
   moves at most one, when lines are to spare. Otherwise only GC moves
   them, and the hook refuses the failure until they are gone.
+- Each failure takes spare space. SMART Available Spare reports
+  `100 * (cap(F) - namespace) / (cap(0) - namespace)`, with cap(e) the
+  data pages of the lines past the GC reserve at epoch e. Below the
+  threshold (20) it also sets Critical Warning bit 0.
 - The rebuild is done when its moves are booked, as all FEMU timing is:
   the mapping moves at once, and the NAND programs end later. A failure
   after that point can come before those programs end.

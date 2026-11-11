@@ -3,12 +3,12 @@ title: "CXL caching API (CCA)"
 description: "The caching API lets software in the guest control the DRAM cache of a femu-cxl-ssd: pin pages so they stay cached, write back and drop ranges, mark ranges..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/22b92832e8071f05befba429378bc8c508e13a73/hw/femu/docs/features/cxl-cca.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/939e70d9a4de6361c8153166c0d4b1f350ad43ea/hw/femu/docs/features/cxl-cca.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/cxl-cca.md`](https://github.com/MoatLab/FEMU/blob/22b92832e8071f05befba429378bc8c508e13a73/hw/femu/docs/features/cxl-cca.md) at FEMU `22b92832e` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/cxl-cca.md`](https://github.com/MoatLab/FEMU/blob/939e70d9a4de6361c8153166c0d4b1f350ad43ea/hw/femu/docs/features/cxl-cca.md) at FEMU `939e70d9a` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -248,7 +248,7 @@ sudo ./run-guest-tests.sh -d mem0
 case prints `PASS`, `FAIL` or `SKIP`, and the script exits 1 if any failed.
 The `query`, `thrash`, `invalidate` and `disable` cases map the devdax
 device and are skipped without one of at least 2 MiB. The
-[tools README](https://github.com/MoatLab/FEMU/blob/22b92832e8071f05befba429378bc8c508e13a73/hw/femu/tools/cca/README.md#guest-tests) lists every case.
+[tools README](https://github.com/MoatLab/FEMU/blob/939e70d9a4de6361c8153166c0d4b1f350ad43ea/hw/femu/tools/cca/README.md#guest-tests) lists every case.
 
 The `thrash` and `disable` cases compare access times and expect a factor of 5.
 With `der=off` a cache hit already costs microseconds of emulation, so
@@ -275,5 +275,5 @@ Read with `qom-get` as described in
 ## Related pages
 
 - [CXL SSD](../modes/cxl-ssd.md)
-- [CCA guest tools README](https://github.com/MoatLab/FEMU/blob/22b92832e8071f05befba429378bc8c508e13a73/hw/femu/tools/cca/README.md)
+- [CCA guest tools README](https://github.com/MoatLab/FEMU/blob/939e70d9a4de6361c8153166c0d4b1f350ad43ea/hw/femu/tools/cca/README.md)
 - [CXL SSD design note](../cxlssd.md#caching-api-cca)
