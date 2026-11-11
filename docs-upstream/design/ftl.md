@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8bf76c8abe65d9a5160a332f6de74b9c4ec2917f/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/212778a5acbca4709e76496329ad46d05f6acda9/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/8bf76c8abe65d9a5160a332f6de74b9c4ec2917f/hw/femu/docs/design/ftl.md) at FEMU `8bf76c8ab` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/212778a5acbca4709e76496329ad46d05f6acda9/hw/femu/docs/design/ftl.md) at FEMU `212778a5a` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -916,6 +916,30 @@ Uncorrectable write back their own namespace's. If the device has no
 line to write to, they fail with Capacity Exceeded (a shutdown sets
 Controller Fatal Status instead) rather than claim the data is durable. An FUA write programs a whole NAND page, so buffered
 neighbours in that page become durable with it.
+
+With `durable_at_done=on` a page is durable when its program ends, not
+when the program is booked. Each booked host program keeps a generation:
+the page's bytes and LBA states before it, and the program's end time.
+
+```text
+ per page, oldest first:  durable | g1 (end d1) | g2 (end d2)
+ g2 ends:                 g1 and g2 go (programs end out of order)
+ cut at c:                from the newest back, restore while d > c
+```
+
+- A direct write (FUA or cache off) keeps one too. When it replaces a
+  buffered copy, the generation holds the bytes from before that copy.
+- A Flush completes no earlier than the end of the last pending program,
+  also when the buffer is empty. SHST 10b waits for it too.
+- The generations are at most `buffer_size`; the buffer has its own
+  bound. At the bound a direct write fails with Capacity Exceeded, and a
+  write-back stops, so a buffered write fails when the buffer is full.
+  The older generations stay. The FTL idle pass drops the generations
+  whose program ended.
+- The mapping is not rolled back: only the payload and its LBA states.
+- DSM, Write Zeroes, Copy, Write Uncorrectable, Format, Sanitize and a
+  cache disable fail with Invalid Field, because they change parts of
+  pages or need a delayed completion.
 
 ## Read cache
 

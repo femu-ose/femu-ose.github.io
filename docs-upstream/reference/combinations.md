@@ -3,12 +3,12 @@ title: "Supported combinations"
 description: "Each section is a device property and the refusals that name it: the messages realize, or a runtime setter, gives for a combination FEMU does not support. A..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8bf76c8abe65d9a5160a332f6de74b9c4ec2917f/hw/femu/docs/reference/combinations.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/212778a5acbca4709e76496329ad46d05f6acda9/hw/femu/docs/reference/combinations.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/8bf76c8abe65d9a5160a332f6de74b9c4ec2917f/hw/femu/docs/reference/combinations.md) at FEMU `8bf76c8ab` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/212778a5acbca4709e76496329ad46d05f6acda9/hw/femu/docs/reference/combinations.md) at FEMU `212778a5a` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -201,6 +201,11 @@ own description allows. A message keeps its format directives (`%s`,
 ## `dram_hit_ns`
 
 - FEMU bbssd: dram_hit_ns must not be negative
+
+## `durable_at_done`
+
+- durable_at_done is not supported with %s
+- durable_at_done needs power_loss=on
 
 ## `ecc_retention_sec`
 
@@ -888,6 +893,7 @@ own description allows. A message keeps its format directives (`%s`,
 - FEMU bbssd: buffer_low_pcent needs buffer_size, must be below buffer_thres_pcent, and does not work with shared namespaces or power_loss, got %d
 - action power-loss needs power_loss=on
 - csd_slm_size and csd_cp cannot be used with ns_mgmt, power_loss or a CXL link
+- durable_at_done needs power_loss=on
 - power_loss requires bbssd, buffer_size > 0, and no metadata, namespace management or subsystem
 - power_loss requires page-aligned namespaces and whole LBAs per NAND page
 - sanitize_ms and sanitize_ops do not work with power_loss yet

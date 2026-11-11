@@ -3,12 +3,12 @@ title: "Subsystems, controllers and namespaces"
 description: "This chapter describes how FEMU arranges NVMe subsystems, controllers and namespaces: how a controller's memory backend is split between namespaces, how..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/8bf76c8abe65d9a5160a332f6de74b9c4ec2917f/hw/femu/docs/design/namespaces.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/212778a5acbca4709e76496329ad46d05f6acda9/hw/femu/docs/design/namespaces.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/namespaces.md`](https://github.com/MoatLab/FEMU/blob/8bf76c8abe65d9a5160a332f6de74b9c4ec2917f/hw/femu/docs/design/namespaces.md) at FEMU `8bf76c8ab` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/namespaces.md`](https://github.com/MoatLab/FEMU/blob/212778a5acbca4709e76496329ad46d05f6acda9/hw/femu/docs/design/namespaces.md) at FEMU `212778a5a` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
