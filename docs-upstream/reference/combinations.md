@@ -3,12 +3,12 @@ title: "Supported combinations"
 description: "Each section is a device property and the refusals that name it: the messages realize, or a runtime setter, gives for a combination FEMU does not support. A..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/185b707eafc766bbb0455257edb8b68d0938c4f8/hw/femu/docs/reference/combinations.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/37e8e2a7caf0f23c4b16237f83f9f9be98ba05aa/hw/femu/docs/reference/combinations.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/185b707eafc766bbb0455257edb8b68d0938c4f8/hw/femu/docs/reference/combinations.md) at FEMU `185b707ea` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/37e8e2a7caf0f23c4b16237f83f9f9be98ba05aa/hw/femu/docs/reference/combinations.md) at FEMU `37e8e2a7c` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -959,7 +959,12 @@ own description allows. A message keeps its format directives (`%s`,
 - FEMU bbssd: die_parity and rain_parity need two dies at least and mapping=page, and does not work with mp_program, mp_read, onfi_cache_read, gc_copyback, rber_ppb, KV, namespace_modes or FDP; parity_xor_ns (0 or more) and failed_die (-1 to dies - 1) need die_parity
 - FEMU: rber_ppb is not supported with %s
 - FEMU: rrl needs rber_ppb
+- femu: rber_timing_only needs rber_ppb
 - x-rber-u requires rber_ppb
+
+## `rber_timing_only`
+
+- femu: rber_timing_only needs rber_ppb
 
 ## `read_prio`
 

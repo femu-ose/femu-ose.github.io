@@ -3,12 +3,12 @@ title: "Timing model"
 description: "FEMU makes an emulated SSD take as long as a real one would. This page explains how it computes that time, how it makes the guest wait for it, which..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/185b707eafc766bbb0455257edb8b68d0938c4f8/hw/femu/docs/concepts/timing-model.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/37e8e2a7caf0f23c4b16237f83f9f9be98ba05aa/hw/femu/docs/concepts/timing-model.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/timing-model.md`](https://github.com/MoatLab/FEMU/blob/185b707eafc766bbb0455257edb8b68d0938c4f8/hw/femu/docs/concepts/timing-model.md) at FEMU `185b707ea` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/timing-model.md`](https://github.com/MoatLab/FEMU/blob/37e8e2a7caf0f23c4b16237f83f9f9be98ba05aa/hw/femu/docs/concepts/timing-model.md) at FEMU `37e8e2a7c` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

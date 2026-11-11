@@ -3,12 +3,12 @@ title: "Guest image"
 description: "FEMU emulates an SSD inside a virtual machine, so you need a guest disk image. The run scripts boot ~/images/u20s.qcow2 by default. The name is historical;..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/185b707eafc766bbb0455257edb8b68d0938c4f8/hw/femu/docs/getting-started/guest-image.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/37e8e2a7caf0f23c4b16237f83f9f9be98ba05aa/hw/femu/docs/getting-started/guest-image.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/getting-started/guest-image.md`](https://github.com/MoatLab/FEMU/blob/185b707eafc766bbb0455257edb8b68d0938c4f8/hw/femu/docs/getting-started/guest-image.md) at FEMU `185b707ea` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/getting-started/guest-image.md`](https://github.com/MoatLab/FEMU/blob/37e8e2a7caf0f23c4b16237f83f9f9be98ba05aa/hw/femu/docs/getting-started/guest-image.md) at FEMU `37e8e2a7c` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

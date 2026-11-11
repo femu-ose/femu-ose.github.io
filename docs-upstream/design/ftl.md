@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/185b707eafc766bbb0455257edb8b68d0938c4f8/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/37e8e2a7caf0f23c4b16237f83f9f9be98ba05aa/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/185b707eafc766bbb0455257edb8b68d0938c4f8/hw/femu/docs/design/ftl.md) at FEMU `185b707ea` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/37e8e2a7caf0f23c4b16237f83f9f9be98ba05aa/hw/femu/docs/design/ftl.md) at FEMU `37e8e2a7c` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -1098,8 +1098,10 @@ timing chapter.
 
 With `rber_ppb`, each host page read draws a decode outcome for each ECC
 codeword. A failed attempt costs one more page read on the same LUN and
-channel. The model is synthetic and not calibrated. It changes read time
-only, never data or status.
+channel. The model is synthetic and not calibrated. It never changes
+data. A codeword that no decode corrects fails the read with
+Unrecovered Read Error, as on a drive. `rber_timing_only=on` keeps the
+earlier rule: such a read passes and pays the time only.
 
 ```text
   p        = rber_ppb * 1e-9 * 2^(PE/rber_pe_double + age/rber_age_double_sec
@@ -1123,10 +1125,11 @@ bounds the recovery of host reads; GC reads keep full recovery.
 
 ```text
  level 4 (default)    attempts 0 .. rr_steps, then soft decode (as above);
-                      a codeword still uncorrected changes time only
+                      a codeword still uncorrected fails the read
+                      (with rber_timing_only it pays the time only)
  level 9              attempts 0 .. rr_steps, no soft decode
  level 15 (Fast Fail) attempt 0 only, per codeword
- level 9 or 15, a codeword left uncorrected --> Unrecovered Read Error with DNR
+ any level, a codeword left uncorrected --> Unrecovered Read Error with DNR
                                  (Linux does not retry it), a SMART
                                  media error; the page leaves the read cache
 ```
