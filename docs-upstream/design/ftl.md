@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/939e70d9a4de6361c8153166c0d4b1f350ad43ea/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/185b707eafc766bbb0455257edb8b68d0938c4f8/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/939e70d9a4de6361c8153166c0d4b1f350ad43ea/hw/femu/docs/design/ftl.md) at FEMU `939e70d9a` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/185b707eafc766bbb0455257edb8b68d0938c4f8/hw/femu/docs/design/ftl.md) at FEMU `185b707ea` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -956,8 +956,11 @@ the page's bytes and LBA states before it, and the program's end time.
   Uncorrectable makes them allocated and uncorrectable. A cut then rolls
   the other LBAs of a page back and keeps these.
 - Format and Sanitize drop the history of the namespaces they erase.
-- Copy and Write Zeroes without DEAC fail with Invalid Field: they change
-  bytes before the FTL step, where no before-image is taken yet.
+- Copy and Write Zeroes without DEAC hand their bytes to the FTL as a
+  write's payload: the gathered source bytes, or zeros. The FTL takes
+  each destination page's before-image, then applies the bytes, as for
+  a write. On a namespace with metadata both fail with Invalid Field:
+  the before-image holds data bytes only.
 - A partial deallocate still unmaps the whole page in the FTL; this
   changes timing only.
 
