@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/212778a5acbca4709e76496329ad46d05f6acda9/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/05f702105ebd02493b1b14477e7a922e8cd8a9d4/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/212778a5acbca4709e76496329ad46d05f6acda9/hw/femu/docs/design/ftl.md) at FEMU `212778a5a` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/05f702105ebd02493b1b14477e7a922e8cd8a9d4/hw/femu/docs/design/ftl.md) at FEMU `05f702105` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -937,9 +937,12 @@ the page's bytes and LBA states before it, and the program's end time.
   The older generations stay. The FTL idle pass drops the generations
   whose program ended.
 - The mapping is not rolled back: only the payload and its LBA states.
-- DSM, Write Zeroes, Copy, Write Uncorrectable, Format, Sanitize and a
-  cache disable fail with Invalid Field, because they change parts of
-  pages or need a delayed completion.
+- A cache disable writes the buffer back and completes when those
+  programs end. Until then the admin queue runs no later command, so a
+  second cache change waits in the queue. A reset or a power cut drops
+  the held command.
+- DSM, Write Zeroes, Copy, Write Uncorrectable, Format and Sanitize fail
+  with Invalid Field, because they change parts of pages.
 
 ## Read cache
 
