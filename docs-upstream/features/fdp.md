@@ -3,12 +3,12 @@ title: "Flexible Data Placement (FDP)"
 description: "Flexible Data Placement lets the host tell the SSD which writes belong together. The device groups its NAND into reclaim units and offers a few reclaim unit..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/7bbd8e1cef71b06be98859d83f08c6b9e4364910/hw/femu/docs/features/fdp.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/45657dac8c20e9ccb0d26c37f53805f5018821cd/hw/femu/docs/features/fdp.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/fdp.md`](https://github.com/MoatLab/FEMU/blob/7bbd8e1cef71b06be98859d83f08c6b9e4364910/hw/femu/docs/features/fdp.md) at FEMU `7bbd8e1ce` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/fdp.md`](https://github.com/MoatLab/FEMU/blob/45657dac8c20e9ccb0d26c37f53805f5018821cd/hw/femu/docs/features/fdp.md) at FEMU `45657dac8` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

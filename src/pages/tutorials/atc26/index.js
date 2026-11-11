@@ -11,8 +11,8 @@ import styles from './styles.module.css';
  * and a wide layout, separate from the FEMU site's documentation look: event
  * facts beside the introduction, then materials, the program, preparation,
  * organizers and papers, following conference tutorial pages such as Vortex
- * and FireSim. Event facts come from the ATC 2026 workshops page; organizer
- * photos and home pages come from the MoatLab site.
+ * and FireSim. Event facts come from the ATC 2026 workshops page; MoatLab
+ * organizer photos and home pages come from the MoatLab site.
  */
 
 const ATC = 'https://www.sigops.org/s/conferences/atc/2026';
@@ -45,7 +45,7 @@ const LINKS = [
   ]],
 ];
 
-/* [time, id, title, summary, [[label, href], ...]] */
+/* [time, id, title, summary, [[label, href], ...], presenter] */
 const PROGRAM = [
   ['08:00', '', 'Welcome and setup check', 'Goals of the morning, the FEMU project and how to follow along.', []],
   ['08:10', 'S0', 'FEMU architecture and the I/O path', 'From a guest application through the NVMe driver into FEMU; NoSSD mode as a baseline without media timing.',
@@ -59,7 +59,7 @@ const PROGRAM = [
   ['09:55', '', 'Questions', '', []],
   ['10:00', '', 'Coffee break', 'Provided by the conference.', []],
   ['10:30', 'S4', 'Computational storage', 'A compute request run on the device, checked against a host reference result.',
-    [['CSD mode', '/manual/modes/csd'], ['CEMU paper', 'https://doi.org/10.1145/3779212.3790137']]],
+    [['CSD mode', '/manual/modes/csd'], ['CEMU paper', 'https://doi.org/10.1145/3779212.3790137']], 'Tao Lu, DapuStor'],
   ['10:50', 'S5', 'CXL-attached SSDs', 'From CXL device discovery to usable guest memory, with flash behind a memory interface.',
     [['CXL SSD', '/manual/modes/cxl-ssd'], ['Exercise', '/manual/tutorials/08-cxl-memory'], ['Cylon paper', 'https://www.usenix.org/conference/fast26/presentation/yoon']]],
   ['11:10', 'S6', 'Extending FEMU, testing and contributing', 'Add a small device command, test it, and package the change so others can reproduce it.',
@@ -74,6 +74,8 @@ const PEOPLE = [
     'Works on memory and storage systems; co-author of Cylon, the FEMU CXL SSD emulator.'],
   ['Shoaib Qazi', 'https://shoaibcs.github.io/', 'https://moatlab.github.io/students/shoaib-qazi.jpg', 'PhD student, Virginia Tech',
     'Works on storage systems; co-author of WARP, the FEMU FDP emulator.'],
+  ['Tao Lu', 'https://github.com/taovcu', null, 'Manager, Emerging Technology Department, DapuStor',
+    'Co-author of CEMU, the computational storage emulator. Presents the computational storage session (S4).'],
 ];
 
 const PAPERS = [
@@ -170,10 +172,10 @@ export default function Tutorial() {
               <div>
                 <table className={styles.program}>
                   <thead><tr><th scope="col">Time</th><th scope="col">Session</th><th scope="col">Related</th></tr></thead>
-                  <tbody>{PROGRAM.map(([time, id, title, summary, refs]) => (
+                  <tbody>{PROGRAM.map(([time, id, title, summary, refs, presenter]) => (
                     <tr key={time} className={id ? undefined : styles.plainRow}>
                       <td className={styles.time}>{time}</td>
-                      <td><span className={styles.sessionTitle}>{id && <span className={styles.sid}>{id}</span>}{title}</span>{summary && <span className={styles.summary}>{summary}</span>}</td>
+                      <td><span className={styles.sessionTitle}>{id && <span className={styles.sid}>{id}</span>}{title}</span>{summary && <span className={styles.summary}>{summary}</span>}{presenter && <span className={styles.presenter}>Presented by {presenter}</span>}</td>
                       <td className={styles.refs}>{refs.map(([label, href]) => <A key={label} href={href}>{label}</A>)}</td>
                     </tr>))}
                   </tbody>
@@ -204,11 +206,13 @@ export default function Tutorial() {
               <h2>Organizers</h2>
               <div className={styles.people}>{PEOPLE.map(([name, home, photo, role, bio]) => (
                 <div key={name} className={styles.person}>
-                  <a href={home}><img src={photo} alt={`Photo of ${name}`} width="120" height="120"/></a>
+                  <a href={home}>{photo
+                    ? <img src={photo} alt={`Photo of ${name}`} width="120" height="120"/>
+                    : <span className={styles.initials} aria-hidden="true">{name.split(' ').map((w) => w[0]).join('')}</span>}</a>
                   <div><a href={home} className={styles.personName}>{name}</a><span className={styles.role}>{role}</span><p>{bio}</p></div>
                 </div>))}
               </div>
-              <p className={styles.note}>From <a href="https://moatlab.github.io/">MoatLab</a> at Virginia Tech.</p>
+              <p className={styles.note}>Huaicheng Li, Hansen Idden and Shoaib Qazi are from <a href="https://moatlab.github.io/">MoatLab</a> at Virginia Tech; Tao Lu is from DapuStor.</p>
             </section>
 
             <section id="papers" className={styles.section}>

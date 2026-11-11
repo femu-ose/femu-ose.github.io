@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/7bbd8e1cef71b06be98859d83f08c6b9e4364910/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/45657dac8c20e9ccb0d26c37f53805f5018821cd/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/7bbd8e1cef71b06be98859d83f08c6b9e4364910/hw/femu/docs/design/ftl.md) at FEMU `7bbd8e1ce` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/45657dac8c20e9ccb0d26c37f53805f5018821cd/hw/femu/docs/design/ftl.md) at FEMU `45657dac8` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -960,6 +960,31 @@ the page's bytes and LBA states before it, and the program's end time.
   bytes before the FTL step, where no before-image is taken yet.
 - A partial deallocate still unmaps the whole page in the FTL; this
   changes timing only.
+
+## RAIN (rain_parity)
+
+`rain_parity=1` keeps one parity page in each stripe of a line, as RAIN
+does on a datacenter drive. A stripe is one row of the line: one page per
+die at one plane and page index. The parity page rotates over the dies,
+so no die holds all the parity.
+
+```text
+ t = lun * nchs + ch (write pointer order), row r = pg * pls_per_lun + pl
+ parity of row r at t = dies - 1 - r % dies
+
+          t0  t1  t2  t3
+ row 0:   D   D   D   P      the pointer starts a line on data
+ row 1:   D   D   P   D      and steps over every P
+```
+
+- The parity page takes space: a line holds `pgs_per_line * (dies - 1) /
+  dies` data pages. The namespace size does not change, so the spare
+  space drops and WAF rises.
+- The last data page of a row books the parity program on its die. The
+  XOR time `parity_xor_ns` comes first.
+- A line that closes early (open-block read reclaim) books the parity of
+  each row it ends inside.
+- `failed_die` reads a page of that die from the other dies of its row.
 
 ## Read cache
 

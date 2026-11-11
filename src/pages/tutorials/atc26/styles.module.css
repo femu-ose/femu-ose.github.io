@@ -386,6 +386,29 @@
   border-radius: 2px;
 }
 
+.initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+  border-radius: 2px;
+  background: var(--tut-band);
+  border: 1px solid var(--tut-rule);
+  color: var(--tut-muted);
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.presenter {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--tut-accent);
+  margin-top: 0.2rem;
+}
+
 .person p {
   margin: 0.35rem 0 0;
   font-size: 0.94rem;
@@ -505,9 +528,14 @@
     grid-template-columns: 88px 1fr;
   }
 
-  .person img {
+  .person img,
+  .initials {
     width: 88px;
     height: 88px;
+  }
+
+  .initials {
+    font-size: 1.6rem;
   }
 
   .papers thead {
