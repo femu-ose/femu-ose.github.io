@@ -3,12 +3,12 @@ title: "NoSSD"
 description: "NoSSD mode (femu_mode=2, the default) emulates an NVMe drive with no media model. Reads and writes copy data between guest memory and a host DRAM buffer and..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/b50447e089561045ad1ca31c0f7c36722ec777a4/hw/femu/docs/modes/nossd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/22b92832e8071f05befba429378bc8c508e13a73/hw/femu/docs/modes/nossd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/nossd.md`](https://github.com/MoatLab/FEMU/blob/b50447e089561045ad1ca31c0f7c36722ec777a4/hw/femu/docs/modes/nossd.md) at FEMU `b50447e08` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/nossd.md`](https://github.com/MoatLab/FEMU/blob/22b92832e8071f05befba429378bc8c508e13a73/hw/femu/docs/modes/nossd.md) at FEMU `22b92832e` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
