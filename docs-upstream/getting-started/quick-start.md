@@ -3,12 +3,12 @@ title: "Quick start"
 description: "From a fresh clone to a running BlackBox SSD (BBSSD). On a 20-core host the whole run took 5 minutes, most of it compiling. You build FEMU, build a guest..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/05f702105ebd02493b1b14477e7a922e8cd8a9d4/hw/femu/docs/getting-started/quick-start.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/4433cfd57141cbe90c06fc15dc6fce2a409b6d35/hw/femu/docs/getting-started/quick-start.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/getting-started/quick-start.md`](https://github.com/MoatLab/FEMU/blob/05f702105ebd02493b1b14477e7a922e8cd8a9d4/hw/femu/docs/getting-started/quick-start.md) at FEMU `05f702105` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/getting-started/quick-start.md`](https://github.com/MoatLab/FEMU/blob/4433cfd57141cbe90c06fc15dc6fce2a409b6d35/hw/femu/docs/getting-started/quick-start.md) at FEMU `4433cfd57` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

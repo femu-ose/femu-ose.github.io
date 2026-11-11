@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/05f702105ebd02493b1b14477e7a922e8cd8a9d4/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/4433cfd57141cbe90c06fc15dc6fce2a409b6d35/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/05f702105ebd02493b1b14477e7a922e8cd8a9d4/hw/femu/docs/CHANGELOG.md) at FEMU `05f702105` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/4433cfd57141cbe90c06fc15dc6fce2a409b6d35/hw/femu/docs/CHANGELOG.md) at FEMU `4433cfd57` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -199,7 +199,7 @@ listed one by one.
 - `wrr=on` adds weighted round robin with an urgent class (CC.AMS 001b): the queue priority of Create I/O SQ and the weights of feature 01h choose which queue the poller serves next. It needs one poller.
 - `die_stats=on` counts, for each LUN, the array bookings, the ones that waited for a busy LUN, the wait and the array time; `query-femu` kind `dies` lists them. See [waits per die](guides/measuring.md#waits-per-die-die_stats).
 - bbssd: a Write or Write Zeroes that fails with Capacity Exceeded no longer counts the pages it did not place as host pages, so the WAF denominator holds only pages the device took, as under FDP.
-- `durable_at_done=on` (with `power_loss`) makes a written page durable when its NAND program ends, not when it is booked. A power cut restores the pages whose program had not ended, and Flush, a cache disable and shutdown wait for the last program. See [FTL](design/ftl.md#power-loss).
+- `durable_at_done=on` (with `power_loss`) makes a written page durable when its NAND program ends, not when it is booked. A power cut restores the pages whose program had not ended, and Flush, a cache disable and shutdown wait for the last program. DSM, Write Zeroes with DEAC, Write Uncorrectable, Format and Sanitize work with it; Copy and Write Zeroes without DEAC are refused. See [FTL](design/ftl.md#power-loss).
 - `stage_ns=on` (with `io_stages`) times the Read and the write commands of each namespace apart, for NSID 1 to 8. `query-femu-stages` with `nsid` returns them as `read` and `write`. See [query-femu](reference/query-femu.md#io-stage-times-query-femu-stages).
 - When namespaces share one FTL (`shared_ftl`, or FDP with several namespaces), query-femu reports `namespace-counters` for each namespace: its host, NAND and GC pages and its WAF. A page counts for the namespace whose slice holds it. See [namespaces](design/namespaces.md).
 - `shared_ftl=on` puts every bbssd namespace on the FTL and NAND array of namespace 1, each in its own slice of the logical pages. Writes and GC of one namespace then slow the I/O of another, as in a shared SSD. Format of one namespace drops only its slice. query-femu reports `shared-ftl-nsid`. See [namespaces](design/namespaces.md).

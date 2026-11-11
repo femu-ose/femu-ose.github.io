@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/05f702105ebd02493b1b14477e7a922e8cd8a9d4/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/4433cfd57141cbe90c06fc15dc6fce2a409b6d35/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/05f702105ebd02493b1b14477e7a922e8cd8a9d4/hw/femu/docs/design/ftl.md) at FEMU `05f702105` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/4433cfd57141cbe90c06fc15dc6fce2a409b6d35/hw/femu/docs/design/ftl.md) at FEMU `4433cfd57` (2026-11-10), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -941,8 +941,17 @@ the page's bytes and LBA states before it, and the program's end time.
   programs end. Until then the admin queue runs no later command, so a
   second cache change waits in the queue. A reset or a power cut drops
   the held command.
-- DSM, Write Zeroes, Copy, Write Uncorrectable, Format and Sanitize fail
-  with Invalid Field, because they change parts of pages.
+- DSM, Write Zeroes with DEAC and Write Uncorrectable program nothing,
+  so they are durable at once. Every pending before-image of their pages
+  takes the change: DSM zeroes the LBAs and makes them unallocated, Write
+  Zeroes with DEAC also clears their uncorrectable bit, and Write
+  Uncorrectable makes them allocated and uncorrectable. A cut then rolls
+  the other LBAs of a page back and keeps these.
+- Format and Sanitize drop the history of the namespaces they erase.
+- Copy and Write Zeroes without DEAC fail with Invalid Field: they change
+  bytes before the FTL step, where no before-image is taken yet.
+- A partial deallocate still unmaps the whole page in the FTL; this
+  changes timing only.
 
 ## Read cache
 
