@@ -3,12 +3,12 @@ title: "Keeping the documentation correct"
 description: "Four checks keep the documentation in step with the code. CI runs all of them, and so does"
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/a9cd400df23139bd0804fd534370cf796e5ca0cc/hw/femu/docs/development/docs-maintenance.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/b50447e089561045ad1ca31c0f7c36722ec777a4/hw/femu/docs/development/docs-maintenance.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/development/docs-maintenance.md`](https://github.com/MoatLab/FEMU/blob/a9cd400df23139bd0804fd534370cf796e5ca0cc/hw/femu/docs/development/docs-maintenance.md) at FEMU `a9cd400df` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/development/docs-maintenance.md`](https://github.com/MoatLab/FEMU/blob/b50447e089561045ad1ca31c0f7c36722ec777a4/hw/femu/docs/development/docs-maintenance.md) at FEMU `b50447e08` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -39,7 +39,7 @@ also needs an entry in [CHANGELOG.md](../changelog.md).
 
 ## Per-mode facts: `modes.py`
 
-[`hw/femu/docs/modes.py`](https://github.com/MoatLab/FEMU/blob/a9cd400df23139bd0804fd534370cf796e5ca0cc/hw/femu/docs/modes.py) holds one entry per mode or feature:
+[`hw/femu/docs/modes.py`](https://github.com/MoatLab/FEMU/blob/b50447e089561045ad1ca31c0f7c36722ec777a4/hw/femu/docs/modes.py) holds one entry per mode or feature:
 how to turn it on, a minimal example, the guest kernel and tools it needs,
 host requirements, its launcher and the page that documents it. Change a
 fact there, never in a table, then run

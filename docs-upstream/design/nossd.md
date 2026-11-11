@@ -3,12 +3,12 @@ title: "NoSSD: the mode without a media model"
 description: "This chapter describes NoSSD (femu_mode=2, the default): what it leaves out compared with the other modes, the path a command takes, and when to use it. To..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/a9cd400df23139bd0804fd534370cf796e5ca0cc/hw/femu/docs/design/nossd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/b50447e089561045ad1ca31c0f7c36722ec777a4/hw/femu/docs/design/nossd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nossd.md`](https://github.com/MoatLab/FEMU/blob/a9cd400df23139bd0804fd534370cf796e5ca0cc/hw/femu/docs/design/nossd.md) at FEMU `a9cd400df` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nossd.md`](https://github.com/MoatLab/FEMU/blob/b50447e089561045ad1ca31c0f7c36722ec777a4/hw/femu/docs/design/nossd.md) at FEMU `b50447e08` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -222,10 +222,10 @@ Refusal messages are listed in the
 
 | File | Contents |
 | --- | --- |
-| [`hw/femu/nossd/nop.c`](https://github.com/MoatLab/FEMU/blob/a9cd400df23139bd0804fd534370cf796e5ca0cc/hw/femu/nossd/nop.c) | the mode: handler table, Read and Write dispatch, model string |
-| [`hw/femu/nvme-io.c`](https://github.com/MoatLab/FEMU/blob/a9cd400df23139bd0804fd534370cf796e5ca0cc/hw/femu/nvme-io.c) | `nvme_process_sq_io()`, `nvme_io_cmd()`, `nvme_rw()`, `nvme_process_cq_cpl()`, `nvme_poller()` |
-| [`hw/femu/backend/dram.c`](https://github.com/MoatLab/FEMU/blob/a9cd400df23139bd0804fd534370cf796e5ca0cc/hw/femu/backend/dram.c) | the memory backend and `backend_rw()` |
-| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/a9cd400df23139bd0804fd534370cf796e5ca0cc/hw/femu/femu.c) | mode registration, FTL thread decision |
+| [`hw/femu/nossd/nop.c`](https://github.com/MoatLab/FEMU/blob/b50447e089561045ad1ca31c0f7c36722ec777a4/hw/femu/nossd/nop.c) | the mode: handler table, Read and Write dispatch, model string |
+| [`hw/femu/nvme-io.c`](https://github.com/MoatLab/FEMU/blob/b50447e089561045ad1ca31c0f7c36722ec777a4/hw/femu/nvme-io.c) | `nvme_process_sq_io()`, `nvme_io_cmd()`, `nvme_rw()`, `nvme_process_cq_cpl()`, `nvme_poller()` |
+| [`hw/femu/backend/dram.c`](https://github.com/MoatLab/FEMU/blob/b50447e089561045ad1ca31c0f7c36722ec777a4/hw/femu/backend/dram.c) | the memory backend and `backend_rw()` |
+| [`hw/femu/femu.c`](https://github.com/MoatLab/FEMU/blob/b50447e089561045ad1ca31c0f7c36722ec777a4/hw/femu/femu.c) | mode registration, FTL thread decision |
 
 ## Related pages
 

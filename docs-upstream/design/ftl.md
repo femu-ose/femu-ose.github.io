@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/a9cd400df23139bd0804fd534370cf796e5ca0cc/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/b50447e089561045ad1ca31c0f7c36722ec777a4/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/a9cd400df23139bd0804fd534370cf796e5ca0cc/hw/femu/docs/design/ftl.md) at FEMU `a9cd400df` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/b50447e089561045ad1ca31c0f7c36722ec777a4/hw/femu/docs/design/ftl.md) at FEMU `b50447e08` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -991,6 +991,14 @@ so no die holds all the parity.
   at once. It reads those with data or parity, then adds the XOR time.
 - One die can fail. With one parity page per stripe, a second failure
   could lose data, and FEMU does not model that loss yet.
+- A failed die makes the media less reliable: SMART Critical Warning
+  bit 2 (and EGCWS bit 2) stays set. A failure at run time also raises a
+  SMART event, a telemetry trigger and a Persistent Event log record.
+  Each degraded read counts in the OCP C0h XOR Recovery Count.
+- After a failure, lines have two sizes. A GC victim that holds more
+  live pages than the free room can take goes back to the queue, and the
+  line with the fewest live pages goes instead. Without this, FIFO GC
+  could stall on a large old line.
 - A failure at run time (the qtest hook `x-rain-fail`) needs room for
   GC: an old line can fill two new lines, so the forced GC reserve must
   hold two lines.
