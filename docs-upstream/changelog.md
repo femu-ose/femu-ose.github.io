@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/37e8e2a7caf0f23c4b16237f83f9f9be98ba05aa/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/45405512e715898de402f5b5d42736538af764eb/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/37e8e2a7caf0f23c4b16237f83f9f9be98ba05aa/hw/femu/docs/CHANGELOG.md) at FEMU `37e8e2a7c` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/45405512e715898de402f5b5d42736538af764eb/hw/femu/docs/CHANGELOG.md) at FEMU `45405512e` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -208,6 +208,7 @@ listed one by one.
 - With `rain_parity=1` a die can fail (`failed_die`): lines opened after the failure leave the die out, and a read of the failed die reads the other dies of its stripe.
 - `rain_parity=1` keeps one parity page in each stripe of a line, as RAIN on a datacenter drive: the parity page rotates over the dies and takes space, so the spare space drops and WAF counts one parity program per N - 1 data pages. See [FTL](design/ftl.md#rain-rain_parity).
 - `durable_at_done=on` (with `power_loss`) makes a written page durable when its NAND program ends, not when it is booked. A power cut restores the pages whose program had not ended, and Flush, a cache disable and shutdown wait for the last program. DSM, Write Zeroes with DEAC, Write Uncorrectable, Format and Sanitize work with it; Copy and Write Zeroes without DEAC work too, except on a namespace with metadata. At its bound a write waits for a program to end, it does not fail. See [FTL](design/ftl.md#power-loss).
+- `plp=on` (with `power_loss`) models power-loss protection: a cut keeps the write buffer, FUA and Flush complete without the media, and `vwc=0` keeps it on. A check at enable and every C6h minutes reads `plp_health` (C0h Capacitor Health). Below 1 the protection fails with Critical Warning bit 4 and a SMART event. Then `plp_fail_mode` or OCP Feature C2h (DP-CFG-6 A) picks read-only, write-through or normal. See [FTL](design/ftl.md#power-loss-protection-plp).
 - `stage_ns=on` (with `io_stages`) times the Read and the write commands of each namespace apart, for NSID 1 to 8. `query-femu-stages` with `nsid` returns them as `read` and `write`. See [query-femu](reference/query-femu.md#io-stage-times-query-femu-stages).
 - When namespaces share one FTL (`shared_ftl`, or FDP with several namespaces), query-femu reports `namespace-counters` for each namespace: its host, NAND and GC pages and its WAF. A page counts for the namespace whose slice holds it. See [namespaces](design/namespaces.md).
 - `shared_ftl=on` puts every bbssd namespace on the FTL and NAND array of namespace 1, each in its own slice of the logical pages. Writes and GC of one namespace then slow the I/O of another, as in a shared SSD. Format of one namespace drops only its slice. query-femu reports `shared-ftl-nsid`. See [namespaces](design/namespaces.md).

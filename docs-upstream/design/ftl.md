@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/37e8e2a7caf0f23c4b16237f83f9f9be98ba05aa/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/45405512e715898de402f5b5d42736538af764eb/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/37e8e2a7caf0f23c4b16237f83f9f9be98ba05aa/hw/femu/docs/design/ftl.md) at FEMU `37e8e2a7c` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/45405512e715898de402f5b5d42736538af764eb/hw/femu/docs/design/ftl.md) at FEMU `45405512e` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -963,6 +963,39 @@ the page's bytes and LBA states before it, and the program's end time.
   the before-image holds data bytes only.
 - A partial deallocate still unmaps the whole page in the FTL; this
   changes timing only.
+
+#### Power-loss protection (plp)
+
+`plp=on` gives the buffer hold-up energy, as on a data-center drive
+(OCP 2.7, 7.8). A cut then writes the buffer back instead of rolling it
+back. A FUA write completes from the buffer and a Flush does not wait
+for the media (OCP NVMe-IO-3). `vwc=0` keeps the buffer on; with
+`ocp=on` it is required, since such a drive has no cache to disable.
+Not with `durable_at_done` or `rain_parity`.
+
+```text
+ buffer volatile = power_loss and not (plp and the check passed)
+
+ CC.EN 0->1, then every C6h minutes (default 15):
+   plp_health < 1 --> failed, for the life of the device
+     Critical Warning bit 4, SMART reliability event, PEL entry
+     C2h 01b ROM:    write the buffer back; new writes fail 82h (bit 3
+                     too); a write fetched before programs first
+     C2h 10b WTM:    write the buffer back; writes program first
+     C2h 11b normal: the buffer is volatile again
+```
+
+- `plp_health` is the energy in percent. C0h reports it as Capacitor
+  Health; without `plp` that field is FFFFh. Set it at run time with
+  the `plp-health` QOM property.
+- The energy, not the last check, decides a cut: below 1 a cut writes
+  nothing back. Every cut counts in PLP Start Count (C0h bytes
+  175:160). A page with no room on the media at the cut rolls back.
+- A failure lasts for the life of the device. The mode taken then stays,
+  whatever C2h says later.
+- `plp_fail_mode` sets the C2h factory value (ROM, ROWTM-1). With
+  `ocp=on` and DP-CFG-6 A, Set Features C2h changes it. End of life is
+  read-only in every mode.
 
 ## RAIN (rain_parity)
 

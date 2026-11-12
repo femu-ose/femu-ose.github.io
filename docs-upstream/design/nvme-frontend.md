@@ -3,12 +3,12 @@ title: "NVMe frontend"
 description: "The NVMe frontend is the part of -device femu that a guest driver talks to: the PCI function, the controller registers, the admin and I/O queues, the poller..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/37e8e2a7caf0f23c4b16237f83f9f9be98ba05aa/hw/femu/docs/design/nvme-frontend.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/45405512e715898de402f5b5d42736538af764eb/hw/femu/docs/design/nvme-frontend.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/37e8e2a7caf0f23c4b16237f83f9f9be98ba05aa/hw/femu/docs/design/nvme-frontend.md) at FEMU `37e8e2a7c` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/45405512e715898de402f5b5d42736538af764eb/hw/femu/docs/design/nvme-frontend.md) at FEMU `45405512e` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -849,14 +849,17 @@ CEDA (bits 31:16) and CMDA (bits 15:0).
 With `ocp=on` the OCP 2.7 features answer through UUID index 0 or 1 (OCP
 4.15). C5h configures the latency monitor, C7h selects a DSSD power state
 and C9h configures the DSSD events. C6h, C8h and CAh hold one value each,
-with a current, default and saved value. FEMU only stores them: it models
-no PLP circuit or idle mode. Device profile B, the only one FEMU takes,
-disables C2h (DP-CFG-6) and prohibits CBh (DP-CFG-13), so both fail.
+with a current, default and saved value. C2h exists with DP-CFG-6 A
+only, and picks what a failed PLP does (`plp=on`, see
+[FTL](ftl.md#power-loss-protection-plp)). C6h sets how often the PLP
+check runs. FEMU models no idle mode. DP-CFG-13 prohibits CBh, so it
+fails.
 
 ```text
  FID  name                         CDW11 bits  default  note
+ C2h  PLP failure mode             31:30       01b      ROM; 10b WTM, 11b normal
  C3h  clear PCIe error counters    31          -        not saveable; reads 0
- C6h  PLP health check interval    31:16       0        minutes
+ C6h  PLP health check interval    31:16       0        minutes; 15 with plp
  C8h  telemetry profile            7:0         0        saved without SV
  CAh  idle wake up time            15:0        0        ms
 ```

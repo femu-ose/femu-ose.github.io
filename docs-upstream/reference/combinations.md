@@ -3,12 +3,12 @@ title: "Supported combinations"
 description: "Each section is a device property and the refusals that name it: the messages realize, or a runtime setter, gives for a combination FEMU does not support. A..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/37e8e2a7caf0f23c4b16237f83f9f9be98ba05aa/hw/femu/docs/reference/combinations.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/45405512e715898de402f5b5d42736538af764eb/hw/femu/docs/reference/combinations.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/37e8e2a7caf0f23c4b16237f83f9f9be98ba05aa/hw/femu/docs/reference/combinations.md) at FEMU `37e8e2a7c` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/45405512e715898de402f5b5d42736538af764eb/hw/femu/docs/reference/combinations.md) at FEMU `45405512e` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -725,11 +725,14 @@ own description allows. A message keeps its format directives (`%s`,
 - ocp needs fw_slots of 3 or more (FWUP-6)
 - ocp needs lba_index 0: the factory sector size is LBA format 0 (DP-CFG-1 B, NSM-3)
 - ocp_profile needs ocp=on
+- plp with ocp=on needs vwc=0
 - power_states does not work with ocp yet (OCP C7h maps DSSD power states to PS0)
 
 ## `ocp_profile`
 
 - ocp_profile DP-CFG-%d A needs %s, which FEMU does not support; use B
+- ocp_profile DP-CFG-6 A needs plp=on
+- ocp_profile DP-CFG-6 B needs plp_fail_mode rom
 - ocp_profile must be %d letters, each A or B (DP-CFG-1 to DP-CFG-%d)
 - ocp_profile needs ocp=on
 
@@ -887,6 +890,25 @@ own description allows. A message keeps its format directives (`%s`,
 - plane_reads needs the plain channel model: no ONFI profile, onfi_cache_read, bus phases, pe_suspend or read_prio
 - plane_reads works with bbssd, CSD or KV namespaces only (KV keeps the LUN rule)
 
+## `plp`
+
+- ocp_profile DP-CFG-6 A needs plp=on
+- plp is not supported with %s
+- plp needs power_loss=on
+- plp with ocp=on needs vwc=0
+- plp-health needs plp=on and 0 to 65534
+- plp_fail_mode needs plp=on
+
+## `plp_fail_mode`
+
+- ocp_profile DP-CFG-6 B needs plp_fail_mode rom
+- plp_fail_mode must be rom, wtm or normal
+- plp_fail_mode needs plp=on
+
+## `plp_health`
+
+- plp_health must be 0 to 65534
+
 ## `poller_ratio`
 
 - multipoller_enabled must be 0 (one poller for all queues) or 1 (each poller owns poller_ratio queues)
@@ -903,6 +925,7 @@ own description allows. A message keeps its format directives (`%s`,
 - action power-loss needs power_loss=on
 - csd_slm_size and csd_cp cannot be used with ns_mgmt, power_loss or a CXL link
 - durable_at_done needs power_loss=on
+- plp needs power_loss=on
 - power_loss requires bbssd, buffer_size > 0, and no metadata, namespace management or subsystem
 - power_loss requires page-aligned namespaces and whole LBAs per NAND page
 - sanitize_ms and sanitize_ops do not work with power_loss yet
@@ -1174,6 +1197,7 @@ own description allows. A message keeps its format directives (`%s`,
 
 ## `vwc`
 
+- plp with ocp=on needs vwc=0
 - vwc, intc, cqr and extended are single bits
 
 ## `wl_spread`
