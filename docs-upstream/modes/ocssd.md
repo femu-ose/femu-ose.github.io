@@ -3,12 +3,12 @@ title: "Open-Channel SSD (OCSSD)"
 description: "OCSSD mode (femu_mode=0) emulates an Open-Channel SSD, also called a \"white-box\" SSD. The device has no FTL. The host sees the NAND geometry (channels or..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/45405512e715898de402f5b5d42736538af764eb/hw/femu/docs/modes/ocssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0d8658713824e11493bf26227c92e1cc78dffe5e/hw/femu/docs/modes/ocssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/modes/ocssd.md`](https://github.com/MoatLab/FEMU/blob/45405512e715898de402f5b5d42736538af764eb/hw/femu/docs/modes/ocssd.md) at FEMU `45405512e` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/modes/ocssd.md`](https://github.com/MoatLab/FEMU/blob/0d8658713824e11493bf26227c92e1cc78dffe5e/hw/femu/docs/modes/ocssd.md) at FEMU `0d8658713` (2026-11-12), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

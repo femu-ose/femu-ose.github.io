@@ -3,12 +3,12 @@ title: "KV value packing"
 description: "A key-value namespace packs small values into shared NAND pages, as real KV-SSDs do. PinK (Im et al., USENIX ATC '20) appends values to a value log. The..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/45405512e715898de402f5b5d42736538af764eb/hw/femu/docs/features/kv-value-packing.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0d8658713824e11493bf26227c92e1cc78dffe5e/hw/femu/docs/features/kv-value-packing.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/kv-value-packing.md`](https://github.com/MoatLab/FEMU/blob/45405512e715898de402f5b5d42736538af764eb/hw/femu/docs/features/kv-value-packing.md) at FEMU `45405512e` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/kv-value-packing.md`](https://github.com/MoatLab/FEMU/blob/0d8658713824e11493bf26227c92e1cc78dffe5e/hw/femu/docs/features/kv-value-packing.md) at FEMU `0d8658713` (2026-11-12), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

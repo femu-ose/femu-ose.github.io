@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/45405512e715898de402f5b5d42736538af764eb/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0d8658713824e11493bf26227c92e1cc78dffe5e/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/45405512e715898de402f5b5d42736538af764eb/hw/femu/docs/design/ftl.md) at FEMU `45405512e` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/0d8658713824e11493bf26227c92e1cc78dffe5e/hw/femu/docs/design/ftl.md) at FEMU `0d8658713` (2026-11-12), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -963,6 +963,26 @@ the page's bytes and LBA states before it, and the program's end time.
   the before-image holds data bytes only.
 - A partial deallocate still unmaps the whole page in the FTL; this
   changes timing only.
+
+#### Power-fail atomicity (awupf_lbas)
+
+The buffer holds whole pages, so a write inside one page is atomic at a
+cut. A write that spans two pages can tear: a later FUA write or a
+write-back can make one page durable while the other waits.
+
+```text
+ write of LBAs 7..8, page = 8 LBAs, then FUA to LBA 0
+   page 0 programmed (with LBA 7) --> kept at a cut
+   page 1 buffered (LBA 8)        --> rolled back      = torn
+```
+
+`awupf_lbas=N` (with `power_loss`) runs a Write, Write Zeroes or Copy
+of at most N blocks that spans pages as one transaction. It skips the
+buffer and keeps each page's before-image until every page is placed.
+If one page finds no room, every page goes back and the command fails.
+The FTL runs the whole command in one step, and a cut comes only
+between steps. AWUN and AWUPF report N - 1. Not with `durable_at_done`
+or `err_write_fail_ppm`.
 
 #### Power-loss protection (plp)
 

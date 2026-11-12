@@ -3,12 +3,12 @@ title: "FEMU architecture"
 description: "FEMU is QEMU with a set of emulated storage devices under hw/femu/. This page describes those devices as a stack of layers, from what the guest sees down to..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/45405512e715898de402f5b5d42736538af764eb/hw/femu/docs/concepts/architecture.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/0d8658713824e11493bf26227c92e1cc78dffe5e/hw/femu/docs/concepts/architecture.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/concepts/architecture.md`](https://github.com/MoatLab/FEMU/blob/45405512e715898de402f5b5d42736538af764eb/hw/femu/docs/concepts/architecture.md) at FEMU `45405512e` (2026-11-11), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/concepts/architecture.md`](https://github.com/MoatLab/FEMU/blob/0d8658713824e11493bf26227c92e1cc78dffe5e/hw/femu/docs/concepts/architecture.md) at FEMU `0d8658713` (2026-11-12), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
