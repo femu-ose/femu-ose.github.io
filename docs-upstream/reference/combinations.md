@@ -3,12 +3,12 @@ title: "Supported combinations"
 description: "Each section is a device property and the refusals that name it: the messages realize, or a runtime setter, gives for a combination FEMU does not support. A..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/0d8658713824e11493bf26227c92e1cc78dffe5e/hw/femu/docs/reference/combinations.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/a898d22b2f894042afe0f4ef21867393c5c78a70/hw/femu/docs/reference/combinations.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/0d8658713824e11493bf26227c92e1cc78dffe5e/hw/femu/docs/reference/combinations.md) at FEMU `0d8658713` (2026-11-12), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/a898d22b2f894042afe0f4ef21867393c5c78a70/hw/femu/docs/reference/combinations.md) at FEMU `a898d22b2` (2026-11-12), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -933,6 +933,7 @@ own description allows. A message keeps its format directives (`%s`,
 - power_loss requires bbssd, buffer_size > 0, and no metadata, namespace management or subsystem
 - power_loss requires page-aligned namespaces and whole LBAs per NAND page
 - sanitize_ms and sanitize_ops do not work with power_loss yet
+- sdc needs power_loss=on
 - simulated power loss requires a realized power_loss device
 
 ## `power_meas`
@@ -1049,6 +1050,24 @@ own description allows. A message keeps its format directives (`%s`,
 
 - femu: sanitize_ns needs sanitize_ops
 - sanitize_ms and sanitize_ops do not work with power_loss yet
+
+## `sdc`
+
+- sdc is not supported with %s
+- sdc needs power_loss=on
+- sdc_ppm and sdc_kind need sdc=on
+- x-sdc needs sdc=on and &lt;nsid&gt;:&lt;kind&gt;:&lt;lba&gt; of a namespace
+- x-sdc: a fault is already waiting
+
+## `sdc_kind`
+
+- sdc_ppm and sdc_kind need sdc=on
+- sdc_ppm must be 0 to 1000000 and sdc_kind flip, lost, misdirect or mix
+
+## `sdc_ppm`
+
+- sdc_ppm and sdc_kind need sdc=on
+- sdc_ppm must be 0 to 1000000 and sdc_kind flip, lost, misdirect or mix
 
 ## `secs_per_pg`
 

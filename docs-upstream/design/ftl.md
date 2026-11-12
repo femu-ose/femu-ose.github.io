@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/0d8658713824e11493bf26227c92e1cc78dffe5e/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/a898d22b2f894042afe0f4ef21867393c5c78a70/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/0d8658713824e11493bf26227c92e1cc78dffe5e/hw/femu/docs/design/ftl.md) at FEMU `0d8658713` (2026-11-12), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/a898d22b2f894042afe0f4ef21867393c5c78a70/hw/femu/docs/design/ftl.md) at FEMU `a898d22b2` (2026-11-12), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -983,6 +983,31 @@ If one page finds no room, every page goes back and the command fails.
 The FTL runs the whole command in one step, and a cut comes only
 between steps. AWUN and AWUPF report N - 1. Not with `durable_at_done`
 or `err_write_fail_ppm`.
+
+#### Silent corruption faults (sdc)
+
+`sdc=on` (with `power_loss`) adds media faults that leave wrong data.
+The FTL thread draws one as each page of a write goes into the store:
+`x-sdc` for one fault in a test, or `sdc_ppm` with `sdc_seed`.
+
+```text
+ flip       the page goes in with one bit changed
+ lost       the old bytes stay; the write still completes
+ misdirect  the old bytes stay; the new ones go to the next page
+            after the command
+ each spoiled block is marked (bit 2 of the per-LBA state, so a
+ rollback restores the mark with the bytes)
+
+ Read, Copy source, Compare, Verify of a marked block:
+   e2e_check=on  (default) --> 81h, C0h Detected Errors + 1
+   e2e_check=off           --> the wrong data, with success
+```
+
+A write of a block clears its mark, and so does a deallocation. The
+mark stands in for an LBA tag or version that no longer matches (OCP
+E2E-5). FEMU corrects no fault, so C0h Corrected Errors reads 0. Not
+with `durable_at_done`, `persist_file` or `awupf_lbas`: a misdirected
+page lies outside the transaction it would have to roll back with.
 
 #### Power-loss protection (plp)
 
