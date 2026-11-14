@@ -3,12 +3,12 @@ title: "Supported combinations"
 description: "Each section is a device property and the refusals that name it: the messages realize, or a runtime setter, gives for a combination FEMU does not support. A..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/a898d22b2f894042afe0f4ef21867393c5c78a70/hw/femu/docs/reference/combinations.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/d3726d4738833add57790994b96d85dc7038bc66/hw/femu/docs/reference/combinations.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/a898d22b2f894042afe0f4ef21867393c5c78a70/hw/femu/docs/reference/combinations.md) at FEMU `a898d22b2` (2026-11-12), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/d3726d4738833add57790994b96d85dc7038bc66/hw/femu/docs/reference/combinations.md) at FEMU `d3726d473` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -515,7 +515,7 @@ own description allows. A message keeps its format directives (`%s`,
 - femu: pd_open_read_limit and pd_open_close_sec are not supported with mapping=%s
 - hmb_mb %u MiB is smaller than the mapping table of this device (8 bytes per page)
 - persist_ftl needs mapping=page
-- the FTL section comes from other FTL properties (geometry, mapping, GC or NAND timing)
+- the FTL section comes from other FTL properties (geometry, mapping, GC, NAND timing or aging)
 
 ## `max_cqes`
 
@@ -849,6 +849,7 @@ own description allows. A message keeps its format directives (`%s`,
 - persist_file '%s' does not match this device: the mode, the backend size (%
 - persist_file '%s' has a short FTL section
 - persist_file '%s' has bytes past its FTL state
+- persist_file '%s' has no FTL state, and an aging model needs the media history
 - persist_file '%s' is in use by another device
 - persist_file '%s', namespace %u: %s
 - persist_file '%s', namespace %u: the FTL section is longer than this FTL's

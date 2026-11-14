@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/a898d22b2f894042afe0f4ef21867393c5c78a70/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/d3726d4738833add57790994b96d85dc7038bc66/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/a898d22b2f894042afe0f4ef21867393c5c78a70/hw/femu/docs/CHANGELOG.md) at FEMU `a898d22b2` (2026-11-12), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/d3726d4738833add57790994b96d85dc7038bc66/hw/femu/docs/CHANGELOG.md) at FEMU `d3726d473` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -211,6 +211,7 @@ listed one by one.
 - `plp=on` (with `power_loss`) models power-loss protection: a cut keeps the write buffer, FUA and Flush complete without the media, and `vwc=0` keeps it on. A check at enable and every C6h minutes reads `plp_health` (C0h Capacitor Health). Below 1 the protection fails with Critical Warning bit 4 and a SMART event. Then `plp_fail_mode` or OCP Feature C2h (DP-CFG-6 A) picks read-only, write-through or normal. See [FTL](design/ftl.md#power-loss-protection-plp).
 - `awupf_lbas=N` (with `power_loss`) makes a Write, Write Zeroes or Copy of at most N blocks that spans pages one transaction. A cut or a failed placement then finds it all old or all new, and AWUN and AWUPF report N - 1. See [FTL](design/ftl.md#power-fail-atomicity-awupf_lbas).
 - `sdc=on` (with `power_loss`) injects media faults that leave wrong data: a flipped bit, a lost write or a misdirected write. With `e2e_check` (on by default) a read of a spoiled block fails with 81h and counts in C0h Detected Errors. With it off, the read returns the wrong data. Not with `awupf_lbas`. See [FTL](design/ftl.md#silent-corruption-faults-sdc).
+- `persist_ftl` now keeps the aging state, so an aged drive goes on after a clean restart. It takes `blk_pe_limit`, `spare_lines`, `wl_spread`, `read_reclaim_limit`, `retention_limit_sec`, `ecc_retention_sec` and `rber_ppb`. The file keeps erase limits, used spares, retired and reserve lines, read-only media, the queued rewrite, levelling and the RBER generator. Data ages do not grow while QEMU is down. Files of the old format still load into a device without an aging model. See [FTL](design/ftl.md#aging-state-across-a-restart-persist_ftl).
 - `stage_ns=on` (with `io_stages`) times the Read and the write commands of each namespace apart, for NSID 1 to 8. `query-femu-stages` with `nsid` returns them as `read` and `write`. See [query-femu](reference/query-femu.md#io-stage-times-query-femu-stages).
 - When namespaces share one FTL (`shared_ftl`, or FDP with several namespaces), query-femu reports `namespace-counters` for each namespace: its host, NAND and GC pages and its WAF. A page counts for the namespace whose slice holds it. See [namespaces](design/namespaces.md).
 - `shared_ftl=on` puts every bbssd namespace on the FTL and NAND array of namespace 1, each in its own slice of the logical pages. Writes and GC of one namespace then slow the I/O of another, as in a shared SSD. Format of one namespace drops only its slice. query-femu reports `shared-ftl-nsid`. See [namespaces](design/namespaces.md).
