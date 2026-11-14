@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/d3726d4738833add57790994b96d85dc7038bc66/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/e4f0b33121ad17c4d194eb91c374e71b34e0ba9f/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/d3726d4738833add57790994b96d85dc7038bc66/hw/femu/docs/design/ftl.md) at FEMU `d3726d473` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/e4f0b33121ad17c4d194eb91c374e71b34e0ba9f/hw/femu/docs/design/ftl.md) at FEMU `e4f0b3312` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -961,8 +961,9 @@ the page's bytes and LBA states before it, and the program's end time.
   each destination page's before-image, then applies the bytes, as for
   a write. On a namespace with metadata both fail with Invalid Field:
   the before-image holds data bytes only.
-- A partial deallocate still unmaps the whole page in the FTL; this
-  changes timing only.
+- A deallocate unmaps only the NAND pages it covers in full. A page
+  that keeps some of its LBAs keeps its mapping, so a read of those LBAs
+  still costs a NAND read and GC still moves the page.
 
 #### Power-fail atomicity (awupf_lbas)
 
@@ -1109,6 +1110,24 @@ so no die holds all the parity.
  row 1:   D   P   x   D
 ```
 
+- In an open stripe the parity is not programmed yet. The controller
+  holds it in RAM, so a degraded read costs NAND reads of the programmed
+  members only.
+- With `ocp=on`, OCP event 0016h (NAND Die Offline) takes `inject_die`
+  offline until NUME=0 or a power cycle. The die stays out of the failure
+  list, and lines keep their layout. A read of its page takes the other
+  members of its stripe, as for a failed die.
+- Every live stripe keeps one lost member at most, so no page becomes
+  unreadable. Set Features C0h checks this with the FTL paused:
+
+```text
+ Set 0016h, die d
+   d already failed ---------------------------------> accepted
+   a line opened before the last failure holds data -> Invalid Field
+   otherwise ----------------------------------------> accepted
+ x-rain-fail of another die while 0016h is set or waits --> refused
+```
+
 ## Read cache
 
 `read_cache_mb` adds a DRAM read cache in front of NAND reads
@@ -1135,13 +1154,15 @@ so no die holds all the parity.
 
 ## Deallocate, Write Zeroes, Format and Sanitize
 
-- **Dataset Management deallocate** (`ssd_trim()`) unmaps every LPN of every
-  range: it drops the buffered copy, invalidates the physical page, clears
-  `maptbl` and `rmap`, and drops the read cache entry. A log-block scheme does
+- **Dataset Management deallocate** (`ssd_trim()`) unmaps every LPN that a
+  range covers in full: it drops the buffered copy, invalidates the
+  physical page, clears `maptbl` and `rmap`, and drops the read cache
+  entry. A page that keeps some of its LBAs keeps its mapping, so the
+  data of those LBAs stays readable and in its stripe. A log-block scheme does
   this through its `trim()` hook. A range past the device is skipped. The
   latency is `trim_lat_ns` times the number of ranges, or 0.
-- **Write Zeroes with Deallocate** unmaps the range in the same way and costs
-  no time. **Without Deallocate** it programs the range directly, after
+- **Write Zeroes with Deallocate** unmaps the pages it covers in full in
+  the same way and costs no time. **Without Deallocate** it programs the range directly, after
   forced GC if needed, and counts the pages as host writes.
 - **Format** and **Sanitize** call `bbssd_deallocate_all()` on BlackBox
   namespaces (not CSD), which unmaps every LPN of the namespace's FTL. The lines keep their wear.
@@ -1375,6 +1396,44 @@ counters run per namespace FTL, so a run repeats exactly. The command is
 still timed and, for a write, still programmed and mapped; only its status
 changes. The injected counts feed SMART Media and Data Integrity Errors.
 Write Zeroes and Copy are never failed.
+
+### Block death beyond the erase limit
+
+Two opt-in models kill blocks before their erase limit. Both need
+`blk_pe_limit`, so the spare swap, retirement and read-only end of life
+handle the dead block. Each draw is a stateless hash of `blk_pe_seed`.
+The same seed, block and erase count always give the same draw. The dead
+blocks still depend on which erases run, so a run with another collection
+order can lose other blocks.
+
+```text
+ early life   at realize, per block:
+                hash A(seed, block) < blk_early_ppm
+                  --> pe_limit = min(pe_limit, 1 + hash B(seed, block) % blk_early_pe)
+ erase fail   after a line erase, per block alive before the erase:
+                hash C(seed, block uid, erase count) < erase_fail_ppm
+                  --> block failed --> spare swap, else the line retires
+                  --> spare pools set but one is empty --> read-only
+                  --> no spare pools and no room to retire --> read-only
+ the host sees success; statistics log byte 328 counts erase failures
+```
+
+- A draw hits when `hash * 10^6 < ppm * 2^64`. A rate of 0 never hits,
+  and 1000000 always hits.
+- Early life changes only the fixed limits, so `persist_ftl` keeps it.
+  The two early-life properties join the FTL digest when set.
+- A failed block keeps its erase limit. Its own flag makes it dead, and
+  it never stays in service as an overworn block: `erase_fail_ppm` needs
+  `eol_read_only=on`, which retires its line in every case.
+- The block uid moves with the block in a spare swap. A spare block that
+  takes its place draws with its own uid.
+- `erase_fail_ppm` is refused with FDP and with `persist_ftl`. The FTL
+  section has no record of the failed flag yet.
+- The rates are synthetic fault injection, with no fit to a measured
+  population.
+- Program failure is not modelled. A faithful model must stop writes to
+  the block and make every relocation commit only after its program
+  succeeds.
 
 ## Over-provisioning and capacity
 

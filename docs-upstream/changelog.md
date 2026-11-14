@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/d3726d4738833add57790994b96d85dc7038bc66/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/e4f0b33121ad17c4d194eb91c374e71b34e0ba9f/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/d3726d4738833add57790994b96d85dc7038bc66/hw/femu/docs/CHANGELOG.md) at FEMU `d3726d473` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/e4f0b33121ad17c4d194eb91c374e71b34e0ba9f/hw/femu/docs/CHANGELOG.md) at FEMU `e4f0b3312` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -212,6 +212,9 @@ listed one by one.
 - `awupf_lbas=N` (with `power_loss`) makes a Write, Write Zeroes or Copy of at most N blocks that spans pages one transaction. A cut or a failed placement then finds it all old or all new, and AWUN and AWUPF report N - 1. See [FTL](design/ftl.md#power-fail-atomicity-awupf_lbas).
 - `sdc=on` (with `power_loss`) injects media faults that leave wrong data: a flipped bit, a lost write or a misdirected write. With `e2e_check` (on by default) a read of a spoiled block fails with 81h and counts in C0h Detected Errors. With it off, the read returns the wrong data. Not with `awupf_lbas`. See [FTL](design/ftl.md#silent-corruption-faults-sdc).
 - `persist_ftl` now keeps the aging state, so an aged drive goes on after a clean restart. It takes `blk_pe_limit`, `spare_lines`, `wl_spread`, `read_reclaim_limit`, `retention_limit_sec`, `ecc_retention_sec` and `rber_ppb`. The file keeps erase limits, used spares, retired and reserve lines, read-only media, the queued rewrite, levelling and the RBER generator. Data ages do not grow while QEMU is down. Files of the old format still load into a device without an aging model. See [FTL](design/ftl.md#aging-state-across-a-restart-persist_ftl).
+- Opt-in block death beyond the erase limit: an early-life cohort with low erase limits (`blk_early_ppm`, `blk_early_pe`) and erase failures that kill a block (`erase_fail_ppm`). A dead block takes the spare, retirement and read-only paths of a worn-out one; statistics log byte 328 counts erase failures. See [FTL](design/ftl.md#block-death-beyond-the-erase-limit).
+- A deallocate (Dataset Management, Write Zeroes with Deallocate) unmaps only the NAND pages it covers in full. A page that keeps some of its LBAs keeps its mapping, so their reads still cost a NAND read. FDP event 80h no longer counts the deallocated blocks of such a page. See [FTL](design/ftl.md#deallocate-write-zeroes-format-and-sanitize).
+- OCP event 0016h (NAND Die Offline) now works with `rain_parity`: the die leaves reads only, and its pages read from the other members of their stripe. Set Features accepts the event while each live stripe keeps one lost member at most. See [FTL](design/ftl.md#rain-rain_parity).
 - `stage_ns=on` (with `io_stages`) times the Read and the write commands of each namespace apart, for NSID 1 to 8. `query-femu-stages` with `nsid` returns them as `read` and `write`. See [query-femu](reference/query-femu.md#io-stage-times-query-femu-stages).
 - When namespaces share one FTL (`shared_ftl`, or FDP with several namespaces), query-femu reports `namespace-counters` for each namespace: its host, NAND and GC pages and its WAF. A page counts for the namespace whose slice holds it. See [namespaces](design/namespaces.md).
 - `shared_ftl=on` puts every bbssd namespace on the FTL and NAND array of namespace 1, each in its own slice of the logical pages. Writes and GC of one namespace then slow the I/O of another, as in a shared SSD. Format of one namespace drops only its slice. query-femu reports `shared-ftl-nsid`. See [namespaces](design/namespaces.md).

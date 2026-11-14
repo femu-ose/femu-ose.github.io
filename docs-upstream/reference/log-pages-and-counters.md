@@ -3,12 +3,12 @@ title: "Log pages and counters"
 description: "How to read FEMU's own counters from the guest. Device properties are in properties.md, and the counters of femu-cxl-ssd are QOM properties listed in..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/d3726d4738833add57790994b96d85dc7038bc66/hw/femu/docs/reference/log-pages-and-counters.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/e4f0b33121ad17c4d194eb91c374e71b34e0ba9f/hw/femu/docs/reference/log-pages-and-counters.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/d3726d4738833add57790994b96d85dc7038bc66/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `d3726d473` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/log-pages-and-counters.md`](https://github.com/MoatLab/FEMU/blob/e4f0b33121ad17c4d194eb91c374e71b34e0ba9f/hw/femu/docs/reference/log-pages-and-counters.md) at FEMU `e4f0b3312` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -66,8 +66,9 @@ own media counters, little-endian at these offsets (`FemuStatsLog` in
 | 304 | 8 | Read-retry page reads (`rber_ppb`) |
 | 312 | 8 | Host page reads with a soft decode, passed or failed (`rber_ppb`) |
 | 320 | 8 | Host page reads past the decode limit: soft decode failed, or failed with it off (`rber_ppb`) |
+| 328 | 8 | Blocks an erase failure killed (`erase_fail_ppm`); each one also counts as a grown bad block when it leaves service |
 
-Bytes 4-7 and 328-511 are reserved and read as zero. The counters are summed
+Bytes 4-7 and 336-511 are reserved and read as zero. The counters are summed
 over the controller's bbssd, CSD and KV namespaces (the block read count is the
 largest of them); other modes leave them zero. The write amplification factor
 stays zero until the host has written a page.

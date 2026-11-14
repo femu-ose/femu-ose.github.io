@@ -3,12 +3,12 @@ title: "Device property reference"
 description: "Every property of the FEMU devices, as the binary reports it. ./qemu-system-x86_64 -device femu,help prints the same descriptions at the terminal...."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/d3726d4738833add57790994b96d85dc7038bc66/hw/femu/docs/reference/properties.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/e4f0b33121ad17c4d194eb91c374e71b34e0ba9f/hw/femu/docs/reference/properties.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/d3726d4738833add57790994b96d85dc7038bc66/hw/femu/docs/reference/properties.md) at FEMU `d3726d473` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/properties.md`](https://github.com/MoatLab/FEMU/blob/e4f0b33121ad17c4d194eb91c374e71b34e0ba9f/hw/femu/docs/reference/properties.md) at FEMU `e4f0b3312` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -28,7 +28,7 @@ Devices:
 
 ## `femu`: NVMe controller
 
-`-device femu` has 306 properties of its own and 4 QOM properties listed in [runtime-properties.md](runtime-properties.md).
+`-device femu` has 309 properties of its own and 4 QOM properties listed in [runtime-properties.md](runtime-properties.md).
 
 ### Mode, capacity and namespaces
 
@@ -205,7 +205,7 @@ Devices:
 | `rain_rebuild` | `bool` | `off` | bbssd, CSD: with rain_parity, each write moves at most one line opened before the last die failure into a line without that die, when lines are to spare; off (default): only GC moves them |
 | `parity_xor_ns` | `int32` | `0` | bbssd, CSD: with die_parity or rain_parity, controller time in ns before each parity program and added to a read of the failed die; 0 (default) |
 | `failed_die` | `int32` | `-1` | bbssd, CSD: with die_parity or rain_parity, the die (channel * luns_per_ch + LUN) that has failed: a host read there reads the other dies of its stripe in parallel; -1 (default) is none |
-| `inject_die` | `int32` | `0` | bbssd, CSD: with ocp=on, the die (channel * luns_per_ch + LUN) that OCP event injection 0016h (NAND Die Offline) takes offline; 0 (default) |
+| `inject_die` | `int32` | `0` | bbssd, CSD: with ocp=on, the die (channel * luns_per_ch + LUN) that OCP event injection 0016h (NAND Die Offline) takes offline; with rain_parity, accepted while each live stripe keeps one lost member at most; 0 (default) |
 | `nand_cell_type` | `uint8` | `0` | bbssd, CSD, KV: 0 uses the flat pg_rd_lat, pg_wr_lat and blk_er_lat; 1 SLC, 2 MLC, 3 TLC or 4 QLC uses built-in per-page-type timing (other values fall back to 0) |
 | `cell_pages` | `int32` | `0` | bbssd, CSD, KV: bits per cell (pages per wordline) for the pgtype_lat model, 0 to 5; 0 with pgtype_lat means 3 |
 | `pgtype_lat` | `int32` | `0` | bbssd, CSD, KV: non-zero scales the program time by page type (lower to upper) using cell_pages, when nand_cell_type is 0 |
@@ -243,6 +243,9 @@ Devices:
 | `blk_pe_limit` | `uint32` | `0` | bbssd, CSD, also FDP: mean program/erase cycles a block survives before it wears out; 0 (default) turns wear-out off. When no block can replace a worn-out one, the media goes read-only (eol_read_only). Under FDP a worn-out block retires its reclaim unit |
 | `blk_pe_spread` | `uint32` | `0` | bbssd, CSD, also FDP: how far each block's limit varies from blk_pe_limit, in percent, 0 to 90 |
 | `blk_pe_seed` | `uint64` | `0` | bbssd, CSD, also FDP: seed of the per-block erase limits; one seed gives the same limits on every run |
+| `blk_early_ppm` | `uint32` | `0` | bbssd, CSD, also FDP: blocks per million in an early-life cohort, whose erase limit is at most blk_early_pe; needs blk_pe_limit; 0 (default) turns it off |
+| `blk_early_pe` | `uint32` | `0` | bbssd, CSD, also FDP: erase limit bound of the early-life cohort (blk_early_ppm), 1 or more |
+| `erase_fail_ppm` | `uint32` | `0` | bbssd, CSD: erases per million that fail and kill the block; a spare replaces it, or its line retires. Needs blk_pe_limit and eol_read_only=on; synthetic, with no measured rate behind it |
 | `spare_lines` | `uint32` | `0` | bbssd, CSD: lines held back, needs blk_pe_limit; their blocks replace worn-out blocks of the same plane, and SMART Available Spare is the spare blocks the emptiest plane has left, in percent |
 | `eol_read_only` | `bool` | `on` | bbssd, CSD, with blk_pe_limit: on (default) puts the media in read-only mode when no block can replace a worn-out one, with reserve lines for the writes in flight; needs mdts 1 or more and limits Write Zeroes (WZSL) to mdts and Copy (MCL) to mdts or one block. off keeps a worn-out block in service with the SMART reliability warning. Under FDP each reclaim group holds reserve units |
 | `energy_read_nj` | `uint32` | `0` | bbssd, CSD, KV: energy of one plane read in nJ, for the energy total in log page C0h; 0 (default) gives no figure |

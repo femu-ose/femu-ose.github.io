@@ -3,12 +3,12 @@ title: "QMP query-femu"
 description: "query-femu is a QMP command that reports the FTL state of a FEMU NVMe controller to the host. It needs no guest tools. The schema is in qapi/femu.json, and..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/d3726d4738833add57790994b96d85dc7038bc66/hw/femu/docs/reference/query-femu.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/e4f0b33121ad17c4d194eb91c374e71b34e0ba9f/hw/femu/docs/reference/query-femu.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/d3726d4738833add57790994b96d85dc7038bc66/hw/femu/docs/reference/query-femu.md) at FEMU `d3726d473` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/query-femu.md`](https://github.com/MoatLab/FEMU/blob/e4f0b33121ad17c4d194eb91c374e71b34e0ba9f/hw/femu/docs/reference/query-femu.md) at FEMU `e4f0b3312` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -407,8 +407,8 @@ reply has no `next-offset`.
 
 Kind `blocks` pages through every flash block of a BlackBox namespace in
 the same way. Blocks come in channel, LUN, plane and block order. Each
-record has the erase count, the block's P/E limit and whether it is
-overworn. The erase counts of all blocks add up to `block-erases`.
+record has the erase count, the block's P/E limit, whether it is
+overworn and whether an erase failure killed it. The erase counts of all blocks add up to `block-erases`.
 
 ```json
 {"execute": "query-femu", "arguments": {"kind": "blocks", "offset": 0, "limit": 2}}
@@ -416,9 +416,9 @@ overworn. The erase counts of all blocks add up to `block-erases`.
 
 ```json
   "blocks": [{"channel": 0, "lun": 0, "plane": 0, "block": 0, "erase-count": 3,
-              "pe-limit": 0, "overworn": false},
+              "pe-limit": 0, "overworn": false, "failed": false},
              {"channel": 0, "lun": 0, "plane": 0, "block": 1, "erase-count": 2,
-              "pe-limit": 0, "overworn": false}],
+              "pe-limit": 0, "overworn": false, "failed": false}],
   "offset": 0, "next-offset": 2
 ```
 

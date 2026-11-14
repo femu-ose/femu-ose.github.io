@@ -3,12 +3,12 @@ title: "FDP: Flexible Data Placement"
 description: "This chapter describes how FEMU implements NVMe Flexible Data Placement (FDP): how the subsystem builds reclaim groups, reclaim units and reclaim unit..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/d3726d4738833add57790994b96d85dc7038bc66/hw/femu/docs/design/fdp.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/e4f0b33121ad17c4d194eb91c374e71b34e0ba9f/hw/femu/docs/design/fdp.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/d3726d4738833add57790994b96d85dc7038bc66/hw/femu/docs/design/fdp.md) at FEMU `d3726d473` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/fdp.md`](https://github.com/MoatLab/FEMU/blob/e4f0b33121ad17c4d194eb91c374e71b34e0ba9f/hw/femu/docs/design/fdp.md) at FEMU `e4f0b3312` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -689,7 +689,9 @@ holds LBAV, the number of blocks moved (at most FFFFh) and one of them.
 
 The FTL moves whole pages, so the count takes only the blocks of a moved
 page that a host write programmed into it. The FTL notes those blocks as it
-programs each page, in 512-byte pieces. The block reported is the first such
+programs each page, in 512-byte pieces. A deallocate removes its blocks from
+that record, also when the page keeps its mapping (and also from a copy
+the write buffer holds). The block reported is the first such
 block. With a page size that is not a multiple of 512 bytes, the FTL keeps
 no such record, and 80h reports no count and no block. The FTL drops a handle's active unit when it fills with no free
 unit. That logs nothing, and the unit taken later logs the 81h.
