@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/b96b25a6720561aba02086f10862e746e3c62ee7/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/92d9c3cfa2bf00e31cffc70f425a0063cd7651d2/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/b96b25a6720561aba02086f10862e746e3c62ee7/hw/femu/docs/CHANGELOG.md) at FEMU `b96b25a67` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/92d9c3cfa2bf00e31cffc70f425a0063cd7651d2/hw/femu/docs/CHANGELOG.md) at FEMU `92d9c3cfa` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -216,6 +216,10 @@ listed one by one.
 - A deallocate (Dataset Management, Write Zeroes with Deallocate) unmaps only the NAND pages it covers in full. A page that keeps some of its LBAs keeps its mapping, so their reads still cost a NAND read. FDP event 80h no longer counts the deallocated blocks of such a page. See [FTL](design/ftl.md#deallocate-write-zeroes-format-and-sanitize).
 - A DSM range of 0 blocks at LBA 0 no longer hangs an FDP controller. The deallocate walked about 2^52 pages, because the range end wrapped below its start.
 - `rain_read_only=on` (with `rain_parity`): a die failure that leaves no spare or no room for GC is accepted, and the media goes read-only with its data readable, as a real drive does. Off by default; such a failure is refused then. See [FTL](design/ftl.md#read-only-when-the-spare-runs-out-rain_read_only).
+- Get and Set Features answer LBA Status Information Attributes (15h): LSIPI 1 s, LSIRI settable down to LSIPI. See [NVMe frontend](design/nvme-frontend.md).
+- Log 0Eh lists each attached namespace with tracked blocks and their runs, and LSGC steps only when the page lists a block the last host read did not. A RAE=1 read freezes the page until a RAE=0 read. It used to give only an estimate, also for detached namespaces. See [NVMe frontend](design/nvme-frontend.md#lba-status-information-log-0eh).
+- The LBA Status Information alert (Notice 05h, AEC bit 13): after LSIRI, or at once for a component failure, with the page captured at the post. A read with RAE=0 clears it; a reset sends an unread one again. Get LBA Status no longer reports a run of 2^32 blocks when a write clears the run's first block during the scan. See [NVMe frontend](design/nvme-frontend.md#lba-status-information-log-0eh).
+- `persist_file` keeps the LBA Status Information state (LSGC, the last alert and host read, a pending component failure) in a new section, version 3 flag 2. Files from older FEMU still load, with that state empty. A file saved now needs this FEMU.
 - OCP event 0016h (NAND Die Offline) now works with `rain_parity`: the die leaves reads only, and its pages read from the other members of their stripe. Set Features accepts the event while each live stripe keeps one lost member at most. See [FTL](design/ftl.md#rain-rain_parity).
 - `stage_ns=on` (with `io_stages`) times the Read and the write commands of each namespace apart, for NSID 1 to 8. `query-femu-stages` with `nsid` returns them as `read` and `write`. See [query-femu](reference/query-femu.md#io-stage-times-query-femu-stages).
 - When namespaces share one FTL (`shared_ftl`, or FDP with several namespaces), query-femu reports `namespace-counters` for each namespace: its host, NAND and GC pages and its WAF. A page counts for the namespace whose slice holds it. See [namespaces](design/namespaces.md).

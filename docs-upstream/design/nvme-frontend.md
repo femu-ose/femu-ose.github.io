@@ -3,12 +3,12 @@ title: "NVMe frontend"
 description: "The NVMe frontend is the part of -device femu that a guest driver talks to: the PCI function, the controller registers, the admin and I/O queues, the poller..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/b96b25a6720561aba02086f10862e746e3c62ee7/hw/femu/docs/design/nvme-frontend.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/92d9c3cfa2bf00e31cffc70f425a0063cd7651d2/hw/femu/docs/design/nvme-frontend.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/b96b25a6720561aba02086f10862e746e3c62ee7/hw/femu/docs/design/nvme-frontend.md) at FEMU `b96b25a67` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/nvme-frontend.md`](https://github.com/MoatLab/FEMU/blob/92d9c3cfa2bf00e31cffc70f425a0063cd7651d2/hw/femu/docs/design/nvme-frontend.md) at FEMU `92d9c3cfa` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -685,7 +685,7 @@ Namespace Management.
 | OCP Latency Monitor | C3h | with `ocp=on`: 512 bytes, version 0005h, configured by Feature C5h; bytes 512 to 4095 read as zeros |
 | OCP SMART / Health Extended, Error Recovery | C0h, C1h | with `ocp=on`: OCP 2.7 layouts at UUID index 0 and 1 (CNS 17h lists the OCP UUID, then the FEMU UUID `2ff92965-47be-4ce0-923d-649d30079203`); the FEMU counters at C0h, UUID index 2. Fields FEMU does not model are 0, capacitor health is FFFFh (no PLP) |
 | Rotational Media Information | 16h | with `femu-subsys,rotational=on`: one actuator, one spinup and one load per QEMU run; Spinup Control (Feature 1Ah) is fixed off |
-| LBA Status | 0Eh | |
+| LBA Status Information | 0Eh | one element per attached namespace with tracked blocks; see [LBA Status Information](#lba-status-information-log-0eh) |
 | Feature Identifiers Supported and Effects | 12h | built from the check Get and Set Features use; per command set (CSI) when CC.CSS is 110b |
 | NVMe-MI Commands Supported and Effects | 13h | all zero: no NVMe-MI Send or Receive |
 | Command and Feature Lockdown | 14h | with `lockdown=on`: what the Lockdown command (24h) can prohibit, and what the admin queue refuses now; no Management Endpoint, so Contents 10b is Invalid Field |
@@ -712,12 +712,79 @@ State Transition, 0Ch), LBA Range Type (03h), Temperature Threshold (04h), Error
 Recovery (05h), Volatile Write Cache (06h, only with `vwc=1`), Number of
 Queues (07h), Interrupt Coalescing (08h), Interrupt Vector Configuration
 (09h), Write Atomicity (0Ah), Asynchronous Event Configuration (0Bh),
-Timestamp (0Eh), Read Recovery Level (12h, only with `rrl=on`), Host
-Behavior Support (16h), Command Set Profile (19h), FDP
-(1Dh, 1Eh, only with FDP on), Key Value Configuration (20h, only with
-a KV namespace) and Software Progress Marker (80h). Any other identifier, or
-one of these without what it needs, fails with Invalid Field in Command, and
-log 12h lists exactly the identifiers that answer.
+Timestamp (0Eh), Read Recovery Level (12h, only with `rrl=on`), LBA
+Status Information Attributes (15h, NVM and ZNS), Host Behavior Support
+(16h), Command Set Profile (19h), FDP (1Dh, 1Eh, only with FDP on), Key
+Value Configuration (20h, only with a KV namespace) and Software Progress
+Marker (80h). Any other identifier, or one of these without what it needs,
+fails with Invalid Field in Command, and log 12h lists exactly the
+identifiers that answer.
+
+LBA Status Information Attributes (NVM 1.2, 4.1.3.5) return LSIPI in bits
+31:16 and LSIRI in bits 15:0, both in 100 ms units. LSIPI is fixed at 10
+(1 s). A Set takes LSIRI from bits 15:0; a value below 10 becomes 10, the
+closest supported value. The feature is not saveable, and a controller
+reset sets LSIRI back to 10.
+
+### LBA Status Information (log 0Eh)
+
+The tracked blocks are the uncorrectable map of each namespace. Write
+Uncorrectable sets them. A write, a Write Zeroes, a Format or a Sanitize
+clears them.
+
+The log has one element for each attached
+namespace with a tracked block. An element lists the runs as LBA Range
+Descriptors with RATYPE 11h. A run longer than 2^32 blocks takes several
+descriptors. More than 256 descriptors give NLRD FFFFFFFFh and no list.
+ESTULB is the sum of the tracked blocks, and saturates at FFFFFFFEh.
+
+```
+ first read after a clear --> capture (pollers paused): page S, gen G_S
+ read OK, any RAE          --> R = what S listed, G_R = G_S
+ RAE=1                     --> S stays: later reads return the same bytes
+ RAE=0                     --> S goes: the next read captures again
+ gen with no S             = max(G_pub, G_R + 1 if a tracked block is
+                             not in R)       G_pub: highest gen given out
+```
+
+- LSGC (Figure 109) steps only when the page lists a block that the last
+  host read did not list. A repair alone, or a repeat Write Uncorrectable
+  of a listed block, does not step it.
+- Take an element that the last read gave with FFFFFFFFh descriptors.
+  The next page is new when it lists descriptors, or when a block was
+  added since. Figure 109 compares descriptors only; this is the FEMU rule for
+  an element with none.
+- A failed transfer or a bad offset changes nothing. A controller reset
+  drops the held page and keeps R, so the same blocks do not step LSGC
+  again.
+
+The alert is an AER of type Notice, information 05h, log 0Eh (AEC bit 13,
+OAES bit 13). FEMU sends it when the generation is above the last one it
+announced:
+
+```
+ new block --> wait: LSIRI after the last clear --> scan (at most 1 per 100 ms)
+           --> queue Notice 05h --> AER --> capture S, check its gen --> post
+ component failure --> no LSIRI wait (also with no tracked blocks)
+ posted --> no more 05h until a read with RAE=0 clears it
+```
+
+- The page is captured when the alert is posted, so the alert and the
+  page agree. A block added after that waits for the next alert.
+- A full event queue refuses the alert. It goes in when an event leaves
+  the queue. AEC bit 13 off drops a queued alert.
+- A controller reset keeps the generation the host was told. An alert the
+  host did not read is sent again, one LSIRI after the next enable; a
+  cleared one is not.
+- `persist_file` keeps the generations, the last alert, a pending
+  component failure, and the last host read. A restart then acts as a
+  reset: an alert the host did not read comes back one LSIRI after the
+  enable.
+- Format and Sanitize clear the blocks with no LSGC step. After a Format
+  to the same LBA size, the last host read still covers its blocks; after
+  a new LBA size it covers none. A namespace created again with the same
+  NSID is a new namespace for LSGC.
+- LSGC is 16 bits and wraps from FFFFh to 0.
 
 With `power_states=on` and `power_limit=on`, Power Limit (23h, Base 2.3
 8.1.18.6) takes a limit in CDW13 (PLS 01b or 10b, PLV). The states whose
