@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/92d9c3cfa2bf00e31cffc70f425a0063cd7651d2/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/526998446834bf8e2bab6ba8a75952e40795ee2d/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/92d9c3cfa2bf00e31cffc70f425a0063cd7651d2/hw/femu/docs/CHANGELOG.md) at FEMU `92d9c3cfa` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/526998446834bf8e2bab6ba8a75952e40795ee2d/hw/femu/docs/CHANGELOG.md) at FEMU `526998446` (2026-11-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -220,6 +220,7 @@ listed one by one.
 - Log 0Eh lists each attached namespace with tracked blocks and their runs, and LSGC steps only when the page lists a block the last host read did not. A RAE=1 read freezes the page until a RAE=0 read. It used to give only an estimate, also for detached namespaces. See [NVMe frontend](design/nvme-frontend.md#lba-status-information-log-0eh).
 - The LBA Status Information alert (Notice 05h, AEC bit 13): after LSIRI, or at once for a component failure, with the page captured at the post. A read with RAE=0 clears it; a reset sends an unread one again. Get LBA Status no longer reports a run of 2^32 blocks when a write clears the run's first block during the scan. See [NVMe frontend](design/nvme-frontend.md#lba-status-information-log-0eh).
 - `persist_file` keeps the LBA Status Information state (LSGC, the last alert and host read, a pending component failure) in a new section, version 3 flag 2. Files from older FEMU still load, with that state empty. A file saved now needs this FEMU.
+- `rain_loss=on` (with `rain_read_only`): a die failure is accepted while old lines hold data. Data pages in stripes with two failed members are lost: their blocks read Unrecovered Read Error until a write, Get LBA Status lists them (001b), a failed read adds a media error, and Notice 05h reports the component failure. query-femu reports `lost-pages` and `lost-blocks`. See [FTL design](design/ftl.md).
 - OCP event 0016h (NAND Die Offline) now works with `rain_parity`: the die leaves reads only, and its pages read from the other members of their stripe. Set Features accepts the event while each live stripe keeps one lost member at most. See [FTL](design/ftl.md#rain-rain_parity).
 - `stage_ns=on` (with `io_stages`) times the Read and the write commands of each namespace apart, for NSID 1 to 8. `query-femu-stages` with `nsid` returns them as `read` and `write`. See [query-femu](reference/query-femu.md#io-stage-times-query-femu-stages).
 - When namespaces share one FTL (`shared_ftl`, or FDP with several namespaces), query-femu reports `namespace-counters` for each namespace: its host, NAND and GC pages and its WAF. A page counts for the namespace whose slice holds it. See [namespaces](design/namespaces.md).

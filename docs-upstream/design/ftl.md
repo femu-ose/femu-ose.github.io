@@ -3,12 +3,12 @@ title: "The BlackBox FTL"
 description: "This chapter describes the flash translation layer (FTL) behind BlackBox mode (femu_mode=1): how it maps logical pages to NAND pages, how it organises NAND..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/92d9c3cfa2bf00e31cffc70f425a0063cd7651d2/hw/femu/docs/design/ftl.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/526998446834bf8e2bab6ba8a75952e40795ee2d/hw/femu/docs/design/ftl.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/92d9c3cfa2bf00e31cffc70f425a0063cd7651d2/hw/femu/docs/design/ftl.md) at FEMU `92d9c3cfa` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/ftl.md`](https://github.com/MoatLab/FEMU/blob/526998446834bf8e2bab6ba8a75952e40795ee2d/hw/femu/docs/design/ftl.md) at FEMU `526998446` (2026-11-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -1166,6 +1166,40 @@ default), such a failure is refused.
 - With the property on, the FTL thread reports the spare, reliability
   and read-only bits to the Persistent Event Log as they change, as with
   the wear model.
+
+### Data loss at a second failure (rain_loss)
+
+One parity page per stripe repairs one failed member. A real drive whose
+second die fails before the rebuild ends loses the data of stripes with
+two failed members. `rain_loss=on` (with `rain_read_only`) accepts such
+a failure. Off (the default), the old-data rule refuses it.
+
+```text
+ x-rain-fail(d), lines from before the last failure hold data
+   x-ftl-hold=1                    --> refused, no change
+   freeze admission, drain the FTL queues, pause (one 10 s deadline)
+   failure as above, then the loss scan:
+     row r of an old line, missing(r) = failed members programmed in r
+     missing(r) >= 2 --> each valid data page of r on a failed die:
+                         unmap it; mark its allocated blocks
+   Notice 05h (component failure); resume; thaw
+```
+
+- A programmed page counts even when it is invalid now: its old data is
+  still in the parity of the row. The parity page counts too.
+- A lost block reads Unrecovered Read Error, as after Write Uncorrectable,
+  until a write. Deallocate keeps the mark.
+- The device keeps the cause of each mark. Get LBA Status 10h/11h gives
+  a run with a lost block LBARS 001b, else 011b. A failed Read, Compare,
+  Verify or Copy adds a media error only when its range holds a lost
+  block.
+- A block the host deallocated holds no data, so it loses nothing.
+- The freeze stops the pollers from taking commands, and the drain lets
+  the FTL finish the ones they took. So every write before the failure
+  has its new mapping when the scan runs.
+- query-femu reports `lost-pages` and `lost-blocks`. Both count up over
+  the device's life; a rewrite does not lower them.
+- `persist_file` is refused: the file keeps no record of the cause.
 
 ## Read cache
 

@@ -3,12 +3,12 @@ title: "Supported combinations"
 description: "Each section is a device property and the refusals that name it: the messages realize, or a runtime setter, gives for a combination FEMU does not support. A..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/92d9c3cfa2bf00e31cffc70f425a0063cd7651d2/hw/femu/docs/reference/combinations.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/526998446834bf8e2bab6ba8a75952e40795ee2d/hw/femu/docs/reference/combinations.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/92d9c3cfa2bf00e31cffc70f425a0063cd7651d2/hw/femu/docs/reference/combinations.md) at FEMU `92d9c3cfa` (2026-11-14), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/reference/combinations.md`](https://github.com/MoatLab/FEMU/blob/526998446834bf8e2bab6ba8a75952e40795ee2d/hw/femu/docs/reference/combinations.md) at FEMU `526998446` (2026-11-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -185,7 +185,10 @@ own description allows. A message keeps its format directives (`%s`,
 
 ## `did`
 
+- the FTL did not pause in 10 s
+- the FTL queues did not drain in 10 s
 - the FTL thread did not take the query; the controller may be paused or disabled
+- the FTL thread did not take x-ftl-hold in 5 s
 
 ## `die_parity`
 
@@ -682,6 +685,7 @@ own description allows. A message keeps its format directives (`%s`,
 - power_states works with bbssd or CSD namespaces only
 - shared namespaces require homogeneous NoSSD or bbssd without Streams or default protection
 - streams requires NVM namespaces
+- the loss scan needs a controller whose namespaces are its own
 - zoned namespaces need a logical block of 4 KiB or less; lba_index selects %u bytes
 
 ## `nand_cell_type`
@@ -863,6 +867,7 @@ own description allows. A message keeps its format directives (`%s`,
 ## `persist_file`
 
 - FEMU: rrl is not supported with persist_file
+- femu: rain_loss is not supported with persist_file
 - io_trace: '%s' is a persist_file, pel_file or io_trace of a device
 - persist_file '%s' cannot be read in full
 - persist_file '%s' does not match this device: the mode, the backend size (%
@@ -990,7 +995,14 @@ own description allows. A message keeps its format directives (`%s`,
 - femu: %s needs queues x (entries + 1) of at most %d
 - multipoller_enabled must be 0 (one poller for all queues) or 1 (each poller owns poller_ratio queues)
 - queues must be in [1, %d]
+- the FTL queues did not drain in 10 s
 - wrr needs one poller: multipoller_enabled=0, or poller_ratio of at least queues
+- x-ftl-hold holds the FTL: the loss scan needs its queues drained
+
+## `rain_loss`
+
+- femu: rain_loss is not supported with persist_file
+- femu: rain_loss needs rain_read_only and bbssd
 
 ## `rain_parity`
 
@@ -1004,6 +1016,7 @@ own description allows. A message keeps its format directives (`%s`,
 ## `rain_read_only`
 
 - FEMU bbssd: with rain_read_only, failed_die leaves no spare, so the media would start read-only; lower devsz_mb or raise blks_per_pl
+- femu: rain_loss needs rain_read_only and bbssd
 - femu: rain_read_only is not supported with %s
 - femu: rain_read_only needs rain_parity=1 and eol_read_only=on
 
