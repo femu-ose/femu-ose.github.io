@@ -3,12 +3,12 @@ title: "ZNS: the zoned namespace model"
 description: "This chapter describes how FEMU implements the NVMe Zoned Namespace (ZNS) command set: the zone state machine, how zones are laid out on the emulated NAND,..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/64773348b3417bc6776ee9c806326b40fa6cdf71/hw/femu/docs/design/zns.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/d8b29b1e0c20abde2c0402053a2c4108d52c8fe4/hw/femu/docs/design/zns.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/design/zns.md`](https://github.com/MoatLab/FEMU/blob/64773348b3417bc6776ee9c806326b40fa6cdf71/hw/femu/docs/design/zns.md) at FEMU `64773348b` (2026-11-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/design/zns.md`](https://github.com/MoatLab/FEMU/blob/d8b29b1e0c20abde2c0402053a2c4108d52c8fe4/hw/femu/docs/design/zns.md) at FEMU `d8b29b1e0` (2026-11-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

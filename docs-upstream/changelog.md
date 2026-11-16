@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/64773348b3417bc6776ee9c806326b40fa6cdf71/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/d8b29b1e0c20abde2c0402053a2c4108d52c8fe4/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/64773348b3417bc6776ee9c806326b40fa6cdf71/hw/femu/docs/CHANGELOG.md) at FEMU `64773348b` (2026-11-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/d8b29b1e0c20abde2c0402053a2c4108d52c8fe4/hw/femu/docs/CHANGELOG.md) at FEMU `d8b29b1e0` (2026-11-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -126,6 +126,7 @@ listed one by one.
 - Opt-in power loss model (`power_loss`) that drops data still held in the volatile write buffer and records the event in SMART and the event log ([46602b0e7](https://github.com/MoatLab/FEMU/commit/46602b0e7), [303c77aef](https://github.com/MoatLab/FEMU/commit/303c77aef), [7679c443d](https://github.com/MoatLab/FEMU/commit/7679c443d)).
 - TCG Opal groundwork (`x-opal=on`, experimental, off by default): Security Send (81h) and Receive (82h), with OACS bit 0. It answers Level 0 discovery and the protocol list. ComID 1000h has its state machine, STACK_RESET and the Session Manager Properties method. Sessions reach the Admin SP: MSID, SID and PSID, Activate, Revert and transactions, with Block SID and TPER_RESET.
 - TCG Opal locking (`x-opal=on`): the Locking SP has 8 ranges, keys, users, ACEs, MBR control, the MBR table and the DataStore. Read, Write, Write Zeroes, Write Uncorrectable, Compare, Verify, DSM and Copy check the locks and fail with Access Denied. GenKey and a range change erase the LBAs that change owner or key. The MBR shadow serves Reads until MBR Done. Format is refused on a write-locked LBA, and Sanitize while the Locking SP is active. See [TCG Opal](features/tcg-opal.md).
+- Format NVM accepts a cryptographic erase (SES 010b) when `x-opal=on` or `crypto_mbps` is set; FNA bit 2 reports it. The data goes as with a user data erase. With `x-opal`, every range also gets a new key, and so does a Sanitize Crypto Erase.
 
 #### ZNS
 

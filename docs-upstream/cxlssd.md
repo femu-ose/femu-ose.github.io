@@ -3,12 +3,12 @@ title: "CXL SSD design"
 description: "The opt-in femu-cxl-ssd device subclasses QEMU's CXL Type-3 device. It takes an ordinary volatile memory backend, preserving standard decoder translation,..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/64773348b3417bc6776ee9c806326b40fa6cdf71/hw/femu/docs/cxlssd.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/d8b29b1e0c20abde2c0402053a2c4108d52c8fe4/hw/femu/docs/cxlssd.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/cxlssd.md`](https://github.com/MoatLab/FEMU/blob/64773348b3417bc6776ee9c806326b40fa6cdf71/hw/femu/docs/cxlssd.md) at FEMU `64773348b` (2026-11-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/cxlssd.md`](https://github.com/MoatLab/FEMU/blob/d8b29b1e0c20abde2c0402053a2c4108d52c8fe4/hw/femu/docs/cxlssd.md) at FEMU `d8b29b1e0` (2026-11-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 

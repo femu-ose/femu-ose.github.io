@@ -3,12 +3,12 @@ title: "TCG Opal self-encrypting drive (x-opal)"
 description: "x-opal=on makes FEMU answer as a TCG Opal 2 drive. The guest sends TCG commands with NVMe Security Send (81h) and Security Receive (82h). The feature is..."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/64773348b3417bc6776ee9c806326b40fa6cdf71/hw/femu/docs/features/tcg-opal.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/d8b29b1e0c20abde2c0402053a2c4108d52c8fe4/hw/femu/docs/features/tcg-opal.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/features/tcg-opal.md`](https://github.com/MoatLab/FEMU/blob/64773348b3417bc6776ee9c806326b40fa6cdf71/hw/femu/docs/features/tcg-opal.md) at FEMU `64773348b` (2026-11-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/features/tcg-opal.md`](https://github.com/MoatLab/FEMU/blob/d8b29b1e0c20abde2c0402053a2c4108d52c8fe4/hw/femu/docs/features/tcg-opal.md) at FEMU `d8b29b1e0` (2026-11-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -80,6 +80,12 @@ MBR Done to read the media again.
 
 - Format NVM is refused with Invalid Format (1/0Ah), DNR, when a formatted
   LBA has a write-locked owner.
+- Format NVM offers a cryptographic erase (FNA bit 2, SES 010b). It
+  clears the data, as a user data erase does, and gives every range a
+  new key. The PINs, ACEs and ranges stay. A Sanitize Crypto Erase also
+  gives new keys.
+- An open transaction keeps the new keys. A GenKey that it holds still
+  erases its range at the commit.
 - Sanitize is refused with Access Denied, DNR, while the Locking SP is
   active.
 - Copy accepts descriptor format 0h only; OCFS reports it.
