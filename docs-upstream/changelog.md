@@ -3,12 +3,12 @@ title: "Changelog"
 description: "User-visible changes to FEMU. Each entry names the commits it comes from; git show <hash> has the details."
 mdx:
   format: md
-custom_edit_url: https://github.com/MoatLab/FEMU/blob/526998446834bf8e2bab6ba8a75952e40795ee2d/hw/femu/docs/CHANGELOG.md
+custom_edit_url: https://github.com/MoatLab/FEMU/blob/64773348b3417bc6776ee9c806326b40fa6cdf71/hw/femu/docs/CHANGELOG.md
 ---
 
 :::info[Mirrored from the FEMU repository]
 
-This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/526998446834bf8e2bab6ba8a75952e40795ee2d/hw/femu/docs/CHANGELOG.md) at FEMU `526998446` (2026-11-15), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
+This page is [`hw/femu/docs/CHANGELOG.md`](https://github.com/MoatLab/FEMU/blob/64773348b3417bc6776ee9c806326b40fa6cdf71/hw/femu/docs/CHANGELOG.md) at FEMU `64773348b` (2026-11-16), licensed GPL-2.0-or-later. Send corrections to the FEMU repository.
 
 :::
 
@@ -124,6 +124,8 @@ listed one by one.
 - `query-femu` reports the NAND bus timing of each namespace in a `media` member. It gives the page transfer and the command, status and burst phases after their fallbacks. It also gives the multi-plane gaps, the ONFI mode and the ordering rules. CSD, KV and OCSSD namespaces now report this member only ([reference](reference/query-femu.md#media-timing)).
 - `query-femu` also reports FDP namespaces: the reclaim group geometry, unit counts per state, and the host and media bytes of each reclaim unit handle. Kind `reclaim-units` lists the state, handle, valid pages and wear of each unit. The handle byte counters sum to the FDP Statistics log.
 - Opt-in power loss model (`power_loss`) that drops data still held in the volatile write buffer and records the event in SMART and the event log ([46602b0e7](https://github.com/MoatLab/FEMU/commit/46602b0e7), [303c77aef](https://github.com/MoatLab/FEMU/commit/303c77aef), [7679c443d](https://github.com/MoatLab/FEMU/commit/7679c443d)).
+- TCG Opal groundwork (`x-opal=on`, experimental, off by default): Security Send (81h) and Receive (82h), with OACS bit 0. It answers Level 0 discovery and the protocol list. ComID 1000h has its state machine, STACK_RESET and the Session Manager Properties method. Sessions reach the Admin SP: MSID, SID and PSID, Activate, Revert and transactions, with Block SID and TPER_RESET.
+- TCG Opal locking (`x-opal=on`): the Locking SP has 8 ranges, keys, users, ACEs, MBR control, the MBR table and the DataStore. Read, Write, Write Zeroes, Write Uncorrectable, Compare, Verify, DSM and Copy check the locks and fail with Access Denied. GenKey and a range change erase the LBAs that change owner or key. The MBR shadow serves Reads until MBR Done. Format is refused on a write-locked LBA, and Sanitize while the Locking SP is active. See [TCG Opal](features/tcg-opal.md).
 
 #### ZNS
 
@@ -220,6 +222,7 @@ listed one by one.
 - Log 0Eh lists each attached namespace with tracked blocks and their runs, and LSGC steps only when the page lists a block the last host read did not. A RAE=1 read freezes the page until a RAE=0 read. It used to give only an estimate, also for detached namespaces. See [NVMe frontend](design/nvme-frontend.md#lba-status-information-log-0eh).
 - The LBA Status Information alert (Notice 05h, AEC bit 13): after LSIRI, or at once for a component failure, with the page captured at the post. A read with RAE=0 clears it; a reset sends an unread one again. Get LBA Status no longer reports a run of 2^32 blocks when a write clears the run's first block during the scan. See [NVMe frontend](design/nvme-frontend.md#lba-status-information-log-0eh).
 - `persist_file` keeps the LBA Status Information state (LSGC, the last alert and host read, a pending component failure) in a new section, version 3 flag 2. Files from older FEMU still load, with that state empty. A file saved now needs this FEMU.
+- `rain_parity` now works with `blk_pe_limit`. A failed die takes no erase (also without the wear model) and leaves the wear counts. Retirement keeps the lines the namespace needs at the line size after the last failure. Available Spare is the lower of the wear and RAIN spare, and with an end of life a spare of 0 sends the media read-only. See [FTL design](design/ftl.md#rain-with-the-wear-model-blk_pe_limit).
 - `rain_loss=on` (with `rain_read_only`): a die failure is accepted while old lines hold data. Data pages in stripes with two failed members are lost: their blocks read Unrecovered Read Error until a write, Get LBA Status lists them (001b), a failed read adds a media error, and Notice 05h reports the component failure. query-femu reports `lost-pages` and `lost-blocks`. See [FTL design](design/ftl.md).
 - OCP event 0016h (NAND Die Offline) now works with `rain_parity`: the die leaves reads only, and its pages read from the other members of their stripe. Set Features accepts the event while each live stripe keeps one lost member at most. See [FTL](design/ftl.md#rain-rain_parity).
 - `stage_ns=on` (with `io_stages`) times the Read and the write commands of each namespace apart, for NSID 1 to 8. `query-femu-stages` with `nsid` returns them as `read` and `write`. See [query-femu](reference/query-femu.md#io-stage-times-query-femu-stages).

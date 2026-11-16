@@ -172,6 +172,10 @@ const sidebars = {
         },
         {
           "type": "doc",
+          "id": "features/tcg-opal"
+        },
+        {
+          "type": "doc",
           "id": "features/tiered-nand"
         }
       ]
